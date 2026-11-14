@@ -24,9 +24,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Starter dataset for the PolyFinances **AlphaForge AI** datathon (2026). It is simulation material only, not investment advice. The case brief and organizer slides live outside the repo, one level up (`../Datathon - Case Officiel 2026 ENG.pdf` / `FR.pdf`, `../Presentation_AlphaForge_AI_Participants - EN V2.pptx`). The brief refers to personas (Mateo: ESG/energy screening; Robert: volatile high-profile names like TSLA and NVDA; Amira: crypto plus non-tech growth) that the universe was chosen to serve.
+Team project for the PolyFinances **AlphaForge AI** datathon (2026, sponsors: Banque Nationale and AWS). Simulation only, not investment advice. The repo currently holds the organizer starter dataset; the solution itself is still to be built. The case brief and organizer slides live outside the repo, one level up (`../Datathon - Case Officiel 2026 ENG.pdf` / `FR.pdf`, `../Presentation_AlphaForge_AI_Participants - EN V2.pptx`).
 
-The organizers say this pack is a starting point, not the expected dataset. Teams may add or replace data, but every added source must be documented: source, retrieval date and processing.
+## The challenge (summary of the official brief)
+
+Build a **self-explaining agentic solution** that uses public financial data to inform an investment decision, adapted to the investor's profile. One or more agents gather data, use tools, coordinate tasks and adapt to context. The output is free: asset comparison, scenario analysis, risk explanation, fictional allocation, decision aid. The goal is **not** the best-performing portfolio: the jury wants a credible, innovative, useful approach. A simple, focused, verifiable design is explicitly preferred over sophistication or many agents.
+
+### Personas (fictional reference cases, and what each one tests)
+
+| Persona | Risk / horizon | Profile and preferences | What the system must show |
+| --- | --- | --- | --- |
+| **Amira**, 26, software engineer | High / 15+ years | Single, intermediate experience. Long-term growth. Loves AI and emerging tech, open to high-growth and high volatility, interested in crypto, but wants some diversification and not an all-tech bet. | Where does risk acceptance stop? "High risk" must not mean "anything goes"; keep diversification consistent with her preferences. |
+| **Mateo**, 41, operations manager | Moderate / 8-12 years | Partner, two kids, intermediate experience. Balanced growth. Strong ESG weight, avoid companies with major environmental or social controversies, balance growth and stability, open to emerging tech if it fits his risk, little interest in speculative assets. | Integrate non-financial preferences, not just return and risk. |
+| **Robert**, 59, health professional | Low to moderate / 3-5 years | Married, adult kids, retiring soon, advanced experience. Preserve capital with some growth. Prefers established companies with business models he understands, values stability and quality, not interested in crypto. Follows markets and can be tempted by a hyped, riskier name. | **Push back** on a request inconsistent with his profile: flag the tension, explain the risks, never just agree. |
+
+A comparison of two contrasting investors is suggested to show adaptability.
+
+### Suggested building blocks (optional)
+
+- **Explainability agent (or mechanism):** summarizes what supports a result, cites the data used, states assumptions, flags uncertainty.
+- **Governance agent (or mechanism):** checks outputs against investor constraints and the simulation rules, flags conflicts or missing information, makes the checks visible.
+- Suggested approach: formulate a useful question; define agent roles, data, tools, coordination and checkpoints; account for persona context; stress-test results (sensitivity to assumptions, data, scenarios); link every result to sources, assumptions, observable steps and limits.
+
+### Deliverables
+
+1. **Working prototype + code repo** showing one full use case with an accessible explanation (sources, assumptions, key drivers, limits). README must cover dependencies, data sources, configuration, setup/reproduction.
+2. **Demo video**, about 5 minutes, end to end: problem, agent roles, data and tools, result, explanation given to the user.
+3. **Technical documentation**: methods/models/tech and why; sources, assets, processing, assumptions; the explainability mechanism with an example tying a conclusion to data or execution traces; validation, limits, future work.
+4. **One pager** (max one page): problem, agentic approach, originality, data sources, explainability, user benefits.
+
+Deadlines, submission platform and infra requirements come in separate official logistics instructions.
+
+### Judging grid (simplified, full grid is jury-only)
+
+| Criterion | Weight |
+| --- | --- |
+| Quality, relevance and innovation of the solution | 20% |
+| Agentic intelligence and explainability | 20% |
+| Data analysis and processing | 20% |
+| UX/UI | 10% |
+| **AWS integration quality** | **15%** |
+| Presentation, business value and marketing | 15% |
+
+AWS integration is 15% of the grade: prefer AWS services (e.g. Bedrock for agents/LLMs, AWS hosting) when choosing the stack. A usable UI and a convincing demo matter more than complexity or past asset performance.
+
+### Hard constraints (responsible framing)
+
+- Simulation only: no real transactions, and the tool must not present itself as personalized financial advice.
+- Clearly separate facts, assumptions and fictional scenarios; surface important uncertainties understandably.
+- Explanations must be concise, verifiable and faithful to sources and observable actions: never invent justifications, do not expose detailed internal model reasoning.
+- Do not predict future returns from past performance. Historical data describes assets (returns, volatility over an explicit period); volatility is one risk indicator among others (horizon, diversification, preferences matter too). Never map a profile to an asset automatically.
+- Data rules: traceability (source, date, currency, processing), temporal consistency (observation date vs publication date, no look-ahead), comparability (dividends, splits, selection bias, missing data, CAD/USD), respect licenses, no real client accounts or confidential banking data (profiles and portfolios can be fully fictional).
+- The starter dataset is optional; no asset or asset class is mandatory. Every added source must document relevance, origin, date, processing, limits and terms of use (see `data/external/sources.md`).
 
 ## Commands
 
