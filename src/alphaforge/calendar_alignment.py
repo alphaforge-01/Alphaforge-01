@@ -138,6 +138,16 @@ def aligned_cad_prices(as_of: AsOf = None, tickers: str | list[str] | None = Non
     return prices.copy()
 
 
+def returns_base_date(as_of: AsOf = None) -> pd.Timestamp:
+    """Date de la valeur de départ des rendements : la première date du calendrier commun.
+
+    `daily_cad_returns` retire cette date (elle n'a pas de rendement) : il faut
+    la passer à `metrics` comme `base_date` pour ne pas ignorer une baisse dès
+    le premier jour.
+    """
+    return _aligned_cad_prices_cached(parse_as_of(as_of)).index[0]
+
+
 def daily_cad_returns(as_of: AsOf = None, tickers: str | list[str] | None = None) -> pd.DataFrame:
     """Rendements simples quotidiens en CAD sur le calendrier commun.
 
