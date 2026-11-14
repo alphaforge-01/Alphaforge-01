@@ -1,6 +1,6 @@
 # Choix du cas d'usage
 
-Statut : **proposition à valider par l'équipe**. Rien n'est choisi tant que l'équipe n'a pas tranché (voir CLAUDE.md, section "Exigences du projet et décisions"). Les notes ci-dessous sont un jugement, pas une mesure.
+Statut : **cas d'usage retenu par l'équipe**. Le périmètre réel, le calendrier et la répartition du travail sont dans `docs/sprint_plan.md`, qui prime sur ce document en cas d'écart. Les notes ci-dessous sont un jugement, pas une mesure.
 
 Cette version fusionne la proposition initiale (cas A) avec les idées de Samer et d'Ibrahima, dont l'agent explicateur séparé proposé par Ibrahima. Le tableau "Ce qui change" résume les arbitrages.
 
@@ -119,6 +119,8 @@ Risques résiduels assumés :
 
 ## Annonces planifiées plutôt que nouvelles libres
 
+**Écartée du projet faute de temps, conservée pour mémoire.**
+
 Ibrahima propose deux variantes de la deuxième porte d'entrée. Recommandation : garder les annonces planifiées, écarter les nouvelles libres du MVP.
 
 | Critère | Nouvelle libre collée | Annonce planifiée |
@@ -165,10 +167,10 @@ Test obligatoire : pour une date donnée, le résultat d'un outil ne change pas 
 | 3. Fausse diversification | MVP, par corrélations et secteurs. Chevauchement réel des FNB reporté |
 | 4. Contraintes ESG | MVP, version minimale |
 | 5. Changement de profil | MVP (curseurs) |
-| 6. Impact d'une nouvelle | Remplacé par les annonces planifiées (extension 1). Recadrage en scénarios hypothétiques écarté pour le moment par l'équipe |
-| 7. Scénarios "et si ça dure ?" | Extension 3 |
-| 8. "Comment en profiter ?" | Pas une fonction. Requête refusée dans les tests du garde-fou |
-| 9. Rejeu | Extension 2 |
+| 6. Impact d'une nouvelle | Écarté (nouvelles libres, scénarios hypothétiques et annonces planifiées) |
+| 7. Scénarios "et si ça dure ?" | Hors périmètre |
+| 8. "Comment en profiter ?" | Écarté comme fonction : requête refusée dans le panneau de test du garde-fou |
+| 9. Rejeu | Hors périmètre (seul le paramètre `as_of` reste) |
 | 10. Définir le profil | MVP par cases. Texte libre confirmé après le MVP |
 | 11. Niveau d'explication | MVP |
 | 12. Vérifier un chiffre | MVP (registre de preuves) |
@@ -355,11 +357,7 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 
 ### Extensions, dans l'ordre
 
-1. Annonces planifiées : décisions de taux de la Banque du Canada.
-2. Rejeu à une date passée, puis révélation de la suite.
-3. Scénarios "choc temporaire ou régime prolongé" en dollars fictifs.
-4. Hébergement sur AWS, puis outils sur Lambda.
-5. Publications de l'inflation, chevauchement réel des FNB.
+Remplacées par les priorités P1 et P2 de `docs/sprint_plan.md` (section 2). Annonces planifiées, rejeu, scénarios, hébergement AWS et Lambda sont hors périmètre.
 
 ### Scènes de démo (vidéo de 5 minutes)
 
@@ -369,20 +367,11 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 | 2 | Même demande pour Amira : autre verdict, même mécanisme | MVP |
 | 3 | Bascule novice, pro : seul l'explicateur est relancé, le texte change, les chiffres restent. La trace montre "ce que l'explicateur a vu" | MVP |
 | 4 | Clic sur un chiffre : calcul, source, date, limites. Puis une requête refusée par le garde-fou, et le score d'ancrage du texte | MVP |
-| 5 | Mateo et une annonce de la Banque du Canada | Extension 1 |
+| 5 | Mateo et XOM (ESG), ou Amira et la fausse diversification | P2 |
 
 ## Feuille de route
 
-1. **Décisions.** Répondre aux questions ouvertes, vérifier le compte AWS et les modèles actifs, obtenir l'accord d'un mentor pour les données.
-2. **Socle de calcul.** Chargement avec `as_of`, alignement, devises, métriques, simulation avant/après, tests.
-3. **Profils et gouvernance.** Trois personas, catalogue de règles, statuts, marges, tests.
-4. **Première démo de bout en bout.** Robert et TSLA, dans cet ordre : dossier d'explication et repli à gabarit (la page fonctionne sans modèle), validateur et ses tests, agent analyste avec `submit_analysis`, puis agent explicateur avec un nouvel essai et le cache. Page avec avertissement.
-5. **Interface.** Cases du profil, sélecteurs de l'idée, radiographie, deux profils côte à côte, panneau de preuves, niveaux d'explication.
-6. **AWS.** Garde-fou testé (requêtes permises et refusées), contrôle d'ancrage en mode détection puis seuils calibrés sur le jeu de scénarios fixes, interventions et scores visibles dans la trace, traces sur S3.
-7. **ESG minimal et fausse diversification.** Scénarios de Mateo et d'Amira.
-8. **Gel du MVP et enregistrement d'une première vidéo.** Avant toute extension. Si l'explicateur ne passe pas le jeu de scénarios fixes à cette date, livrer le repli à gabarit pour deux niveaux et garder l'explicateur pour le troisième.
-9. **Extensions**, dans l'ordre ci-dessus, selon le temps restant.
-10. **Livrables.** README, documentation technique, one pager, vidéo finale.
+Voir `docs/sprint_plan.md` : flux de travail A à D, jalons J0 à J7, replis à chaque jalon.
 
 ## Risques
 
@@ -415,16 +404,12 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 | Saisie | Cases et sélecteurs uniquement pour le MVP (idée de Samer) |
 | Niveaux d'explication | Deux : novice et pro |
 | Nouvelles libres et scénarios hypothétiques | Écartés pour le moment |
+| Annonces planifiées | Abandonnées faute de temps (par défaut, à confirmer) |
+| "Comment en profiter ?" | Pas une fonction, seulement une requête refusée par le garde-fou (par défaut, à confirmer) |
+| Plan de sprint | `docs/sprint_plan.md` |
 
 Modèles Bedrock et options du garde-fou : suivre la section AWS de CLAUDE.md et vérifier directement dans le compte.
 
 ## Questions ouvertes
 
-1. Date limite et heure exacte de remise ? (Non trouvée dans l'énoncé ni dans la présentation : l'énoncé renvoie aux consignes logistiques.)
-2. Répartition des blocs entre les 4 personnes (socle de calcul, agents et AWS, interface, données ESG et livrables) ?
-3. Streamlit pour l'interface ? Interface en français ?
-4. Qui monte la table ESG, et pour quels titres en premier ?
-5. Accepte-t-on le dossier racine `app/` et les seuils comme hypothèses réglables ?
-6. Qui rédige le glossaire et les textes fixes des limites pour les niveaux novice et pro ?
-7. Annonces planifiées : à abandonner faute de temps ?
-8. Accepte-t-on d'écarter le cas "comment en profiter ?" ?
+Les questions ouvertes sont maintenant suivies dans `docs/sprint_plan.md` (section 10).
