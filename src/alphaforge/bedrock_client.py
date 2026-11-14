@@ -48,14 +48,20 @@ GROUNDING_ANSWER_MAX_CHARS = 5_000
 # Motifs de secrets a masquer dans tout texte qui sort de ce module.
 _REDACTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"bedrock-api-key-[A-Za-z0-9+/=_%.\-]+"), "[CLE_BEDROCK_MASQUEE]"),
-    (re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"), "[CLE_AWS_MASQUEE]"),
+    (re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])"), "[CLE_AWS_MASQUEE]"),
+    (re.compile(r"(?i)\"?(SecretAccessKey|SessionToken|AccessKeyId)\"?\s*[:=]\s*\"?[^\s\",}]+\"?"), r"\1=[MASQUE]"),
+    (re.compile(r"(?i)([?&](?:X-Amz-Signature|X-Amz-Security-Token|X-Amz-Credential|token|access_token)=)[^&\s\"']+"),
+     r"\1[MASQUE]"),
+    (re.compile(r"(?<![A-Za-z0-9/+=])(?=[A-Za-z0-9/+]*[A-Z])(?=[A-Za-z0-9/+]*[a-z])(?=[A-Za-z0-9/+]*\d)[A-Za-z0-9/+]{40}(?![A-Za-z0-9/+=])"),
+     "[SECRET_PRESUME_MASQUE]"),
+    (re.compile(r"(?<![A-Za-z0-9/+=_-])[A-Za-z0-9/+_-]{120,}={0,2}(?![A-Za-z0-9/+=_-])"), "[JETON_PRESUME_MASQUE]"),
     (re.compile(r"arn:aws[a-z\-]*:[a-z0-9\-]*:[a-z0-9\-]*:\d{12}:[^\s\"',]+"), "[ARN_MASQUE]"),
     (re.compile(r"(?i)(aws_secret_access_key|aws_session_token|aws_bearer_token_bedrock)\s*[=:]\s*\S+"),
      r"\1=[MASQUE]"),
     (re.compile(r"(?i)bearer\s+[A-Za-z0-9._~+/=\-]{20,}"), "Bearer [MASQUE]"),
-    (re.compile(r"(?<!\d)\d{12}(?!\d)"), "[COMPTE_MASQUE]"),
+    (re.compile(r"(?<![A-Za-z0-9])\d{12}(?![A-Za-z0-9])"), "[COMPTE_MASQUE]"),
 )
-_SENSITIVE_KEY = re.compile(r"(?i)(secret|token|password|passwd|authorization|credential|api[_-]?key)")
+_SENSITIVE_KEY = re.compile(r"(?i)(secret|token(?!s)|password|passwd|authorization|credential|api[_-]?key)")
 
 
 def redact_text(text: str) -> str:
@@ -197,6 +203,7 @@ class BedrockClient:
         self._sleep = sleep
         self._jitter = jitter
         self.retry_count = 0
+        self.last_grounding_flags: dict[str, Any] = {}
 
     @property
     def runtime(self) -> Any:
@@ -215,26 +222,26 @@ class BedrockClient:
             try:
                 return getattr(self.runtime, operation)(**kwargs)
             except NoCredentialsError as error:
-                raise BedrockAuthError("Aucun identifiant AWS disponible dans l'environnement.") from error
+                raise BedrockAuthError("Aucun identifiant AWS disponible dans l'environnement.") from None
             except ClientError as error:
                 code = _error_code(error)
                 if code in AUTH_ERROR_CODES:
                     raise BedrockAuthError(
                         f"Acces refuse ou jeton expire ({code}). Recuperer de nouveaux identifiants temporaires.",
                         code=code,
-                    ) from error
+                    ) from None
                 if code in RETRYABLE_ERROR_CODES:
                     if attempt >= self.max_retries:
                         raise BedrockThrottledError(
                             f"Limitation persistante sur {operation} apres {attempt + 1} essais ({code}).",
                             code=code,
-                        ) from error
+                        ) from None
                     self.retry_count += 1
                     self._sleep(self._delay(attempt))
                     continue
-                raise BedrockError(f"Erreur Bedrock sur {operation} ({code}).", code=code) from error
+                raise BedrockError(f"Erreur Bedrock sur {operation} ({code}).", code=code) from None
             except BotoCoreError as error:
-                raise BedrockError(f"Erreur reseau ou configuration sur {operation} : {type(error).__name__}.") from error
+                raise BedrockError(f"Erreur reseau ou configuration sur {operation} : {type(error).__name__}.") from None
         raise BedrockError(f"Appel {operation} sans resultat.")  # pragma: no cover
 
     def converse(
@@ -268,7 +275,7 @@ class BedrockClient:
             content=content,
         )
 
-    def check_request_topic(self, text: str, *, mode: str = "detect") -> GuardrailResult:
+    def check_request_topic(self, text: str, *, mode: str = "block") -> GuardrailResult:
         """Verifie une requete utilisateur contre les sujets refuses."""
         response = self.apply_guardrail("INPUT", [{"text": {"text": text}}])
         return parse_guardrail_response(response, check="request_topic", mode=mode)
@@ -296,7 +303,22 @@ class BedrockClient:
             {"text": {"text": answer, "qualifiers": ["guard_content"]}},
         ]
         response = self.apply_guardrail("OUTPUT", content)
+        self.last_grounding_flags = grounding_flags(response)
         return parse_guardrail_response(response, check="output_grounding", mode=mode)
+
+
+def grounding_flags(response: Mapping[str, Any]) -> dict[str, Any]:
+    """Indique si un filtre d'ancrage a detecte un texte sous son seuil (mode detection).
+
+    En mode detection, l'API renvoie ``action: NONE`` au niveau global et ``detected: true``
+    sur le filtre : sans cette lecture, un ancrage faible passerait pour un succes.
+    """
+    below: list[str] = []
+    for assessment in response.get("assessments", []) or []:
+        for item in assessment.get("contextualGroundingPolicy", {}).get("filters", []) or []:
+            if item.get("detected") or item.get("action") == "BLOCKED":
+                below.append(str(item.get("type", "")))
+    return {"below_threshold": bool(below), "filters": sorted(set(below))}
 
 
 def parse_guardrail_response(response: Mapping[str, Any], *, check: str, mode: str = "detect") -> GuardrailResult:
@@ -310,7 +332,7 @@ def parse_guardrail_response(response: Mapping[str, Any], *, check: str, mode: s
     relevance: float | None = None
     for assessment in response.get("assessments", []) or []:
         for topic in assessment.get("topicPolicy", {}).get("topics", []) or []:
-            if topic.get("action") in {"BLOCKED", "DETECTED"} and topic.get("name"):
+            if (topic.get("action") == "BLOCKED" or topic.get("detected")) and topic.get("name"):
                 denied.append(str(topic["name"]))
         for item in assessment.get("contextualGroundingPolicy", {}).get("filters", []) or []:
             score = item.get("score")
