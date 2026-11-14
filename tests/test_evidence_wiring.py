@@ -204,3 +204,14 @@ def test_load_real_deps_only_swallows_a_missing_module(monkeypatch):
     monkeypatch.setattr(importlib, "import_module", broken)
     with pytest.raises(ModuleNotFoundError):
         pipeline_deps.load_real_deps()                # bogue dans un module existant : il remonte
+
+
+def test_explanation_result_matches_the_contract_with_the_optional_brief():
+    from alphaforge.contracts import ExplanationResult, check_keys
+    deps = fixture_deps()
+    result = run_analysis(PROFILE, PORTFOLIO, IDEA, deps=deps, config=BedrockConfig())
+    explanation = explain(result, "novice", deps=deps, config=BedrockConfig())
+    assert check_keys(explanation, ExplanationResult) == []
+    without_brief = {key: value for key, value in explanation.items() if key != "brief"}
+    assert check_keys(without_brief, ExplanationResult) == []   # la cle reste facultative pour les anciens appelants
+    assert explanation["brief"]["brief_id"] == deps.build_brief(result, "novice")["brief_id"]

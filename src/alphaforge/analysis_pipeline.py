@@ -487,10 +487,10 @@ def explain(
         cache.put(cache_key, output)
     trace.append(_step(6, "guardrail", "guardrail", guard_status, started, guard_details))
 
+    # Cle facultative du contrat (PR 25) : le dossier exact transmis a l'explicateur, pour l'interface (US-13).
     explanation = ExplanationResult(
-        output=output, validation=validation, guardrail=guardrail, rendered_markdown=markdown, trace=trace)  # type: ignore[typeddict-item]
-    # Cle facultative demandee par l'interface : le dossier exact transmis a l'explicateur (US-13).
-    explanation["brief"] = brief  # type: ignore[typeddict-unknown-key]
+        output=output, validation=validation, guardrail=guardrail, rendered_markdown=markdown, trace=trace,  # type: ignore[typeddict-item]
+        brief=brief)
     if mode == "bedrock":
         trace[-1]["details"]["trace_saved"] = persist_trace(
             result, explanation, config=config, store=trace_store)
