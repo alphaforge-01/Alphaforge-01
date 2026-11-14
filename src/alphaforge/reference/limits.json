@@ -11,8 +11,8 @@
     {
       "limit_id": "LM2",
       "topic": "limited_history",
-      "text_novice": "L'historique couvre seulement cinq ans et contient une seule grande baisse des marchés. Ce qui ne s'est pas produit pendant ces cinq ans n'apparaît pas dans les chiffres, et le passé ne dit pas ce qui arrivera.",
-      "text_pro": "Fenêtre d'historique limitée à cinq ans : peu d'observations indépendantes et un seul épisode de baisse marquée. La volatilité et la perte maximale dépendent de cette fenêtre. Ces mesures décrivent le passé et ne constituent pas une projection."
+      "text_novice": "L'historique couvre seulement cinq ans et contient une seule grande baisse des marchés. Ce qui ne s'est pas produit pendant ces cinq ans n'apparaît pas dans les chiffres, et le passé ne dit pas ce qui arrivera. La volatilité n'est qu'un indicateur de risque parmi d'autres : l'horizon, la diversification et les préférences comptent aussi.",
+      "text_pro": "Fenêtre d'historique limitée à cinq ans : peu d'observations indépendantes et un seul épisode de baisse marquée. La volatilité et la perte maximale dépendent de cette fenêtre. Ces mesures décrivent le passé et ne constituent pas une projection. La volatilité est un indicateur de risque parmi d'autres, au même titre que l'horizon, la diversification et les préférences."
     },
     {
       "limit_id": "LM3",
