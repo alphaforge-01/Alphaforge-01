@@ -1,0 +1,22 @@
+{
+  "brief_id": "fixture-brief-robert-novice",
+  "level": "pro",
+  "summary": "Le poids de l’actif atteint [E1] et dépasse la limite de [G1].",
+  "factors": [
+    {
+      "check_id": "G1",
+      "text": "La concentration dépasse la règle [G1] selon [E1]."
+    },
+    {
+      "check_id": "G2",
+      "text": "La volatilité [E2] mérite une attention particulière [G2]."
+    }
+  ],
+  "counterfactual": "La conformité dépend du seuil indiqué dans [G1].",
+  "variants": "Aucune variante supplémentaire.",
+  "limits_context": "Les données d’essai ne représentent pas les marchés réels.",
+  "origin": "template",
+  "model_id": null,
+  "prompt_version": null,
+  "attempt": 0
+}

@@ -1,0 +1,7 @@
+# B0 development dependencies; freeze tested versions before handoff.
+pandas>=2.2,<3
+numpy>=1.26,<3
+boto3>=1.35
+streamlit>=1.40,<2
+pytest>=8
+# yfinance is only needed if explicitly rebuilding the starter dataset.

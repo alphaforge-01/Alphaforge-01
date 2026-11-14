@@ -1,0 +1,6 @@
+{
+  "ticker": "TSLA",
+  "target_weight": 0.25,
+  "funding_source": "pro_rata",
+  "funding_ticker": null
+}

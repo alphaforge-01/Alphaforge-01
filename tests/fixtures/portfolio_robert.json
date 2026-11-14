@@ -1,0 +1,32 @@
+{
+  "portfolio_id": "portfolio_robert",
+  "label_fr": "Portefeuille fictif de Robert",
+  "is_fictional": true,
+  "base_currency": "CAD",
+  "positions": [
+    {
+      "ticker": "SPY",
+      "weight": 0.2
+    },
+    {
+      "ticker": "XIU.TO",
+      "weight": 0.15
+    },
+    {
+      "ticker": "XBB.TO",
+      "weight": 0.2
+    },
+    {
+      "ticker": "AGG",
+      "weight": 0.15
+    },
+    {
+      "ticker": "ZST.TO",
+      "weight": 0.2
+    },
+    {
+      "ticker": "GLD",
+      "weight": 0.1
+    }
+  ]
+}

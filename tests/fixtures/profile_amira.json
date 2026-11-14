@@ -1,0 +1,92 @@
+{
+  "profile_id": "amira",
+  "display_name": "Amira",
+  "is_fictional": true,
+  "objective": "Croissance à long terme avec diversification",
+  "horizon_years_min": 15,
+  "horizon_years_max": 30,
+  "risk_tolerance": "high",
+  "experience": "intermediate",
+  "esg_preference": "none",
+  "crypto_allowed": true,
+  "capital_cad": 100000.0,
+  "default_level": "novice",
+  "rules": [
+    {
+      "rule_id": "R1",
+      "rule_type": "max_single_asset_weight",
+      "params": {},
+      "direction": "max",
+      "warn_threshold": 0.35,
+      "limit_threshold": 0.5,
+      "unit": "pct",
+      "label_fr": "Concentration par actif",
+      "origin": "persona",
+      "is_assumption": true
+    },
+    {
+      "rule_id": "R2",
+      "rule_type": "max_portfolio_volatility",
+      "params": {},
+      "direction": "max",
+      "warn_threshold": 0.3,
+      "limit_threshold": 0.45,
+      "unit": "pct",
+      "label_fr": "Volatilité annuelle",
+      "origin": "persona",
+      "is_assumption": true
+    },
+    {
+      "rule_id": "R3",
+      "rule_type": "max_portfolio_drawdown",
+      "params": {},
+      "direction": "max",
+      "warn_threshold": 0.4,
+      "limit_threshold": 0.65,
+      "unit": "pct",
+      "label_fr": "Perte maximale historique",
+      "origin": "persona",
+      "is_assumption": true
+    },
+    {
+      "rule_id": "R4",
+      "rule_type": "min_defensive_share",
+      "params": {},
+      "direction": "min",
+      "warn_threshold": 0.05,
+      "limit_threshold": 0.0,
+      "unit": "pct",
+      "label_fr": "Part défensive minimale",
+      "origin": "persona",
+      "is_assumption": true
+    },
+    {
+      "rule_id": "R5",
+      "rule_type": "max_asset_class_weight",
+      "params": {
+        "asset_class": "crypto"
+      },
+      "direction": "max",
+      "warn_threshold": 0.2,
+      "limit_threshold": 0.35,
+      "unit": "pct",
+      "label_fr": "Concentration en cryptoactifs",
+      "origin": "persona",
+      "is_assumption": true
+    },
+    {
+      "rule_id": "R6",
+      "rule_type": "max_asset_class_weight",
+      "params": {
+        "asset_class": "equity"
+      },
+      "direction": "max",
+      "warn_threshold": 0.7,
+      "limit_threshold": 0.85,
+      "unit": "pct",
+      "label_fr": "Concentration par catégorie",
+      "origin": "persona",
+      "is_assumption": true
+    }
+  ]
+}
