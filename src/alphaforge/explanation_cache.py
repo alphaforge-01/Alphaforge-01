@@ -33,6 +33,11 @@ class ExplanationCache:
         item = self._items.get(key)
         return json.loads(json.dumps(item)) if item is not None else None
 
+    def discard(self, key: str) -> None:
+        """Retire une entree (par exemple un texte refuse ensuite par le garde-fou)."""
+        if self._items.pop(key, None) is not None and self._path is not None:
+            self._path.write_text(json.dumps(self._items, ensure_ascii=False), encoding="utf-8")
+
     def put(self, key: str, output: dict[str, Any]) -> None:
         self._items[key] = json.loads(json.dumps(output))
         if self._path is not None:

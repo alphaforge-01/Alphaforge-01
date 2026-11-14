@@ -33,8 +33,6 @@ def parse_output(text: str, brief: ExplanationBrief, *, model_id: str, attempt: 
         raw = json.loads(cleaned[start:end + 1])
     except ValueError:
         return None, "JSON invalide."
-    if not isinstance(raw, dict):
-        return None, "La reponse doit etre un objet JSON."
     for slot in _STRING_SLOTS:
         if not isinstance(raw.get(slot), str):
             return None, f"Emplacement manquant ou invalide : {slot}."
@@ -47,7 +45,7 @@ def parse_output(text: str, brief: ExplanationBrief, *, model_id: str, attempt: 
         brief_id=brief["brief_id"], level=brief["level"], summary=raw["summary"],
         factors=[{"check_id": f["check_id"], "text": f["text"]} for f in factors],
         counterfactual=raw["counterfactual"], variants=raw["variants"], limits_context=raw["limits_context"],
-        origin="llm", model_id=model_id, prompt_version=PROMPT_VERSION, attempt=attempt,
+        origin="llm", model_id=redact_text(model_id), prompt_version=PROMPT_VERSION, attempt=attempt,
     ), None
 
 
@@ -74,7 +72,10 @@ def explain_with_llm(
         text = extract_text(response)
         output, problem = parse_output(text, brief, model_id=model_id, attempt=attempt)
         if output is not None:
-            verdict = validate(output, brief)
+            try:
+                verdict = validate(output, brief)
+            except Exception as error:  # un validateur defaillant ne doit pas faire planter la page
+                raise ExplainerFailure(f"Validateur en erreur ({type(error).__name__}).") from error
             if verdict["is_valid"] or attempt == 2:
                 return output
             codes = ", ".join(
@@ -82,7 +83,10 @@ def explain_with_llm(
             problem = f"Rejet du validateur : {codes}."
         last_problem = problem or last_problem
         if attempt == 1:
-            messages.append(response["output"]["message"])
+            try:
+                messages.append(response["output"]["message"])
+            except (KeyError, TypeError) as error:
+                raise ExplainerFailure("Reponse Converse mal formee.") from error
             messages.append({"role": "user", "content": [{"text": (
                 f"Ta reponse a ete rejetee. {last_problem} Corrige et renvoie uniquement l'objet JSON, "
                 "sans chiffre en clair et avec des renvois existants.")}]})

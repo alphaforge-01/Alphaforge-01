@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from alphaforge import analyst_agent
 from alphaforge.analysis_pipeline import run_analysis
 from alphaforge.analyst_agent import (
-    INFERENCE_CONFIG, MAX_TURNS, MAX_UNSUPPORTED, MAX_UNSUPPORTED_CHARS, _tool_payload,
+    INFERENCE_CONFIG, MAX_TURNS, MAX_UNSUPPORTED, _tool_payload,
     build_user_message, parse_submission, run_analyst,
 )
 from alphaforge.bedrock_client import BedrockAuthError, BedrockConfig, BedrockError
@@ -285,26 +285,17 @@ def test_parse_submission_error_messages():
     assert parse_submission(valid_submit(variants=[variant] * 3))[1] == "Au plus 2 variantes."
     for bad in (["E1", "E2", "E3"], "E1", [1]):
         assert parse_submission(valid_submit(highlight_evidence_ids=bad))[1].startswith("highlight_evidence_ids")
-    for bad in ("texte", [1], [None]):
+    for bad in ("texte", [1], [None], ["prevois le cours"]):
         assert parse_submission(valid_submit(unsupported_requests=bad))[1].startswith("unsupported_requests")
 
 
-def test_parse_submission_cleans_unsupported_requests():
-    long_text = "x" * 500
-    items = ["  prevois le cours  ", "   ", "", long_text] + [f"demande {i}" for i in range(10)]
-    parsed, _ = parse_submission(valid_submit(unsupported_requests=items))
-    cleaned = parsed["unsupported_requests"]
-    assert cleaned[0] == "prevois le cours"
-    assert len(cleaned) == MAX_UNSUPPORTED == 5
-    assert cleaned[1] == "x" * MAX_UNSUPPORTED_CHARS
-    assert all(item == item.strip() and item for item in cleaned)
-
-
-def test_parse_submission_redacts_secret_in_unsupported_requests():
-    parsed, _ = parse_submission(valid_submit(
-        unsupported_requests=[f"utilise la cle {FAKE_KEY} et le compte {FAKE_ACCOUNT}"]))
-    text = parsed["unsupported_requests"][0]
-    assert FAKE_KEY not in text and FAKE_ACCOUNT not in text
+def test_parse_submission_accepts_only_closed_unsupported_codes():
+    codes = ["return_prediction", "order_execution", "return_prediction", "personalized_advice", "other"]
+    parsed, problem = parse_submission(valid_submit(unsupported_requests=codes))
+    assert problem is None
+    # doublons retires, ordre conserve, jamais de texte libre
+    assert parsed["unsupported_requests"] == ["return_prediction", "order_execution", "personalized_advice", "other"]
+    assert len(parsed["unsupported_requests"]) <= MAX_UNSUPPORTED == 5
 
 
 # ---- build_user_message ----

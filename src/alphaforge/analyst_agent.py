@@ -19,14 +19,13 @@ from .bedrock_client import BedrockClient, extract_tool_uses, redact_text
 from .contracts import AnalystSubmission, InvestmentIdea, InvestorProfile
 from .prompt_loader import load_prompt
 from .tool_specs import (
-    MAX_HIGHLIGHTS, MAX_VARIANTS, REASON_CODES, AnalystFailure, AnalystOutcome, ToolBox,
+    MAX_HIGHLIGHTS, MAX_VARIANTS, REASON_CODES, UNSUPPORTED_CODES, AnalystFailure, AnalystOutcome, ToolBox,
     ToolBudgetExceeded, normalize_idea, tool_config,
 )
 
 PROMPT_NAME = "analyst_v1"
 MAX_TURNS = 6
 MAX_UNSUPPORTED = 5
-MAX_UNSUPPORTED_CHARS = 200
 INFERENCE_CONFIG = {"maxTokens": 1024, "temperature": 0}
 
 
@@ -79,9 +78,9 @@ def parse_submission(raw: Any) -> tuple[AnalystSubmission | None, str | None]:
             or len(highlights) > MAX_HIGHLIGHTS:
         return None, f"highlight_evidence_ids : au plus {MAX_HIGHLIGHTS} identifiants (chaines)."
     unsupported = raw.get("unsupported_requests") or []
-    if not isinstance(unsupported, list) or not all(isinstance(u, str) for u in unsupported):
-        return None, "unsupported_requests doit etre une liste de chaines."
-    cleaned = [redact_text(u.strip())[:MAX_UNSUPPORTED_CHARS] for u in unsupported if u.strip()][:MAX_UNSUPPORTED]
+    if not isinstance(unsupported, list) or not all(u in UNSUPPORTED_CODES for u in unsupported):
+        return None, f"unsupported_requests : codes permis {', '.join(UNSUPPORTED_CODES)}."
+    cleaned = list(dict.fromkeys(unsupported))[:MAX_UNSUPPORTED]
     return AnalystSubmission(
         understood_idea=understood, variants=variants,
         highlight_evidence_ids=list(highlights), unsupported_requests=cleaned,
@@ -131,7 +130,10 @@ def run_analyst(
             model_id, messages, system=system, tool_config=tool_config(), inference_config=INFERENCE_CONFIG)
         if response.get("stopReason") == "max_tokens":
             raise AnalystFailure("Reponse de l'analyste tronquee (max_tokens).")
-        messages.append(response["output"]["message"])
+        try:
+            messages.append(response["output"]["message"])
+        except (KeyError, TypeError) as error:
+            raise AnalystFailure("Reponse Converse mal formee.") from error
         tool_uses = extract_tool_uses(response)
         if not tool_uses:
             if nudged:
@@ -168,5 +170,7 @@ def run_analyst(
             if rejected_submission:
                 raise AnalystFailure("Soumission invalide deux fois de suite.")
             rejected_submission = True
+        else:
+            rejected_submission = False
         messages.append({"role": "user", "content": blocks})
     raise AnalystFailure(f"{max_turns} tours sans soumission valide.")
