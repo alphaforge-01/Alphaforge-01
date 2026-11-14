@@ -76,7 +76,8 @@ class _IdentityRegistry:
         return tool_result
 
 
-def _evaluate(profile: dict, snapshot: dict, simulate_fn: Any = None, idea: dict | None = None) -> dict:
+def _evaluate(profile: dict, snapshot: dict, simulate_fn: Any = None, idea: dict | None = None, *,
+              evidence: Any = None) -> dict:
     world = _world(profile["profile_id"])
     key = "governance_before" if snapshot.get("subject") == "portfolio_before" else "governance_after"
     governance = copy.deepcopy(world[key])

@@ -81,6 +81,21 @@ def _worst_status(governance: GovernanceResult) -> str:
     return governance["overall_status"]
 
 
+def _relabel_evidence(tool_result: dict[str, Any], old_subject: str, new_subject: str) -> None:
+    """Change le sujet des preuves d'un resultat d'outil, pour qu'un meme couple (metrique, sujet) designe une seule preuve.
+
+    Les simulations d'une variante ou explorees par l'analyste produisent des preuves de sujet
+    ``portfolio_after`` : sans reetiquetage, elles se confondraient avec celles de l'idee demandee.
+    """
+    for entry in tool_result.get("evidence", []) or []:
+        if entry.get("subject") != old_subject:
+            continue
+        entry["subject"] = new_subject
+        key = entry.get("evidence_key")
+        if isinstance(key, str) and key.endswith(f":{old_subject}"):
+            entry["evidence_key"] = key[: -len(old_subject)] + new_subject
+
+
 def propose_variants(
     governance_after: GovernanceResult, idea: InvestmentIdea, portfolio: Portfolio,
 ) -> list[dict[str, Any]]:
@@ -238,6 +253,13 @@ def run_analysis(
     if simulation is None:
         raise AnalysisError("La simulation de l'idee n'a pas abouti : aucun resultat exploitable.")
     snapshot_before, snapshot_after = _snapshots_from_simulation(simulation)
+    snapshot_before = {**snapshot_before, "subject": "portfolio_before"}
+    snapshot_after = {**snapshot_after, "subject": "portfolio_after"}
+    for call, explored in zip(toolbox.calls, toolbox.results):
+        if call["tool_name"] == "simulate_portfolio_change" and explored["status"] == "ok" and explored is not simulation:
+            label = f"explored:{explored['call_id']}"
+            _relabel_evidence(explored, "portfolio_after", label)
+            _relabel_evidence(explored, "portfolio_before", label)
     step1_status = "fallback" if (mode == "bedrock" and fallback_reason) else "ok"
     details: dict[str, Any] = {
         "tool_calls": list(toolbox.calls), "turns": outcome.turns, "stop_reason": outcome.stop_reason,
@@ -254,8 +276,9 @@ def run_analysis(
         return _snapshots_from_simulation(
             deps.simulate_portfolio_change(portfolio, candidate, as_of=as_of, capital_cad=capital))[1]
 
-    governance_before = deps.evaluate(profile, snapshot_before)
-    governance_after = deps.evaluate(profile, snapshot_after, simulate_fn=simulate_fn, idea=idea)
+    governance_before = deps.evaluate(profile, snapshot_before, evidence=toolbox.evidence())
+    governance_after = deps.evaluate(
+        profile, snapshot_after, simulate_fn=simulate_fn, idea=idea, evidence=toolbox.evidence())
 
     # Variantes : repassent par les memes outils et la meme gouvernance
     raw_variants = list(outcome.submission.get("variants", []))
@@ -268,14 +291,17 @@ def run_analysis(
             continue
         if toolbox.calls_used >= toolbox.max_calls:
             break
+        variant_id = f"V{len(variants) + 1}"
         simulated = toolbox.call("simulate_portfolio_change", _idea_params(variant_idea))
         if simulated["status"] != "ok":
             continue
-        variant_id = f"V{len(variants) + 1}"
+        _relabel_evidence(simulated, "portfolio_after", f"variant:{variant_id}")
+        _relabel_evidence(simulated, "portfolio_before", f"explored:{simulated['call_id']}")
         snapshot = {**_snapshots_from_simulation(simulated)[1], "subject": f"variant:{variant_id}"}
         variants.append(Variant(
-            variant_id=variant_id, reason_code=raw["reason_code"], idea=variant_idea,
-            snapshot=snapshot, governance=deps.evaluate(profile, snapshot, simulate_fn=simulate_fn, idea=variant_idea),
+            variant_id=variant_id, reason_code=raw["reason_code"], idea=variant_idea, snapshot=snapshot,
+            governance=deps.evaluate(
+                profile, snapshot, simulate_fn=simulate_fn, idea=variant_idea, evidence=toolbox.evidence()),
         ))
     trace.append(_step(2, "governance", "code", "ok", started, {
         "overall_before": governance_before["overall_status"], "overall_after": governance_after["overall_status"],
@@ -341,7 +367,10 @@ def explain(
     deps = deps or resolve_deps()
     config = config or BedrockConfig.from_env()
     effective_mode, config_fallback = _resolve_mode(mode, config, client)
-    brief = deps.build_brief(result, level)
+    try:
+        brief = deps.build_brief(result, level)
+    except ValueError as error:
+        raise AnalysisError(f"Dossier d'explication impossible : {redact_text(str(error))}") from error
 
     # Etape 4 : explication
     started = time.perf_counter()
@@ -444,6 +473,8 @@ def explain(
 
     explanation = ExplanationResult(
         output=output, validation=validation, guardrail=guardrail, rendered_markdown=markdown, trace=trace)  # type: ignore[typeddict-item]
+    # Cle facultative demandee par l'interface : le dossier exact transmis a l'explicateur (US-13).
+    explanation["brief"] = brief  # type: ignore[typeddict-unknown-key]
     if mode == "bedrock":
         trace[-1]["details"]["trace_saved"] = persist_trace(
             result, explanation, config=config, store=trace_store)
