@@ -164,3 +164,16 @@ def test_unknown_level_raises():
     for func in (mandatory_limits, disclaimers, threshold_assumption, disclaimer_text):
         with pytest.raises(ValueError):
             func("expert")
+# ---------- intégration (B8) ----------
+@pytest.mark.parametrize("level", LEVELS)
+def test_no_duplicate_warning_or_limit_in_rendered_text(level):
+    brief = build_brief(robert(), level)
+    text = render_markdown(render_template(brief), brief)
+    for item in disclaimers(level):
+        assert text.count(item["text"]) == 1
+    for item in brief["limits"]:
+        assert text.count(f"**{item['limit_id']}** :") == 1
+def test_volatility_is_stated_as_one_indicator_among_others():
+    texts = {i["limit_id"]: i for i in load_limits()}["LM2"]
+    assert "indicateur de risque parmi d'autres" in texts["text_novice"]
+    assert "indicateur de risque parmi d'autres" in texts["text_pro"]
