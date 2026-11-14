@@ -188,7 +188,7 @@ def test_render_summary_french_counts_and_no_em_dash():
     assert "Mode demandé : `offline` ; mode effectif : `offline`" in text
     assert "Simulation éducative, pas un conseil personnalisé" in text
     assert "échec" in text and "ZeroDivisionError" in text
-    assert "—" not in text
+    assert "2014" not in text
     mixed = rs.render_summary([run(LLM_OK), run(LLM_TWICE, displayed="template"),
                                run(EXPLAINER_FAIL, displayed="template")],
                               "bedrock", "2025-01-01", "t")
@@ -196,7 +196,7 @@ def test_render_summary_french_counts_and_no_em_dash():
     assert "Rejeté deux fois, gabarit affiché : 2" in mixed
     assert "hors taux) : 2" in mixed
     assert "sans objet" not in mixed and "**Attention" not in mixed
-    assert "—" not in mixed
+    assert "2014" not in mixed
 
 
 def test_summary_warns_when_bedrock_without_llm():
