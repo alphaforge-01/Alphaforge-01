@@ -2,7 +2,7 @@
 
 Statut : **proposition à valider par l'équipe**. Rien n'est choisi tant que l'équipe n'a pas tranché (voir CLAUDE.md, section "Exigences du projet et décisions"). Les notes ci-dessous sont un jugement, pas une mesure.
 
-Cette version fusionne la proposition initiale (cas A) avec les idées de Samer et d'Ibrahima, dont l'agent explicateur séparé proposé par Ibrahima. Le tableau "Ce qui change" résume les arbitrages.
+Cette version fusionne la proposition initiale (cas A) avec les idées de Samer et d'Ibrahima, dont l'agent explicateur séparé et les scénarios hypothétiques fournis par l'équipe, tous deux proposés par Ibrahima. Le tableau "Ce qui change" résume les arbitrages.
 
 ## Recommandation : un copilote de cohérence, pas un conseiller
 
@@ -49,7 +49,10 @@ Positionnement proposé par Ibrahima : le système ne dit pas quoi acheter. Il v
 | Niveaux d'explication | Ajoutés (3 niveaux, mêmes chiffres) | Ibrahima |
 | Fausse diversification | Ajoutée, version par corrélations | Ibrahima |
 | Fidélité aux données | Validateur de chiffres et repli sans modèle ajoutés | Samer |
-| Nouvelles libres | Écartées du MVP, remplacées par les annonces planifiées | Ibrahima (les deux idées) |
+| Nouvelles | Recadrées en scénarios hypothétiques écrits et étiquetés par l'équipe : ni recherche en ligne, ni vérification, le système reste dans l'hypothèse. Extension 1 | Ibrahima (recadrage), arbitrage (conditions) |
+| Canaux d'exposition | Liste fermée. La table canal vers actifs est une hypothèse de l'équipe, lue par le code, jamais déduite par un modèle | Ibrahima, arbitrage |
+| Épisodes comparables | Règle déterministe sur un facteur observable de nos données. Pas de choc appliqué comme multiplicateur | arbitrage |
+| Annonces planifiées | Conservées comme complément (événements officiels datés), reculées en extension 3 | Ibrahima |
 | Rejeu | Extension, mais `as_of` posé dès le socle | Ibrahima |
 | Agents | Deux agents aux pouvoirs séparés : un analyste (outils) et un explicateur (dossier seul). La gouvernance reste en code | Ibrahima (agent explicateur), arbitrage (conditions) |
 | Rédaction | L'analyste ne rédige plus : il soumet un résultat structuré. L'explicateur rédige dans des emplacements fixes | Ibrahima, arbitrage |
@@ -110,6 +113,8 @@ Demande de Samer : l'agent ne doit jamais inventer. Aucun système ne peut prome
 | Refus si donnée manquante | Un outil sans donnée renvoie "information manquante", jamais une valeur par défaut | Sans objet |
 | Repli sans modèle | Après un rejet et un nouvel essai, une explication à gabarit fixe est affichée, avec les mêmes chiffres | La qualité de style du repli |
 | Garde-fou Bedrock | Sujets refusés (conseil personnalisé, exécution d'ordres, prédiction). Contrôle d'ancrage du texte final contre le dossier d'explication | **L'exactitude factuelle** : c'est un filtre probabiliste à seuil |
+| Scénario par identifiant | Les outils de scénario prennent un `scenario_id`. Les canaux viennent de la table de l'équipe ou d'une confirmation de l'utilisateur, jamais du modèle | Que les étiquettes de l'équipe soient "les bonnes" (ce sont des hypothèses) |
+| Fait, observation, hypothèse séparés | Exposition (fait), épisodes passés (observation) et scénario (hypothèse) ont chacun leur type de preuve et leur encadré | Que le lecteur ne lise pas l'observation comme une prévision |
 
 Risques résiduels assumés :
 
@@ -117,29 +122,112 @@ Risques résiduels assumés :
 - **Emphase à l'intérieur d'un emplacement.** L'ordre global est fixé, pas le poids des mots dans une phrase. Mesure : relecture du jeu fixe.
 - **Connaissances du modèle hors données** (par exemple une remarque sur une entreprise). Mesures : consigne stricte, contrôle d'ancrage, relecture.
 - **Motif d'une variante.** L'explicateur ne sait pas pourquoi l'analyste l'a proposée. Mesure : motif transmis sous forme de code fermé (`reduce_weight`, `change_funding_source`, `spread_across_existing`), jamais deviné.
+- **Sujet du scénario connu du modèle.** L'explicateur peut ajouter une conséquence "connue" (par exemple l'effet des taux sur l'immobilier). Mesures : il ne reçoit qu'un libellé de canal généré par le code, emplacement à phrase encadrée, contrôle d'ancrage, relecture du jeu fixe.
 
-## Annonces planifiées plutôt que nouvelles libres
+## Scénarios hypothétiques et annonces planifiées
 
-Ibrahima propose deux variantes de la deuxième porte d'entrée. Recommandation : garder les annonces planifiées, écarter les nouvelles libres du MVP.
+Ibrahima propose de recadrer le cas "impact d'une nouvelle" : l'équipe fournit elle-même la nouvelle. Vraie ou fausse, peu importe : c'est une hypothèse, et le système reste dans ce cadre pour décrire ce qu'elle toucherait dans le portefeuille fictif. Aucune recherche en ligne, aucune vérification des faits.
 
-| Critère | Nouvelle libre collée | Annonce planifiée |
+Recommandation : **l'adopter sous conditions, en extension 1**. Les annonces planifiées restent un complément (extension 3).
+
+### Ce que le recadrage règle
+
+| Objection à la nouvelle libre collée | Réponse du scénario fourni par l'équipe | Reste à surveiller |
 | --- | --- | --- |
-| Licence | Texte de presse souvent protégé | Publications officielles publiques (conditions à vérifier et consigner) |
-| Datation | Incertaine, heure de publication floue | Date et heure officielles |
-| Anticipation | Élevée (on connaît la suite) | Maîtrisable avec un calendrier |
-| Canal d'exposition | Déduit par le modèle, invérifiable | Fixé par le type d'annonce (taux, inflation) |
-| Comparables | "Épisodes semblables" subjectifs | Même type d'annonce, nombre d'observations affiché |
+| Licence du texte de presse | Texte original de l'équipe, jamais copié ni paraphrasé d'un article | Discipline de rédaction, entrée dans `sources.md` |
+| Datation et anticipation | Le scénario n'est pas un fait daté : c'est une hypothèse posée à la date `as_of` | L'équipe écrit ses scénarios en connaissant le passé : limite affichée |
+| Canal d'exposition déduit par le modèle | Canaux étiquetés par l'équipe dans une liste fermée | Les étiquettes sont des hypothèses, affichées comme telles |
+| Comparables subjectifs | Règle déterministe sur un facteur observable, nombre d'observations affiché | Peu d'observations, une seule fenêtre de 5 ans |
 
-**Ce que cela demande en données :**
+### Règles de rédaction d'un scénario
 
-- Notre série du taux directeur (V39079) change **le lendemain** de l'annonce. Exemple : la hausse annoncée le mercredi 2 mars 2022 (date à confirmer sur le site de la Banque du Canada) y apparaît le jeudi 3 mars. Les décisions de maintien n'y laissent aucune trace.
+- Écrit par l'équipe, en français, deux phrases au plus, ton neutre.
+- Porte sur un canal macro, une devise, un secteur ou une classe d'actifs. **Jamais sur une entreprise réelle ni sur une personne réelle** : pas de fausse nouvelle sur un émetteur, et aucun comparable calculable pour un événement propre à une entreprise.
+- Aucune date réelle, aucun chiffre de marché inventé présenté comme un fait.
+- Champs : `scenario_id`, `title`, `summary`, `channels` (canal, direction, intensité), `persistence` (`shock` ou `regime`), `author`, `written_on`, `fictional: true`.
+- Un scénario dont un canal est hors liste, ou dont la direction ou l'intensité manque, est refusé au chargement (test).
+
+### Canaux : liste fermée, table de l'équipe
+
+| Canal | Directions | Facteur observable (nos données) | Actifs déclarés exposés | Phase |
+| --- | --- | --- | --- | --- |
+| `rates_ca` | hausse, baisse | Taux du Canada à 2 ans (`BD.CDN.2YR.DQ.YLD`), variation en points | FNB obligataires (XBB.TO, ZST.TO, AGG, TLT) | Extension 1 |
+| `usd_cad` | hausse, baisse | `FXUSDCAD`, variation en % | Tous les actifs cotés en USD (fait mécanique) | Extension 1 |
+| `crypto` | hausse, baisse | BTC-USD, variation en % | Classe `crypto` | Extension 1 |
+| `tech` | hausse, baisse | QQQ, variation en % | Secteur "Information Technology", plus QQQ | Si le temps le permet |
+| `equity_market` | hausse, baisse | SPY ou XIU.TO, variation en % | Actions et FNB d'actions | Si le temps le permet |
+| `oil` | hausse, baisse | Aucun dans nos données. Demande une série publique du prix du pétrole (FRED, source EIA), à documenter | Secteur "Energy" | Extension 5 |
+| `inflation`, `credit` | | Aucun facteur utilisable (mensuel révisé sans date de publication, pas de série d'écarts de crédit) | | Non pris en charge |
+
+- La table vit dans `data/external/scenario_channels.json`. Chaque canal porte son facteur, ses seuils par intensité et sa règle de sélection des actifs (classe, secteur, devise ou liste de titres), avec une justification d'une ligne.
+- La table est une **hypothèse de l'équipe**, affichée comme telle. Elle est contrôlée de deux façons :
+  - par des tests : chaque canal sélectionne au moins un actif de l'univers, chaque titre cité existe, chaque facteur existe dans les données ;
+  - par la **sensibilité mesurée** : corrélation des rendements mensuels de chaque actif avec le facteur, affichée à côté de la déclaration. Les écarts sont signalés ("déclaré exposé, sensibilité mesurée faible", "non déclaré, sensibilité mesurée élevée") et jamais corrigés en silence.
+- Un canal sans facteur s'affiche "non pris en charge". Il n'est jamais remplacé par une estimation.
+
+### Ce que le code calcule
+
+1. **Exposition (un fait).** Part du portefeuille fictif placée dans les actifs exposés à chaque canal du scénario, en % et en dollars fictifs, avec la liste des titres. Aucune hypothèse de marché.
+2. **Épisodes comparables (une observation du passé).**
+   - Unité : le mois civil, sans chevauchement, sur le calendrier commun.
+   - Épisode : un mois où le facteur a bougé dans la direction du scénario d'au moins le seuil de l'intensité choisie (par exemple hausse d'au moins 0,25 point du taux à 2 ans).
+   - Mesure : rendement du portefeuille fictif en CAD pendant ces mois, poids actuels tenus constants.
+   - Sortie : nombre d'épisodes, médiane, minimum, maximum, nombre de mois négatifs, en % et en dollars fictifs. La liste des mois est consultable. La médiane de tous les mois sert de repère.
+   - Moins de 5 épisodes : "information insuffisante", sans chiffre.
+   - Même mois pour le facteur et le portefeuille : aucun décalage, donc aucune prétention prédictive.
+3. **Persistance `regime` (reprend le cas 7 "et si ça dure ?").** Le canal renvoie à un épisode daté de la table (par exemple le cycle de hausses du taux directeur de mars 2022 à juillet 2023), calculé par `get_historical_episode`.
+
+Ordres de grandeur sur nos 60 mois (exploration ponctuelle, seuils provisoires, à recalculer par le code testé) : 10 mois de hausse d'au moins 0,25 point du taux à 2 ans (dont 8 en 2022 et 2023), 13 mois de hausse du USD/CAD d'au moins 1,5 %, 9 mois de baisse du bitcoin d'au moins 15 %.
+
+**Ce qu'on ne fait pas :** multiplier une sensibilité par une ampleur supposée. L'intensité choisit un seuil dans le passé, elle ne fabrique pas un chiffre futur.
+
+### Lecture par la gouvernance
+
+- La gouvernance compare les épisodes au seuil de perte tolérée du profil (nouvelle règle du catalogue, seuil hypothèse de l'équipe) : "la perte mensuelle a dépassé le seuil du profil k fois sur n".
+- Statut propre, "tension sous scénario", affiché dans une colonne séparée. Un scénario ne peut jamais produire un conflit ni modifier un statut de base : il est hypothétique.
+- L'exposition au canal reste jugée par les règles de base (plafonds par classe et par secteur).
+- En mode scénario, l'analyste ne propose aucune variante "pour se protéger" ou "pour en profiter". Les variantes restent liées à une idée de l'utilisateur.
+
+### Parcours dans la chaîne
+
+| Étape | Ce qui passe | Ce qui ne passe pas |
+| --- | --- | --- |
+| Interface | L'utilisateur choisit un scénario de la bibliothèque. Titre et résumé affichés tels quels dans un encadré "Scénario hypothétique, non vérifié" | Aucune recherche, aucune vérification |
+| Analyste | `scenario_id`. Il appelle `get_scenario_exposure` et `get_scenario_episodes` | Il ne passe jamais un canal de son cru : le code résout l'identifiant |
+| Registre | Preuves de type `scenario_exposure` (fait) et `scenario_episodes` (observation), avec facteur, seuil, période, n, limites rattachées | |
+| Dossier d'explication | Libellé généré par le code à partir des étiquettes ("hausse marquée des taux canadiens"), preuves, statut sous scénario, limites | Le titre et le résumé du scénario n'y entrent pas |
+| Explicateur | Un emplacement fixe "Sous ce scénario hypothétique", rédigé par renvois | Aucune conséquence hors registre, aucun nom d'entreprise hors dossier |
+| Validateur | Rejet du futur et du conditionnel de prévision ("va", "devrait", "probable"), des termes "profiter" et "se protéger", de tout chiffre hors registre. Exige la mention du nombre d'épisodes | |
+| Garde-fou | Sujets refusés et ancrage contre le dossier | |
+
+Plus tard (extension 6), une nouvelle collée par l'utilisateur suit le motif du texte libre du profil : l'analyste **propose** des canaux de la liste fermée, l'utilisateur confirme, et un canal non confirmé n'est jamais utilisé. Le texte collé passe le garde-fou en entrée, n'est vu que par l'analyste et n'entre jamais dans le dossier.
+
+### Limites affichées (texte fixe)
+
+- scénario hypothétique, non vérifié, écrit par l'équipe ;
+- canaux et table d'exposition : hypothèses de l'équipe ;
+- description de mois passés, pas une prévision : le passé ne dit pas ce qui se produirait ;
+- peu d'observations, concentrées dans un seul cycle (2022 et 2023 pour les hausses de taux) ;
+- d'autres événements ont eu lieu les mêmes mois, aucune causalité affirmée ;
+- pour `tech` et `crypto`, le facteur est lui-même un actif de l'univers.
+
+### Annonces planifiées : le complément
+
+| | Scénario hypothétique | Annonce planifiée |
+| --- | --- | --- |
+| Nature | Hypothèse tournée vers "et si" | Événements officiels datés du passé |
+| Fenêtre | Le mois | Le jour de l'annonce et les 5 jours ouvrables suivants |
+| Donnée à ajouter | Deux fichiers écrits par l'équipe | Calendrier saisi à la main depuis la source officielle |
+| Lien | | Deuxième type de preuve pour le canal `rates_ca` |
+
+**Ce que les annonces demandent en données :**
+
+- Notre série du taux directeur (V39079) change **le lendemain** de l'annonce : elle montre 20 changements, le premier le 2022-03-03. Les décisions de maintien n'y laissent aucune trace.
 - Il faut donc un fichier `data/external/scheduled_announcements.csv` : type d'annonce, date et heure d'annonce, période de référence, décision (hausse, baisse, maintien), valeur, URL, date d'extraction.
-- Étape 1 : décisions de taux de la Banque du Canada (8 par an, environ 40 sur la fenêtre, dont 20 changements visibles dans nos données). Saisie manuelle depuis le calendrier officiel, faisable en une heure.
-- Étape 2, si le temps le permet : publications de l'inflation. Il faut les **dates de publication** (Statistique Canada, BLS), pas seulement le mois de référence. Les valeurs FRED sont révisées : pour rester fidèle, il faudrait les premières publications (ALFRED) ou afficher la limite.
+- Étape 1 : décisions de taux de la Banque du Canada (8 par an, environ 40 sur la fenêtre). Saisie manuelle depuis le calendrier officiel.
+- Étape 2, si le temps le permet : publications de l'inflation, avec les **dates de publication** et la limite sur les valeurs révisées.
 
-**Ce que l'outil calcule :** le rendement du portefeuille fictif le jour de l'annonce et sur les 5 jours ouvrables suivants, pour toutes les annonces passées du même type, avec la médiane, l'étendue et le nombre d'observations.
-
-**Limites affichées :** peu d'observations, d'autres événements le même jour, aucune causalité affirmée, description du passé et non prévision.
+**Ce que l'outil calcule :** le rendement du portefeuille fictif le jour de l'annonce et sur les 5 jours ouvrables suivants, pour toutes les annonces passées du même type, avec la médiane, l'étendue et le nombre d'observations. Mêmes limites : peu d'observations, autres événements le même jour, aucune causalité, description du passé.
 
 ## Rejeu à une date passée : discipline requise
 
@@ -152,6 +240,7 @@ Le rejeu (idée d'Ibrahima) est une extension. Sa discipline est posée dès le 
 | `adj_close` rétro-ajusté depuis 2026 | En rejeu, n'utiliser que des rendements, jamais de niveaux de prix. Les montants viennent du capital fictif |
 | Biais du survivant | L'univers a été choisi en 2026. Le rejeu ne montre pas "ce qu'on aurait vu à l'époque" : limite affichée en permanence |
 | Preuves ESG et annonces | Filtrées par date de publication antérieure à `as_of` |
+| Scénarios hypothétiques | Épisodes limités aux mois terminés avant `as_of`. Seuils lus dans la table, jamais recalculés sur des données postérieures |
 | Secteurs et libellés | Ce sont ceux d'aujourd'hui : limite affichée |
 | Les modèles de langage connaissent la suite | Les outils sont à l'aveugle, pas les modèles. L'isolation de l'explicateur n'y change rien. En rejeu, explication à gabarit fixe, et limite dite à l'écran |
 
@@ -166,9 +255,9 @@ Test obligatoire : pour une date donnée, le résultat d'un outil ne change pas 
 | 3. Fausse diversification | MVP, par corrélations et secteurs. Chevauchement réel des FNB reporté |
 | 4. Contraintes ESG | MVP, version minimale |
 | 5. Changement de profil | MVP (curseurs) |
-| 6. Impact d'une nouvelle | Remplacé par les annonces planifiées (extension 1) |
-| 7. Scénarios "et si ça dure ?" | Extension 3 |
-| 8. "Comment en profiter ?" | Pas une fonction. Requête refusée dans les tests du garde-fou |
+| 6. Impact d'une nouvelle | Extension 1, recadrée par Ibrahima : scénario hypothétique fourni par l'équipe, canaux étiquetés. Nouvelle collée par l'utilisateur avec canaux confirmés : extension 6. Annonces planifiées : extension 3 |
+| 7. Scénarios "et si ça dure ?" | Fusionné dans l'extension 1 : persistance `regime`, qui renvoie à un épisode daté |
+| 8. "Comment en profiter ?" | Pas une fonction. Requête refusée dans les tests du garde-fou, y compris posée après un scénario. Aucune variante proposée en mode scénario |
 | 9. Rejeu | Extension 2 |
 | 10. Définir le profil | MVP (cases, puis texte libre confirmé) |
 | 11. Niveau d'explication | MVP |
@@ -223,6 +312,7 @@ Conditions de l'adoption :
 - **L'explicateur ne voit que le dossier d'explication** : niveau, règles du profil fictif, idée normalisée, preuves (source, période, devise, transformation, valeur, qualificatif), statuts et marges, variantes, facteurs classés, limites, glossaire. Le texte libre de l'utilisateur n'y entre jamais.
 - **L'explicateur ne juge pas** : il ne peut ni changer un statut, ni ajouter une recommandation, ni choisir les limites.
 - **Le repli à gabarit est construit en premier.** Il sert de filet, de référence de comparaison et de mode hors ligne.
+- **Un scénario n'entre dans le dossier que par ses étiquettes.** L'explicateur voit le libellé du canal généré par le code, les preuves et le statut sous scénario. Il ne voit ni le titre, ni le résumé, ni un texte collé.
 
 Ce que l'isolation apporte : pas de contamination par le contexte, pas d'injection par le texte libre, un contrôle d'ancrage applicable (source = dossier), un explicateur testable seul, des chiffres immobiles à la bascule de niveau.
 
@@ -261,7 +351,10 @@ Tous déterministes, tous avec `as_of`, aucun outil de passage d'ordres. L'agent
 | `get_esg_evidence` | Preuves datées, ou "aucune preuve disponible" | MVP |
 | `check_governance` | Statut et marge par règle | MVP |
 | `submit_analysis` | Clôt l'analyse : idée comprise, variantes avec motif en code fermé, preuves à mettre en avant, demandes non prises en charge | MVP |
-| `get_announcement_reactions` | Réaction du portefeuille aux annonces passées d'un même type | Extension 1 |
+| `get_scenario_exposure` | Pour un `scenario_id` : canaux, actifs exposés, part du portefeuille fictif en % et en dollars, écart entre exposition déclarée et sensibilité mesurée | Extension 1 |
+| `get_scenario_episodes` | Pour un `scenario_id` : mois passés où le facteur a franchi le seuil, rendement du portefeuille fictif (n, médiane, étendue, mois négatifs), ou "information insuffisante" | Extension 1 |
+| `get_announcement_reactions` | Réaction du portefeuille aux annonces passées d'un même type | Extension 3 |
+| `propose_scenario_channels` | Canaux de la liste fermée proposés à partir d'un texte collé, à confirmer par l'utilisateur | Extension 6 |
 
 ### Trace visible
 
@@ -269,8 +362,8 @@ Six étapes, chacune avec une étiquette "agent" ou "code" :
 
 | Étape | Acteur | Ce qui est affiché |
 | --- | --- | --- |
-| 1. Analyse | Agent analyste (Bedrock) | Idée comprise, règles confirmées, outils appelés (nom, paramètres, numéro de preuve), variantes proposées, modèle, nombre de tours |
-| 2. Gouvernance | Code | Statut, seuil et marge par règle |
+| 1. Analyse | Agent analyste (Bedrock) | Idée comprise, règles confirmées, scénario choisi (identifiant, canaux, origine : équipe ou confirmé par l'utilisateur), outils appelés (nom, paramètres, numéro de preuve), variantes proposées, modèle, nombre de tours |
+| 2. Gouvernance | Code | Statut, seuil et marge par règle. Colonne séparée "sous scénario" |
 | 3. Dossier | Code | Preuves retenues, ordre des facteurs, limites obligatoires. Bouton "Ce que l'explicateur a vu" |
 | 4. Explication | Agent explicateur (Bedrock) | Niveau, modèle, essai 1 ou 2, texte lu dans le cache ou généré |
 | 5. Validation | Code | Références vérifiées, motifs de rejet, repli utilisé ou non |
@@ -282,6 +375,9 @@ Les deux agents sont visuellement distincts et la frontière est lisible : l'ana
 
 - seuils par profil, réglables par curseurs ;
 - portefeuilles de départ, fictifs et modifiables ;
+- scénarios hypothétiques : texte, canaux, direction et intensité choisis par l'équipe ;
+- table canal vers actifs et seuils par intensité : hypothèses de l'équipe, avec la sensibilité mesurée en regard ;
+- épisodes comparables : mois civils, poids actuels tenus constants ;
 - devise de base : CAD ;
 - alignement sur les jours ouvrables communs, crypto ramenée à ce calendrier, taux de change reporté en avant ;
 - limites : biais du survivant, fenêtre de 5 ans, un seul épisode de baisse marquée (2022), volatilité comme indicateur parmi d'autres.
@@ -292,7 +388,12 @@ Les deux agents sont visuellement distincts et la frontière est lisible : l'ana
 | --- | --- | --- |
 | `data/external/investor_profiles.json` | Les trois personas au format profil, portefeuilles fictifs | MVP |
 | `data/external/esg_evidence.csv` | Une ligne par affirmation : URL, date de publication, date d'extraction. Commencer par les titres des scénarios de démo | MVP |
-| `data/external/scheduled_announcements.csv` | Calendrier des annonces (voir plus haut) | Extension 1 |
+| `data/external/hypothetical_scenarios.json` | 4 à 6 scénarios fictifs écrits par l'équipe : identifiant, titre, résumé, canaux (direction, intensité), persistance, auteur, date de rédaction | Extension 1 |
+| `data/external/scenario_channels.json` | Liste fermée des canaux : facteur observable, seuils par intensité, règle de sélection des actifs, épisode de régime, justification | Extension 1 (structure posée au socle) |
+| `data/external/scheduled_announcements.csv` | Calendrier des annonces (voir plus haut) | Extension 3 |
+| `data/external/market_drivers.csv` | Prix du pétrole (série publique, conditions à vérifier), produit par un script | Extension 5 |
+
+Entrées de `sources.md` pour les deux fichiers de scénarios : source "rédigé par l'équipe, contenu fictif", pas d'URL, date de rédaction, traitement "aucun", limites "hypothèses non vérifiées, choisies en connaissant l'historique", redistribution permise (contenu original). Aucun texte de presse n'y est copié.
 
 Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redistribution à vérifier avant tout commit. L'absence de preuve s'affiche "information manquante", jamais "conforme".
 
@@ -332,7 +433,7 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
   - contrôle et preuves : `governance.py`, `evidence.py` (registre, catalogue de limites) ;
   - explication : `explanation_brief.py` (dossier, facteurs classés, glossaire), `explanation_validator.py`, `explanation_fallback.py` (gabarits par niveau) ;
   - agents : `agent_tools.py`, `analyst_agent.py`, `explainer_agent.py`, `analysis_pipeline.py` (enchaînement des six étapes, cache par niveau), `bedrock_client.py` (Converse, garde-fou, nouvelles tentatives), `prompts/` (un prompt par agent, versionné) ;
-  - extension : `scheduled_events.py`.
+  - extensions : `scenarios.py` (bibliothèque, canaux, exposition, épisodes comparables), `scheduled_events.py`.
 - `app/` : interface. Nouveau dossier racine, à valider (il modifie la règle n°5).
 - `scripts/` : `build_processed.py`, `setup_guardrail.py`, `run_scenarios.py`.
 - `tests/` : un `test_<module>.py` par module.
@@ -356,11 +457,12 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 
 ### Extensions, dans l'ordre
 
-1. Annonces planifiées : décisions de taux de la Banque du Canada.
+1. Scénarios hypothétiques fournis par l'équipe (recadrage d'Ibrahima) : trois canaux (`rates_ca`, `usd_cad`, `crypto`), 4 à 6 scénarios, exposition et épisodes comparables, persistance `regime`. Durée bornée : une journée.
 2. Rejeu à une date passée, puis révélation de la suite.
-3. Scénarios "choc temporaire ou régime prolongé" en dollars fictifs.
+3. Annonces planifiées : décisions de taux de la Banque du Canada, comme deuxième preuve du canal `rates_ca`.
 4. Hébergement sur AWS, puis outils sur Lambda.
-5. Publications de l'inflation, chevauchement réel des FNB.
+5. Canaux `tech`, `equity_market` et `oil`, publications de l'inflation, chevauchement réel des FNB.
+6. Nouvelle collée par l'utilisateur, canaux proposés puis confirmés.
 
 ### Scènes de démo (vidéo de 5 minutes)
 
@@ -370,19 +472,21 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 | 2 | Même demande pour Amira : autre verdict, même mécanisme | MVP |
 | 3 | Bascule novice, intermédiaire, pro : seul l'explicateur est relancé, le texte change, les chiffres restent. La trace montre "ce que l'explicateur a vu" | MVP |
 | 4 | Clic sur un chiffre : calcul, source, date, limites. Puis une requête refusée par le garde-fou, et le score d'ancrage du texte | MVP |
-| 5 | Mateo et une annonce de la Banque du Canada | Extension 1 |
+| 5 | Scénario hypothétique "hausse marquée des taux canadiens" appliqué à Robert puis à Amira. Encadré "hypothétique, non vérifié", exposition (fait), mois comparables avec leur nombre (observation), lecture sous scénario. Puis "comment en profiter ?" : refus du garde-fou | Extension 1 |
+
+Intérêt de la scène 5 : le portefeuille "prudent" de Robert est probablement le plus exposé aux taux, ce qui illustre "la volatilité est un indicateur parmi d'autres". À confirmer une fois les portefeuilles fictifs fixés.
 
 ## Feuille de route
 
 1. **Décisions.** Répondre aux questions ouvertes, vérifier le compte AWS et les modèles actifs, obtenir l'accord d'un mentor pour les données.
-2. **Socle de calcul.** Chargement avec `as_of`, alignement, devises, métriques, simulation avant/après, tests.
-3. **Profils et gouvernance.** Trois personas, catalogue de règles, statuts, marges, tests.
+2. **Socle de calcul.** Chargement avec `as_of`, alignement, devises, métriques, simulation avant/après, rendements mensuels du portefeuille en CAD (réutilisés par les scénarios), tests.
+3. **Profils et gouvernance.** Trois personas, catalogue de règles (dont le seuil de perte tolérée), statuts, marges, tests.
 4. **Première démo de bout en bout.** Robert et TSLA, dans cet ordre : dossier d'explication et repli à gabarit (la page fonctionne sans modèle), validateur et ses tests, agent analyste avec `submit_analysis`, puis agent explicateur avec un nouvel essai et le cache. Page avec avertissement.
 5. **Interface.** Cases du profil, sélecteurs de l'idée, radiographie, deux profils côte à côte, panneau de preuves, niveaux d'explication.
 6. **AWS.** Garde-fou testé (requêtes permises et refusées), contrôle d'ancrage en mode détection puis seuils calibrés sur le jeu de scénarios fixes, interventions et scores visibles dans la trace, traces sur S3.
 7. **ESG minimal et fausse diversification.** Scénarios de Mateo et d'Amira.
 8. **Gel du MVP et enregistrement d'une première vidéo.** Avant toute extension. Si l'explicateur ne passe pas le jeu de scénarios fixes à cette date, livrer le repli à gabarit pour deux niveaux et garder l'explicateur pour le troisième.
-9. **Extensions**, dans l'ordre ci-dessus, selon le temps restant.
+9. **Extensions**, dans l'ordre ci-dessus, selon le temps restant. Pour l'extension 1, dans cet ordre : table des canaux et ses tests, exposition, épisodes comparables avec le test `as_of`, lecture par la gouvernance, emplacement et gabarit de repli, deux outils de l'analyste, règles du validateur, tests du garde-fou, encadré de l'interface, puis la scène 5.
 10. **Livrables.** README, documentation technique, one pager, vidéo finale.
 
 ## Risques
@@ -403,6 +507,16 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 - **Montants en dollars lus comme une prévision :** toujours écrire "perte historique observée sur telle période, appliquée au capital fictif". Formule portée par le gabarit du registre, pas par le modèle.
 - **Analogies du niveau novice :** tirées du glossaire, sans chiffre, sinon rejetées par le validateur.
 - **Rejeu :** l'explicateur connaît la suite, comme tout modèle. En rejeu, repli à gabarit fixe.
+- **Scénario lu comme une prévision :** phrase encadrée par le gabarit ("dans n mois passés où ..."), futur et conditionnel de prévision rejetés par le validateur, repère "tous les mois" affiché, limite fixe. Pas de choc multiplié par une ampleur.
+- **Scénario pris pour une vraie nouvelle :** on écrit "scénario hypothétique", jamais "nouvelle" ou "actualité". Encadré distinct des faits, aucune entreprise ni personne réelle, aucune date réelle.
+- **Connaissances du modèle sur le sujet :** l'explicateur ne reçoit que le libellé du canal. Relecture du jeu de scénarios fixes.
+- **Dérive "comment en profiter ?" ou "comment se protéger ?" :** aucune variante en mode scénario, termes rejetés par le validateur, requête refusée testée au garde-fou.
+- **Sujet refusé "prédiction" trop large :** il peut bloquer une demande de scénario légitime. Tester des paires permises et refusées ("que montrent les mois passés de hausse des taux ?" contre "que va faire mon portefeuille ?") et ajuster la définition.
+- **Peu d'épisodes, groupés dans un cycle :** n affiché, plancher de 5, liste des mois consultable, résultat au seuil voisin montré comme test de sensibilité.
+- **Table des canaux contestable :** présentée comme hypothèse, justification par canal, sensibilité mesurée en regard, écarts signalés.
+- **Scénarios choisis en connaissant le passé :** limite affichée. Ne pas choisir les scénarios pour leur effet spectaculaire : couvrir les deux directions.
+- **Facteur circulaire :** pour `tech` et `crypto`, le facteur est un actif de l'univers. Limite affichée.
+- **Dérive du périmètre par les scénarios :** trois canaux et une journée. Les autres canaux attendent l'extension 5.
 
 ## Questions ouvertes
 
@@ -417,5 +531,9 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 9. Ibrahima : l'agent explicateur est adopté sous conditions (dossier seul, pas d'outil, pas de verdict, limites affichées par le code, emplacements fixes). Ces conditions te conviennent-elles ? Avec un analyste et un explicateur, reste-t-il un rôle de ta proposition à quatre agents qui ne serait couvert ni par un agent ni par le code ?
 10. Samer et Ibrahima : la combinaison "cases d'abord, texte libre confirmé ensuite" convient-elle ?
 11. Trois niveaux d'explication dès le MVP, ou deux (novice et pro) pour commencer ? Chaque niveau coûte un appel explicateur, un contrôle de garde-fou, un gabarit de repli et une entrée de glossaire. Qui rédige le glossaire et les textes fixes des limites ?
-12. Annonces planifiées : qui saisit le calendrier de la Banque du Canada, et ses conditions d'utilisation permettent-elles de le versionner ?
-13. Accepte-t-on d'écarter les nouvelles libres et le cas "comment en profiter ?" ?
+12. Ibrahima : le recadrage des nouvelles est adopté sous conditions (canaux macro ou sectoriels seulement, aucune entreprise réelle, pas de choc multiplié par une ampleur, l'explicateur ne voit que le libellé du canal). Ces conditions te conviennent-elles ? Qui rédige les 4 à 6 scénarios et la table des canaux ?
+13. Scénarios : extension 1 comme proposé, ou tranche minimale (exposition seule) dans le MVP ? Trois canaux pour commencer : `rates_ca`, `usd_cad`, `crypto` ?
+14. Accepte-t-on la règle "seuil de perte tolérée" dans le catalogue, avec un statut plafonné à "tension sous scénario" ? Quels seuils par profil ?
+15. Seuils d'intensité : valeurs fixes par facteur (par exemple 0,25 et 0,40 point pour le taux à 2 ans), ou quantiles calculés ? Les valeurs fixes sont plus simples à expliquer.
+16. Annonces planifiées (extension 3) : qui saisit le calendrier de la Banque du Canada, et ses conditions d'utilisation permettent-elles de le versionner ?
+17. Accepte-t-on de reporter la nouvelle collée par l'utilisateur en extension 6 et d'écarter le cas "comment en profiter ?" ?
