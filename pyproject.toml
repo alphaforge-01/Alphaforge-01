@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+# Rend le package src/alphaforge importable par les tests sans installation
+pythonpath = ["src"]
+testpaths = ["tests"]
