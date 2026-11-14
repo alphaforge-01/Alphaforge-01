@@ -96,6 +96,46 @@ AWS integration is 15% of the grade: prefer AWS services (e.g. Bedrock for agent
 - Data rules: traceability (source, date, currency, processing), temporal consistency (observation date vs publication date, no look-ahead), comparability (dividends, splits, selection bias, missing data, CAD/USD), respect licenses, no real client accounts or confidential banking data (profiles and portfolios can be fully fictional).
 - The starter dataset is optional; no asset or asset class is mandatory. Every added source must document relevance, origin, date, processing, limits and terms of use (see `data/external/sources.md`).
 
+## Exigences du projet et décisions
+
+- Le prototype final doit intégrer AWS de façon réelle et démontrable dans sa chaîne de bout en bout. Cette intégration est une condition d'admissibilité, pas une raison d'ajouter des services sans utilité pour le cas d'usage.
+- Aucun concept de produit, nombre d'agents ou architecture infonuagique n'est considéré comme choisi avant une décision explicite de l'équipe. Streamlit, Bedrock, Strands, AgentCore, SageMaker, S3, Lambda, Athena, Glue et Quick sont des options présentées par l'atelier, pas des instructions de déploiement.
+- Rester dans le cadre d'une simulation éducative: aucune transaction réelle, connexion à un courtier, donnée bancaire ou client confidentielle, ni conseil financier personnalisé. Ne jamais fournir à un agent un outil de passage d'ordres.
+- Calculer rendements, volatilité, perte maximale, corrélations et ratios avec du code déterministe testé. Un modèle de langage peut expliquer les résultats sourcés, mais ne doit ni inventer ni remplacer les calculs.
+- Relier chaque résultat à des sources datées, transformations, hypothèses, résultats d'outils observables, incertitudes et limites. Ne pas exposer le raisonnement interne privé du modèle. Le README du projet doit expliquer les dépendances, sources, paramètres et étapes de reproduction.
+
+## Environnement et opérations AWS
+
+### Accès au compte
+
+- L'équipe partage un seul compte Workshop Studio temporaire. Utiliser `us-east-1`, coordonner la création de ressources et considérer les quotas comme partagés.
+- L'AWS CLI locale est déjà installée. Ne pas la réinstaller et ne pas créer de clé IAM permanente. S'authentifier avec CloudShell, déjà authentifié, ou avec l'ensemble complet d'identifiants temporaires de Workshop Studio: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` et `AWS_SESSION_TOKEN`.
+- Placer les identifiants temporaires uniquement dans un terminal dédié, avec `AWS_REGION=us-east-1`. Exécuter la CLI et les processus SDK depuis ce même environnement. Ne pas utiliser `aws login` pour le compte de l'atelier, car il pourrait sélectionner un autre compte.
+- Avant toute opération AWS, exécuter `aws sts get-caller-identity` et `aws configure list`, puis vérifier le compte et la région. En cas de `ExpiredToken`, `ExpiredTokenException` ou `InvalidClientTokenId`, récupérer un nouvel ensemble des trois valeurs temporaires.
+- Ne pas créer, modifier, exposer ou supprimer une ressource simplement parce qu'un exemple de l'atelier le fait. Ne modifier AWS que pour une implémentation choisie par l'équipe et une tâche demandée par l'utilisateur.
+
+### Persistance et secrets
+
+- Considérer le compte AWS, le stockage CloudShell, les espaces SageMaker, les URL hébergées et le dossier Kiro partagé `/workshop` comme jetables. Garder le code, les prompts, la configuration et les artefacts reproductibles autorisés dans le dépôt. Une copie présente uniquement dans AWS ne doit jamais être la source de vérité.
+- Ne jamais placer d'identifiants AWS, clés API, contenu de `.env` ou URL Kiro contenant un jeton dans le code, Git, les prompts d'un assistant, les journaux, les captures ou la documentation. Si un secret est exposé, cesser de l'utiliser et avertir un mentor ou un organisateur.
+- Utiliser uniquement des données publiques ou fictives. Avant de téléverser des CSV financiers ou rapports publics dans le compte de l'atelier, confirmer avec un mentor que ces documents sont permis. Respecter les licences; si la redistribution est interdite, versionner le code de récupération et la provenance plutôt que le jeu complet.
+
+### Sécurité par défaut
+
+- Appliquer le moindre privilège à chaque rôle IAM. Distinguer le rôle de console du rôle d'exécution d'un notebook ou d'une application. Ne pas attacher une politique large comme `AmazonBedrockFullAccess` si des permissions d'inférence suffisent.
+- Garder les quatre options S3 Block Public Access activées. Ne créer aucun bucket public ni ressource EC2, RDS ou EMR exposée publiquement.
+- Préférer l'authentification IAM pour les URL Lambda. Utiliser `auth-type NONE` seulement si une démonstration publique approuvée l'exige, puis supprimer l'URL lorsqu'elle ne sert plus.
+- Pour AgentCore Gateway, définir explicitement `--authorizer-type AWS_IAM`. Lier les serveurs MCP locaux à `127.0.0.1`. Comme `agentcore dev` écoute sur `0.0.0.0:8080`, l'arrêter dès qu'il n'est plus utilisé.
+
+### Implémentation Bedrock et agents
+
+- Interroger le compte pour connaître les modèles `ACTIVE` avant de choisir un identifiant. La disponibilité, les préfixes de profils d'inférence comme `us.` ou `global.`, l'acheminement régional et les sorties structurées varient selon le modèle et le compte. Ne pas coder autour d'un exemple non vérifié de l'atelier.
+- Préférer l'API Converse de Bedrock pour les appels applicatifs. Le streaming nécessite un SDK. Parcourir tous les blocs de contenu contenant `text` au lieu de supposer que `content[0]` contient la réponse.
+- Commencer avec un modèle peu coûteux, borner les tours et appels d'outils, puis gérer `ThrottlingException` avec un délai exponentiel. Conserver des traces utiles sans secrets, car les quotas sont partagés et les échecs doivent rester explicables.
+- Donner aux outils des schémas précis et documenter leurs erreurs, sources, dates et devises. Avec Bedrock Guardrails, tester les requêtes permises et refusées. Les garde-fous complètent les contrôles applicatifs, mais ne prouvent pas l'exactitude factuelle.
+- Pour le RAG, valider les passages retrouvés et leurs dates de publication, puis resynchroniser la base de connaissances après tout changement de source. La recherche fournit des preuves, elle ne calcule pas les métriques financières. Ne jamais introduire une publication future dans un scénario historique antérieur.
+- Choisir le plus petit ensemble de services adapté au cas d'usage. Pour quelques mégaoctets de CSV, `pandas` local peut être plus approprié que Glue ou Athena. Utiliser S3, SageMaker, Lambda, AgentCore ou un autre service géré seulement si son rôle est concret et démontrable.
+
 ## Commands
 
 Run everything from the project root. The only code so far is `scripts/build_dataset.py`. It downloads everything again from the network and overwrites all generated files in `data/raw/`. On Windows the venv binaries are under `.venv/Scripts/`:
