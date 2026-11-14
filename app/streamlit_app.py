@@ -8,6 +8,7 @@ contrat par app/data_source.py et les affiche (docs/ui_spec.md).
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -26,10 +27,14 @@ import ui_texts as texts  # noqa: E402
 from components import banners, profile_panel  # noqa: E402
 from formatting import format_horizon  # noqa: E402
 
+CUSTOM_ID = "custom"
+
 SESSION_DEFAULTS: Dict[str, Any] = {
     "profile_id": None,
     "level": None,
     "idea": None,
+    # Persona "custom" construit par le formulaire, ou None.
+    "custom_persona": None,
 }
 
 
@@ -37,7 +42,7 @@ def init_state() -> None:
     for key, value in SESSION_DEFAULTS.items():
         st.session_state.setdefault(key, value)
     st.session_state.setdefault("mode", data_source.resolve_mode(os.environ.get("ALPHAFORGE_MODE")))
-    # Résultats déjà obtenus : (mode, profile_id, idée) -> AnalysisResult.
+    # Résultats déjà obtenus : (mode, profil, portefeuille, idée) -> AnalysisResult.
     st.session_state.setdefault("analysis", {})
 
 
@@ -47,7 +52,28 @@ def select_profile(profile_id: str, personas: Dict[str, Any]) -> None:
     st.session_state.level = personas[profile_id]["profile"]["default_level"]
 
 
-def render_sidebar(personas: Optional[Dict[str, Any]]) -> None:
+def use_custom_profile(persona: Dict[str, Any]) -> None:
+    """Rappel du bouton du formulaire : active le profil construit."""
+    st.session_state.custom_persona = persona
+    st.session_state.profile_id = CUSTOM_ID
+    st.session_state.level = persona["profile"]["default_level"]
+
+
+def available_profiles(personas: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Personas du mode courant, plus le profil construit s'il existe."""
+    available = dict(personas or {})
+    if st.session_state.custom_persona is not None:
+        available[CUSTOM_ID] = st.session_state.custom_persona
+    return available
+
+
+def display_name(profile: Dict[str, Any]) -> str:
+    if profile["profile_id"] == CUSTOM_ID:
+        return texts.CUSTOM_DISPLAY_NAME
+    return profile["display_name"]
+
+
+def render_sidebar(personas: Dict[str, Any]) -> None:
     with st.sidebar:
         st.header(texts.SIDEBAR_TITLE)
         st.radio(
@@ -58,10 +84,10 @@ def render_sidebar(personas: Optional[Dict[str, Any]]) -> None:
         )
         st.subheader(texts.SIDEBAR_ACTIVE_PROFILE)
         profile_id = st.session_state.profile_id
-        if personas and profile_id in personas:
+        if profile_id in personas:
             profile = personas[profile_id]["profile"]
             st.markdown(
-                f"**{profile['display_name']}** ({texts.FICTIONAL_BADGE.lower()})  \n"
+                f"**{display_name(profile)}** ({texts.FICTIONAL_BADGE.lower()})  \n"
                 f"{texts.PERSONA_RISK} : {texts.RISK_LABELS[profile['risk_tolerance']]}  \n"
                 f"{texts.PERSONA_HORIZON} : "
                 f"{format_horizon(profile['horizon_years_min'], profile['horizon_years_max'])}  \n"
@@ -73,8 +99,9 @@ def render_sidebar(personas: Optional[Dict[str, Any]]) -> None:
         st.caption(texts.DISCLAIMER)
 
 
-def idea_key(idea: Dict[str, Any]) -> tuple:
-    return (idea["ticker"], idea["target_weight"], idea["funding_source"], idea.get("funding_ticker"))
+def fingerprint(obj: Any) -> str:
+    """Clé stable d'un objet JSON : un profil reconstruit avec d'autres règles change de clé."""
+    return json.dumps(obj, sort_keys=True, ensure_ascii=False)
 
 
 def load_analysis(mode: str, persona: Dict[str, Any], idea: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -83,7 +110,8 @@ def load_analysis(mode: str, persona: Dict[str, Any], idea: Dict[str, Any]) -> O
     Une donnée absente affiche un message d'information, une autre erreur un
     message d'erreur : la page ne plante jamais (US-15).
     """
-    cache_key = (mode, persona["profile"]["profile_id"], idea_key(idea))
+    cache_key = (mode, fingerprint(persona["profile"]), fingerprint(persona["portfolio"]),
+                 fingerprint(idea))
     cache = st.session_state.analysis
     if cache_key in cache:
         return cache[cache_key]
@@ -109,15 +137,22 @@ def render_analysis_tab(mode: str, personas: Optional[Dict[str, Any]]) -> Option
         st.session_state.profile_id,
         on_select=lambda profile_id: select_profile(profile_id, personas),
     )
+    is_custom = st.session_state.profile_id == CUSTOM_ID
+    with st.expander(texts.CUSTOM_EXPANDER, expanded=is_custom):
+        profile_panel.render_custom_profile_form(personas, is_custom, on_use=use_custom_profile)
+
+    profiles = available_profiles(personas)
     profile_id = st.session_state.profile_id
-    if profile_id not in personas:
+    if profile_id not in profiles:
         st.info(texts.NO_PROFILE_SELECTED)
         return None
+    if is_custom:
+        st.success(texts.CUSTOM_ACTIVE)
 
     # Sprint 1 : l'idée de démonstration sert à lire la fixture. Sélecteurs en D4.
     if st.session_state.idea is None:
         st.session_state.idea = data_source.get_fixture_idea()
-    result = load_analysis(mode, personas[profile_id], st.session_state.idea)
+    result = load_analysis(mode, profiles[profile_id], st.session_state.idea)
 
     st.header(texts.SECTION_XRAY)
     if result is not None:
@@ -167,7 +202,7 @@ def main() -> None:
         st.caption(texts.COMING_SOON.format(task="D7"))
     with tab_sources:
         st.caption(texts.COMING_SOON.format(task="D8"))
-    render_sidebar(personas)
+    render_sidebar(available_profiles(personas))
 
     if mode == "fixture" or (result is not None and result.get("is_fixture")):
         with fixture_banner_slot.container():

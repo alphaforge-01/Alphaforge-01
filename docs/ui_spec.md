@@ -118,6 +118,7 @@ Les personas et l'univers sont mis en cache avec `st.cache_data`.
 
 - [x] D1. Squelette : environnement Python 3.11, `streamlit_app.py`, onglets, avertissement, bandeau de données d'essai, mode affiché, `data_source.py` en mode `fixture`, `ui_texts.py`, `formatting.py` (US-12, US-15)
 - [x] D2a. Cartes des personas, badge "profil fictif", niveau prérempli (US-01). En mode `fixture` : Robert et Amira. En modes `offline` et `bedrock` : les trois personas avec âge et métier, par `load_personas` (fusionné dans la PR n° 8)
+- [x] D2b. Formulaire de profil construit (US-02), avancé du sprint 2. Contrôle relancé à chaque changement : erreurs, contradictions et points d'information de `check_answers` affichés tout de suite. Règles et seuils produits par `build_profile_from_answers`, chacun étiqueté "Hypothèse de l'équipe". Deux choix du flux D, à confirmer : la liste fermée des objectifs (`OBJECTIVE_OPTIONS` dans `ui_texts.py`, en attendant celle du flux B) et le portefeuille de départ, choisi parmi ceux des personas
 - [ ] D3. Radiographie : cartes de métriques par le registre, période, poids par secteur et par classe, statut par règle (US-03)
 - [ ] D4a. Idée "25 % dans TSLA" en un clic, avant/après, règles triées par gravité, contrefactuel, marges (US-05, US-06, US-07)
 - [ ] J2. Brancher `offline` si C3 est fusionné. PR `feat(ui): ...` relue et fusionnée
@@ -126,7 +127,6 @@ Terminé quand : la scène 1 se joue en mode `fixture` sans erreur, l'avertissem
 
 ### Sprint 2 : dimanche (S3 et S4), jusqu'au gel (J5, 18 h 30)
 
-- [ ] D2b. Formulaire de profil construit (US-02)
 - [ ] D4b. Sélecteurs complets, variantes, changement de profil qui garde l'idée (US-04, US-08, US-09)
 - [ ] D5. Explication : bascule, cache, preuves citées, limites, bouton "Vérifier" partout (US-10, US-11, US-12)
 - [ ] D6. Trace à six étapes, dossier transmis (US-13)

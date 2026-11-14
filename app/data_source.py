@@ -10,9 +10,10 @@ calcule rien : il lit des fixtures ou appelle les fonctions des autres flux.
 """
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import ui_texts as texts
 
@@ -78,6 +79,33 @@ def get_personas(mode: str) -> Dict[str, Dict[str, Any]]:
     except ImportError as exc:
         raise DataUnavailable(texts.MSG_PROFILES_NOT_READY) from exc
     return load_personas()
+
+
+def check_profile_answers(answers: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Problèmes {code, severity, fields, message_fr} du profil construit (flux B)."""
+    try:
+        from alphaforge.profiles import check_answers
+    except ImportError as exc:
+        raise DataUnavailable(texts.MSG_PROFILE_BUILDER_NOT_READY) from exc
+    return check_answers(answers)
+
+
+def build_custom_persona(answers: Dict[str, Any], portfolio: Dict[str, Any]) -> Dict[str, Any]:
+    """Persona "custom" : profil construit par le flux B et portefeuille fictif choisi.
+
+    Lève ProfileValidationError (flux B) si une réponse est invalide.
+    """
+    try:
+        from alphaforge.profiles import build_profile_from_answers
+    except ImportError as exc:
+        raise DataUnavailable(texts.MSG_PROFILE_BUILDER_NOT_READY) from exc
+    return {
+        "profile": build_profile_from_answers(answers),
+        "portfolio": copy.deepcopy(portfolio),
+        "age": None,
+        "occupation_fr": None,
+        "summary_fr": None,
+    }
 
 
 def get_analysis(mode: str, profile: Dict[str, Any], portfolio: Dict[str, Any],

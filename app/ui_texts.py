@@ -80,6 +80,51 @@ LEVEL_LABELS = {
     "pro": "Pro",
 }
 
+CUSTOM_EXPANDER = "Construire un profil fictif (cases et curseurs)"
+CUSTOM_REMINDER = (
+    "Profil fictif : aucune donnée personnelle n'est demandée ni conservée "
+    "(ni nom, ni revenu, ni compte)."
+)
+CUSTOM_OBJECTIVE = "Objectif"
+CUSTOM_HORIZON = "Horizon de placement (années)"
+CUSTOM_RISK = "Tolérance au risque"
+CUSTOM_EXPERIENCE = "Expérience"
+CUSTOM_ESG = "Préférence ESG"
+CUSTOM_CRYPTO = "Cryptoactifs permis"
+CUSTOM_OWN_CAP = "Fixer mon propre plafond par titre"
+CUSTOM_OWN_CAP_HELP = "Sans plafond choisi, l'hypothèse de l'équipe pour la tolérance au risque s'applique."
+CUSTOM_CAP = "Plafond par titre (%)"
+CUSTOM_CAPITAL = "Capital fictif (CAD)"
+CUSTOM_CAPITAL_HELP = "Montant inventé, utilisé seulement pour exprimer les résultats en dollars."
+CUSTOM_PORTFOLIO = "Portefeuille fictif de départ"
+CUSTOM_RULES_TITLE = "Règles produites par vos réponses"
+CUSTOM_RULES_NOTICE = (
+    "Chaque seuil est une hypothèse de l'équipe, réglable, et non une norme ni un conseil."
+)
+CUSTOM_USE = "Utiliser ce profil fictif"
+CUSTOM_UPDATE = "Mettre à jour le profil construit"
+CUSTOM_ACTIVE = "Profil construit actif."
+CUSTOM_DISPLAY_NAME = "Profil construit"
+
+# Liste fermée : pas de texte libre dans le MVP (US-02). À remplacer par la
+# liste du flux B si elle est fournie.
+OBJECTIVE_OPTIONS = (
+    "Préserver le capital",
+    "Préserver le capital avec un peu de croissance",
+    "Croissance équilibrée",
+    "Croissance à long terme",
+)
+
+RULE_COLUMN = "Règle"
+RULE_TENSION = "Tension"
+RULE_CONFLICT = "Conflit"
+RULE_THRESHOLD_STATUS = "Statut du seuil"
+RULE_ASSUMPTION = "Hypothèse de l'équipe"
+RULE_ABOVE = "au-delà de {value}"
+RULE_BELOW = "en dessous de {value}"
+RULE_EXCLUDED = "toute position"
+RULE_NONE = "aucun"
+
 FICTIONAL_BADGE = "Profil fictif"
 PERSONA_AGE = "{age} ans"
 PERSONA_RISK = "Tolérance au risque"
@@ -96,6 +141,9 @@ ANALYSIS_LOADED = "Analyse chargée : {run_id}, données au {as_of}."
 MSG_PROFILES_NOT_READY = (
     "Les profils ne sont pas encore disponibles dans ce mode "
     "(module profiles.py du flux B non fusionné). Utilisez le mode Données d'essai."
+)
+MSG_PROFILE_BUILDER_NOT_READY = (
+    "La construction de profil n'est pas disponible (module profiles.py du flux B absent)."
 )
 MSG_PIPELINE_NOT_READY = (
     "Le pipeline d'analyse n'est pas encore disponible dans ce mode "

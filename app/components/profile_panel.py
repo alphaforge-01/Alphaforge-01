@@ -1,6 +1,8 @@
-"""Choix du profil fictif : cartes des personas (US-01).
+"""Choix du profil fictif : cartes des personas (US-01) et profil construit (US-02).
 
-Le formulaire de profil construit (US-02, tâche D2b) viendra ici.
+Le profil construit passe uniquement par des cases, curseurs et listes fermées :
+aucun texte libre, aucune donnée personnelle. Les règles et leurs seuils sont
+produits par le flux B (`build_profile_from_answers`), jamais par l'interface.
 """
 from __future__ import annotations
 
@@ -8,8 +10,9 @@ from typing import Any, Callable, Dict, List, Optional
 
 import streamlit as st
 
+import data_source
 import ui_texts as texts
-from formatting import format_cad, format_horizon
+from formatting import format_cad, format_horizon, format_pct
 
 # Ordre d'affichage : Robert d'abord, c'est la scène 1 de la démo.
 PERSONA_ORDER = ("robert", "amira", "mateo")
@@ -66,3 +69,118 @@ def render_persona_cards(personas: Dict[str, Any], selected_id: Optional[str],
     for column, profile_id in zip(st.columns(len(ids)), ids):
         with column:
             _render_card(profile_id, personas[profile_id], profile_id == selected_id, on_select)
+
+
+def _collect_answers() -> Dict[str, Any]:
+    """Réponses du formulaire, au format attendu par profiles.check_answers."""
+    left, right = st.columns(2)
+    with left:
+        objective = st.selectbox(texts.CUSTOM_OBJECTIVE, texts.OBJECTIVE_OPTIONS,
+                                 index=2, key="custom_objective")
+        horizon = st.slider(texts.CUSTOM_HORIZON, min_value=1, max_value=30,
+                            value=(5, 10), key="custom_horizon")
+        risk = st.select_slider(texts.CUSTOM_RISK, options=list(texts.RISK_LABELS),
+                                value="moderate", format_func=texts.RISK_LABELS.get,
+                                key="custom_risk")
+        capital = st.number_input(texts.CUSTOM_CAPITAL, min_value=1_000, max_value=10_000_000,
+                                  value=100_000, step=1_000, help=texts.CUSTOM_CAPITAL_HELP,
+                                  key="custom_capital")
+    with right:
+        experience = st.radio(texts.CUSTOM_EXPERIENCE, list(texts.EXPERIENCE_LABELS), index=1,
+                              format_func=texts.EXPERIENCE_LABELS.get, horizontal=True,
+                              key="custom_experience")
+        esg = st.radio(texts.CUSTOM_ESG, list(texts.ESG_LABELS), index=0,
+                       format_func=texts.ESG_LABELS.get, horizontal=True, key="custom_esg")
+        crypto = st.checkbox(texts.CUSTOM_CRYPTO, value=False, key="custom_crypto")
+        own_cap = st.checkbox(texts.CUSTOM_OWN_CAP, value=False, help=texts.CUSTOM_OWN_CAP_HELP,
+                              key="custom_own_cap")
+        cap_pct = (st.slider(texts.CUSTOM_CAP, min_value=1, max_value=100, value=20,
+                             key="custom_cap") if own_cap else None)
+
+    answers: Dict[str, Any] = {
+        "objective": objective,
+        "horizon_years_min": int(horizon[0]),
+        "horizon_years_max": int(horizon[1]),
+        "risk_tolerance": risk,
+        "experience": experience,
+        "esg_preference": esg,
+        "crypto_allowed": bool(crypto),
+        "capital_cad": float(capital),
+    }
+    if cap_pct is not None:
+        answers["max_single_asset_weight"] = cap_pct / 100
+    return answers
+
+
+def _render_issues(issues: List[Dict[str, Any]]) -> None:
+    """Erreurs (bloquantes), puis contradictions, puis points d'information."""
+    show = {"error": st.error, "warning": st.warning, "info": st.info}
+    for severity in ("error", "warning", "info"):
+        for issue in issues:
+            if issue["severity"] == severity:
+                show[severity](issue["message_fr"])
+
+
+def _pct(threshold: float) -> str:
+    whole = abs(threshold * 100 - round(threshold * 100)) < 1e-9
+    return format_pct(threshold, 0 if whole else 1)
+
+
+def _threshold_text(rule: Dict[str, Any], threshold: Optional[float]) -> str:
+    """Seuil d'une règle (paramètre, pas un résultat de calcul)."""
+    if threshold is None:
+        return texts.RULE_NONE
+    if rule["unit"] == "bool":
+        return texts.RULE_EXCLUDED
+    template = texts.RULE_BELOW if rule["direction"] == "min" else texts.RULE_ABOVE
+    return template.format(value=_pct(threshold))
+
+
+def render_rules_table(rules: List[Dict[str, Any]]) -> None:
+    """Règles du profil et leurs seuils, chacun étiqueté comme hypothèse de l'équipe."""
+    rows = [
+        {
+            texts.RULE_COLUMN: rule["label_fr"],
+            texts.RULE_TENSION: _threshold_text(rule, rule["warn_threshold"]),
+            texts.RULE_CONFLICT: _threshold_text(rule, rule["limit_threshold"]),
+            texts.RULE_THRESHOLD_STATUS: texts.RULE_ASSUMPTION if rule["is_assumption"] else "",
+        }
+        for rule in rules
+    ]
+    st.dataframe(rows, hide_index=True, width="stretch")
+    st.caption(texts.CUSTOM_RULES_NOTICE)
+
+
+def render_custom_profile_form(personas: Dict[str, Any], is_active: bool,
+                               on_use: Callable[[Dict[str, Any]], None]) -> None:
+    """Formulaire du profil construit. `on_use(persona)` est appelé au clic sur le bouton.
+
+    Le contrôle du profil (flux B) est relancé à chaque changement : les
+    contradictions s'affichent tout de suite, avant même de valider.
+    """
+    st.caption(texts.CUSTOM_REMINDER)
+    answers = _collect_answers()
+    ids = ordered_ids(personas)
+    portfolio_id = st.selectbox(
+        texts.CUSTOM_PORTFOLIO, ids, key="custom_portfolio",
+        format_func=lambda pid: personas[pid]["portfolio"]["label_fr"],
+    )
+    try:
+        issues = data_source.check_profile_answers(answers)
+    except data_source.DataUnavailable as exc:
+        st.info(str(exc))
+        return
+    _render_issues(issues)
+    if any(issue["severity"] == "error" for issue in issues):
+        return
+
+    persona = data_source.build_custom_persona(answers, personas[portfolio_id]["portfolio"])
+    st.subheader(texts.CUSTOM_RULES_TITLE)
+    render_rules_table(persona["profile"]["rules"])
+    st.button(
+        texts.CUSTOM_UPDATE if is_active else texts.CUSTOM_USE,
+        key="custom_use",
+        type="primary",
+        on_click=on_use,
+        args=(persona,),
+    )
