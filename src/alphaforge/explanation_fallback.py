@@ -219,13 +219,16 @@ def _counterfactual(brief: Mapping[str, Any], level: str, max_chars: int) -> str
     if with_cf:
         refs = _join_refs([c["check_id"] for c in with_cf])
         if level == "novice":
-            parts_long.append(f"Pour {refs}, le résultat deviendrait conforme avec un poids plus faible "
-                              f"pour l'idée. Le poids limite calculé est donné ci-dessous.")
-            parts_short.append(f"Pour {refs}, un poids plus faible rendrait le résultat conforme.")
+            parts_long.append(f"Pour {refs}, le plus grand poids testé qui respecte cette règle seule est "
+                              f"donné ci-dessous. Respecter une règle n'implique pas de respecter les autres.")
+            parts_short.append(f"Pour {refs}, le plus grand poids testé conforme à cette règle seule "
+                               f"est donné ci-dessous.")
         else:
-            parts_long.append(f"Pour {refs}, le plus grand poids cible conforme est obtenu en faisant "
-                              f"varier seul le poids de l'idée. Valeur calculée ci-dessous.")
-            parts_short.append(f"Pour {refs}, poids cible conforme calculé ci-dessous.")
+            parts_long.append(f"Pour {refs}, plus grand poids cible testé conforme à la règle seule, par "
+                              f"balayage du seul poids de l'idée, valeur ci-dessous. Conformité propre à "
+                              f"chaque règle, pas à l'ensemble du portefeuille.")
+            parts_short.append(f"Pour {refs}, plus grand poids testé conforme à la règle seule, "
+                               f"valeur ci-dessous.")
     if without_cf:
         refs = _join_refs([c["check_id"] for c in without_cf])
         parts_long.append(f"Pour {refs}, seule la marge au seuil est disponible.")

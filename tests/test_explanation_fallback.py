@@ -284,3 +284,29 @@ def test_module_has_no_network_or_model_dependency():
     source = Path(explanation_fallback.__file__).read_text(encoding="utf-8")
     assert not re.search(r"^\s*(import|from)\s+(boto3|botocore|requests|urllib|anthropic)", source, re.M)
     assert "\u2014" not in source
+
+
+# ---------- libellé du contrefactuel (B5 : conformité non nécessairement monotone) ----------
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+def test_counterfactual_slot_is_scoped_to_each_rule_not_the_whole_portfolio(level):
+    text = render_template(make_brief(level))["counterfactual"]
+    assert "[G1]" in text
+    assert "ou moins" not in text and "plus faible" not in text and "au plus" not in text
+    if level == "novice":
+        assert "règle seule" in text and "n'implique pas de respecter les autres" in text
+    else:
+        assert "règle seule" in text and "pas à l'ensemble du portefeuille" in text
+
+
+def test_counterfactual_slot_wording_differs_between_levels():
+    novice = render_template(make_brief("novice"))["counterfactual"]
+    pro = render_template(make_brief("pro"))["counterfactual"]
+    assert novice != pro and "testé" in novice and "testé" in pro
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+def test_counterfactual_slot_fits_when_long(level):
+    brief = make_brief(level, max_chars_per_slot=140)
+    text = render_template(brief)["counterfactual"]
+    assert len(text) <= 140 and "règle seule" in text and "ou moins" not in text

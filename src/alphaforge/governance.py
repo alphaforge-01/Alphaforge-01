@@ -18,8 +18,10 @@ Conventions (hypothèses de l'équipe, voir `profiles.py` pour les seuils) :
   mais défavorable prime sur une information manquante, et l'information
   manquante prime sur "conforme" : l'absence de donnée ne vaut jamais conformité.
   Sans aucune règle, le résultat global est `missing_info`.
-- Le contrefactuel complet (balayage du poids avec `simulate_fn`) relève de B5.
-  Ici `counterfactual` vaut toujours `None`.
+- Le contrefactuel (balayage du poids avec `simulate_fn`) est calculé par
+  `counterfactual.py` (B5) pour les contrôles en tension ou en conflit, seulement si
+  `simulate_fn` et `idea` sont fournis. Sinon, ou si la simulation est indisponible,
+  `counterfactual` vaut `None`.
 """
 from __future__ import annotations
 
@@ -27,7 +29,7 @@ import math
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Union
 
 from alphaforge.contracts import (
-    Counterfactual, EvidenceEntry, GovernanceResult, InvestmentIdea, InvestorProfile,
+    EvidenceEntry, GovernanceResult, InvestmentIdea, InvestorProfile,
     Rule, RuleCheck, RuleStatus,
 )
 
@@ -153,23 +155,8 @@ def _normalize_evidence(evidence: EvidenceInput) -> List[EvidenceEntry]:
     return list(evidence)
 
 
-def _compute_counterfactual(
-    rule: Rule,
-    status: RuleStatus,
-    simulate_fn: Optional[Callable[..., Any]],
-    idea: Optional[InvestmentIdea],
-) -> Optional[Counterfactual]:
-    """Emplacement du contrefactuel (tâche B5, balayage du poids de l'idée).
-
-    B2 ne calcule rien : retourne toujours `None`.
-    """
-    return None
-
-
 def _build_check(index: int, rule: Rule, snapshot: Mapping[str, Any], subject: str,
-                 entries: List[EvidenceEntry],
-                 simulate_fn: Optional[Callable[..., Any]],
-                 idea: Optional[InvestmentIdea]) -> RuleCheck:
+                 entries: List[EvidenceEntry]) -> RuleCheck:
     value, metric, missing_reason = _extract_value(rule, snapshot)
     if missing_reason is None:
         missing_reason = _thresholds_error(rule)
@@ -184,8 +171,6 @@ def _build_check(index: int, rule: Rule, snapshot: Mapping[str, Any], subject: s
         shown_value = value
 
     evidence_ids = _find_evidence_ids(entries, metric, subject)
-    counterfactual = (_compute_counterfactual(rule, status, simulate_fn, idea)
-                      if status in ("tension", "conflict") else None)
     return {
         "check_id": f"G{index}",
         "rule_id": rule["rule_id"],
@@ -198,9 +183,27 @@ def _build_check(index: int, rule: Rule, snapshot: Mapping[str, Any], subject: s
         "margin": _round(margin),
         "unit": rule["unit"],
         "evidence_ids": evidence_ids,
-        "counterfactual": counterfactual,
+        "counterfactual": None,   # rempli par `evaluate` si une simulation est fournie
         "missing_reason": missing_reason,
     }
+
+
+def _attach_counterfactuals(profile: InvestorProfile, checks: List[RuleCheck],
+                            simulate_fn: Optional[Callable[..., Any]],
+                            idea: Optional[InvestmentIdea]) -> None:
+    """Ajoute le contrefactuel (B5) aux contrôles en tension ou en conflit.
+
+    Sans `simulate_fn` ou sans idée, ou si la simulation est indisponible ou peu
+    fiable, `counterfactual` reste `None` : rien n'est inventé.
+    """
+    flagged = [c["rule_id"] for c in checks if c["status"] in ("tension", "conflict")]
+    if simulate_fn is None or idea is None or not flagged:
+        return
+    from alphaforge.counterfactual import compute_counterfactuals   # import tardif (cycle)
+    results = compute_counterfactuals(profile, idea, simulate_fn, rule_ids=flagged)
+    for check in checks:
+        if check["rule_id"] in results:
+            check["counterfactual"] = results[check["rule_id"]]
 
 
 def worst_status(statuses: Iterable[str]) -> RuleStatus:
@@ -222,7 +225,8 @@ def evaluate(
     """Évalue chaque règle du profil sur un `PortfolioSnapshot`.
 
     - `snapshot["subject"]` devient le `subject` du résultat.
-    - `simulate_fn` et `idea` sont réservés au contrefactuel (B5) : sans effet ici.
+    - `simulate_fn(idea) -> ToolResult | PortfolioSnapshot` et `idea` : voir
+      `counterfactual.py`. Sans eux, aucun contrefactuel n'est calculé.
     - `evidence` (facultatif, ajout rétrocompatible) : registre de preuves, dict
       `evidence_id -> entrée` ou liste d'entrées. Une règle reçoit les preuves
       dont `metric` et `subject` correspondent. Sans correspondance : liste vide.
@@ -238,9 +242,10 @@ def evaluate(
     subject = snapshot["subject"]
     entries = _normalize_evidence(evidence)
     checks = [
-        _build_check(i, rule, snapshot, subject, entries, simulate_fn, idea)
+        _build_check(i, rule, snapshot, subject, entries)
         for i, rule in enumerate(profile.get("rules") or [], start=1)
     ]
+    _attach_counterfactuals(profile, checks, simulate_fn, idea)
     return {
         "profile_id": profile["profile_id"],
         "subject": subject,

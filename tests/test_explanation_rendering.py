@@ -129,14 +129,14 @@ def test_idea_funding_from_ticker():
 
 def test_counterfactual_value_comes_from_governance_check():
     text = rendered("novice")
-    assert "Concentration par actif : conforme avec un poids cible de 22 % ou moins." in text
+    assert "Concentration par actif : le plus grand poids testé conforme à cette règle est 22 %." in text
 
 
 def test_counterfactual_none_means_no_compliant_weight():
     brief = make_brief()
     brief["checks"][0]["counterfactual"] = {"parameter": "target_weight",
                                             "compliant_at_or_below": None, "display_value": "aucun"}
-    assert "aucun poids cible testé n'est conforme" in render_markdown(render_template(brief), brief)
+    assert "aucun poids testé n'est conforme à cette règle" in render_markdown(render_template(brief), brief)
 
 
 def test_details_table_matches_checks():
@@ -250,3 +250,52 @@ def test_numbers_in_rendering_come_from_registry_checks_or_idea():
     numbers = set(re.findall(r"(?<![A-Za-z])\d+(?:,\d+)?", text))
     allowed = {"25", "21", "29", "41,25", "22", "20", "35", "30", "2021", "11", "12", "2026", "1", "2"}  # "1" et "2" : numérotation des facteurs
     assert numbers <= allowed, numbers - allowed
+
+
+# ---------- libellé du contrefactuel (conformité non nécessairement monotone) ----------
+
+def non_monotone_brief(level, bound):
+    brief = make_brief(level)
+    brief["checks"][0]["counterfactual"] = {
+        "parameter": "target_weight", "compliant_at_or_below": bound,
+        "display_value": "aucun poids conforme" if bound is None else format_percent(bound)}
+    return brief
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+def test_counterfactual_line_states_largest_tested_compliant_weight(level):
+    brief = non_monotone_brief(level, 0.24)    # 0.24 conforme alors que des poids plus bas ne le sont pas
+    text = render_markdown(render_template(brief), brief)
+    assert "Concentration par actif : le plus grand poids testé conforme à cette règle est 24 %." in text
+    assert "% ou moins" not in text and "% et moins" not in text and "sous 24" not in text
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+def test_counterfactual_section_says_it_concerns_one_rule_only(level):
+    brief = make_brief(level)
+    section = render_markdown(render_template(brief), brief).split("## Ce qui ferait changer le verdict")[1]
+    section = section.split("## ")[0]
+    assert "règle seule" in section
+    assert ("n'implique pas de respecter les autres" in section) or ("pas à l'ensemble du portefeuille" in section)
+
+
+def test_counterfactual_no_solution_line_is_scoped_to_the_rule():
+    brief = non_monotone_brief("novice", None)
+    text = render_markdown(render_template(brief), brief)
+    assert "Concentration par actif : aucun poids testé n'est conforme à cette règle." in text
+
+
+def test_counterfactual_none_gives_no_weight_line():
+    brief = make_brief("pro")
+    brief["checks"][0]["counterfactual"] = None
+    text = render_markdown(render_template(brief), brief)
+    assert "le plus grand poids testé conforme" not in text and "seule la marge" in text
+
+
+def test_each_rule_gets_its_own_counterfactual_line_with_its_own_value():
+    brief = make_brief("pro")
+    brief["checks"][1]["counterfactual"] = {"parameter": "target_weight", "compliant_at_or_below": 0.12,
+                                            "display_value": "12 %"}
+    text = render_markdown(render_template(brief), brief)
+    assert "Concentration par actif : le plus grand poids testé conforme à cette règle est 22 %." in text
+    assert "Volatilité annuelle : le plus grand poids testé conforme à cette règle est 12 %." in text

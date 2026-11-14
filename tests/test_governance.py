@@ -344,15 +344,21 @@ def test_personas_starting_portfolios_have_no_conflict_on_concentration():
         assert result["overall_status"] == "compliant", entry["profile"]["profile_id"]
 
 
-def test_counterfactual_is_left_to_b5():
-    rule = make_rule()
+def test_counterfactual_stays_none_without_simulation():
+    """Sans simulate_fn ou sans idée, aucun contrefactuel n'est inventé (le calcul est testé dans test_counterfactual.py)."""
+    idea = {"ticker": "TSLA", "target_weight": 0.5, "funding_source": "pro_rata", "funding_ticker": None}
+    snapshot = make_snapshot(top_asset_weight=0.5)
+    for kwargs in ({}, {"idea": idea}, {"simulate_fn": lambda i: None}):
+        result = evaluate(make_profile(make_rule()), snapshot, **kwargs)
+        assert result["checks"][0]["status"] == "conflict"
+        assert result["checks"][0]["counterfactual"] is None
+
+
+def test_counterfactual_is_only_attempted_for_tension_and_conflict():
     calls = []
-    result = evaluate(make_profile(rule), make_snapshot(top_asset_weight=0.5),
-                      simulate_fn=lambda *a, **k: calls.append(1),
-                      idea={"ticker": "TSLA", "target_weight": 0.5, "funding_source": "pro_rata",
-                            "funding_ticker": None})
-    assert result["checks"][0]["status"] == "conflict"
-    assert result["checks"][0]["counterfactual"] is None
+    idea = {"ticker": "TSLA", "target_weight": 0.1, "funding_source": "pro_rata", "funding_ticker": None}
+    evaluate(make_profile(make_rule()), make_snapshot(top_asset_weight=0.1),
+             simulate_fn=lambda i: calls.append(i), idea=idea)
     assert calls == []
 
 
