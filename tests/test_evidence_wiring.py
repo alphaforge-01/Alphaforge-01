@@ -60,9 +60,19 @@ def test_evaluate_receives_the_evidence_registry_as_keyword():
         assert all(entry["evidence_id"] == key for key, entry in call["evidence"].items())
 
 
+def funded_portfolio():
+    """Portefeuille ou SPY (30 %) peut financer les 25 % demandes."""
+    portfolio = copy.deepcopy(PORTFOLIO)
+    weights = {"SPY": 0.30, "XIU.TO": 0.10, "XBB.TO": 0.20, "AGG": 0.15, "ZST.TO": 0.15, "GLD": 0.10}
+    for position in portfolio["positions"]:
+        position["weight"] = weights[position["ticker"]]
+    return portfolio
+
+
 def test_variant_evidence_is_relabeled_so_subjects_do_not_collide():
     calls = []
-    result = run_analysis(PROFILE, PORTFOLIO, IDEA, deps=deps_with_unique_evidence(calls), config=BedrockConfig())
+    result = run_analysis(PROFILE, funded_portfolio(), IDEA, deps=deps_with_unique_evidence(calls),
+                          config=BedrockConfig())
     assert [v["variant_id"] for v in result["variants"]] == ["V1", "V2"]
     by_subject = {}
     for entry in result["evidence"].values():
@@ -145,3 +155,52 @@ def test_limits_for_from_deps_still_wins():
     deps = replace(fixture_deps(), limits_for=lambda ids: [{"limit_id": "X", "text_novice": "a", "text_pro": "b"}])
     from alphaforge.analysis_pipeline import _load_limits
     assert _load_limits(deps, []) == [{"limit_id": "X", "text_novice": "a", "text_pro": "b"}]
+
+
+# ---- variantes finançables, trace complete, import strict ----
+
+def test_no_funding_variant_when_no_position_can_fund_the_idea():
+    from alphaforge.analysis_pipeline import propose_variants
+    governance = load("analysis_result_robert_tsla.json")["governance_after"]
+    variants = propose_variants(governance, IDEA, PORTFOLIO)   # la plus grosse autre position pese 20 % < 25 %
+    assert [v["reason_code"] for v in variants] == ["reduce_weight"]
+
+
+def test_funding_variant_uses_the_largest_position_that_can_fund():
+    from alphaforge.analysis_pipeline import propose_variants
+    governance = load("analysis_result_robert_tsla.json")["governance_after"]
+    variants = propose_variants(governance, IDEA, funded_portfolio())
+    funding = [v for v in variants if v["reason_code"] == "change_funding_source"]
+    assert funding and funding[0]["idea"]["funding_ticker"] == "SPY"
+
+
+def test_trace_step_one_lists_variant_simulations_too():
+    result = run_analysis(PROFILE, funded_portfolio(), IDEA, deps=deps_with_unique_evidence([]),
+                          config=BedrockConfig())
+    simulated = [c["params"]["target_weight"] for c in result["trace"][0]["details"]["tool_calls"]
+                 if c["tool_name"] == "simulate_portfolio_change"]
+    assert len(simulated) == 1 + len(result["variants"])   # l'idee puis chaque variante
+
+
+def test_load_real_deps_only_swallows_a_missing_module(monkeypatch):
+    import importlib
+    from alphaforge import pipeline_deps
+
+    real_import = importlib.import_module
+
+    def missing(name, *a, **k):
+        if name == "alphaforge.agent_tools":
+            raise ModuleNotFoundError("absent", name="alphaforge.agent_tools")
+        return real_import(name, *a, **k)
+
+    monkeypatch.setattr(importlib, "import_module", missing)
+    assert pipeline_deps.load_real_deps() is None   # module absent : cas normal, bouchons
+
+    def broken(name, *a, **k):
+        if name == "alphaforge.agent_tools":
+            raise ModuleNotFoundError("No module named 'numpyy'", name="numpyy")
+        return real_import(name, *a, **k)
+
+    monkeypatch.setattr(importlib, "import_module", broken)
+    with pytest.raises(ModuleNotFoundError):
+        pipeline_deps.load_real_deps()                # bogue dans un module existant : il remonte

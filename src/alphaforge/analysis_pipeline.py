@@ -118,9 +118,12 @@ def propose_variants(
         variants.append({"reason_code": "reduce_weight", "idea": {**idea, "target_weight": reduced}})
     # 2. changer la source des fonds (ou repartir sur les positions existantes)
     if idea["funding_source"] == "pro_rata":
-        others = [p for p in portfolio["positions"] if p["ticker"] != idea["ticker"]]
-        if others:
-            largest = max(others, key=lambda p: p["weight"])["ticker"]
+        # Une position ne peut financer l'ajout que si elle pese au moins le poids demande : sinon
+        # l'outil refuse la simulation. On ne propose donc que des variantes finançables.
+        fundable = [p for p in portfolio["positions"]
+                    if p["ticker"] != idea["ticker"] and p["weight"] >= idea["target_weight"]]
+        if fundable:
+            largest = max(fundable, key=lambda p: p["weight"])["ticker"]
             variants.append({
                 "reason_code": "change_funding_source",
                 "idea": {**idea, "funding_source": "from_ticker", "funding_ticker": largest},
@@ -307,6 +310,7 @@ def run_analysis(
             governance=deps.evaluate(
                 profile, snapshot, simulate_fn=simulate_fn, idea=variant_idea, evidence=toolbox.evidence()),
         ))
+    trace[0]["details"]["tool_calls"] = list(toolbox.calls)  # inclut les simulations de variantes
     trace.append(_step(2, "governance", "code", "ok", started, {
         "overall_before": governance_before["overall_status"], "overall_after": governance_after["overall_status"],
         "checks": [{"check_id": c["check_id"], "status": c["status"], "margin": c["margin"]}
