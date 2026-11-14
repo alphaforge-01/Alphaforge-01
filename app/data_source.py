@@ -122,4 +122,15 @@ def get_analysis(mode: str, profile: Dict[str, Any], portfolio: Dict[str, Any],
         from alphaforge.analysis_pipeline import run_analysis
     except ImportError as exc:
         raise DataUnavailable(texts.MSG_PIPELINE_NOT_READY) from exc
-    return run_analysis(profile, portfolio, idea, mode=mode)
+    try:
+        from alphaforge.analysis_pipeline import AnalysisError
+    except ImportError as exc:
+        raise DataUnavailable(texts.MSG_PIPELINE_NOT_READY) from exc
+    try:
+        return run_analysis(profile, portfolio, idea, mode=mode)
+    except AnalysisError as exc:
+        raise DataUnavailable(texts.MSG_ANALYSIS_REFUSED.format(reason=exc)) from exc
+    except ValueError as exc:
+        # Bouchons du flux C : seuls Robert et Amira ont une fixture tant que
+        # les outils du flux A ne sont pas fusionnés.
+        raise DataUnavailable(texts.MSG_PROFILE_NOT_COVERED) from exc

@@ -121,7 +121,7 @@ Les personas sont relus à chaque exécution (fichiers JSON locaux, coût négli
 - [x] D2b. Formulaire de profil construit (US-02), avancé du sprint 2. Contrôle relancé à chaque changement : erreurs, contradictions et points d'information de `check_answers` affichés tout de suite. Règles et seuils produits par `build_profile_from_answers`, chacun étiqueté "Hypothèse de l'équipe". Deux choix du flux D, à confirmer : la liste fermée des objectifs (`OBJECTIVE_OPTIONS` dans `ui_texts.py`, en attendant celle du flux B) et le portefeuille de départ, choisi parmi ceux des personas
 - [ ] D3. Radiographie : cartes de métriques par le registre, période, poids par secteur et par classe, statut par règle (US-03)
 - [ ] D4a. Idée "25 % dans TSLA" en un clic, avant/après, règles triées par gravité, contrefactuel, marges (US-05, US-06, US-07)
-- [ ] J2. Brancher `offline` si C3 est fusionné. PR `feat(ui): ...` relue et fusionnée
+- [x] J2 (partiel). `offline` branché sur `run_analysis`: Robert et Amira répondent (bouchons du flux C, bandeau d'essai affiché), Mateo et le profil construit affichent un message clair tant que les outils du flux A ne sont pas fusionnés. Reste à faire : brancher les outils du flux A pour couvrir Mateo et le profil construit.
 
 Terminé quand : la scène 1 se joue en mode `fixture` sans erreur, l'avertissement est visible dans chaque onglet, aucun chiffre calculé ne vient d'ailleurs que du registre.
 

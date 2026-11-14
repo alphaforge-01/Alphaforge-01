@@ -149,6 +149,12 @@ MSG_PIPELINE_NOT_READY = (
     "Le pipeline d'analyse n'est pas encore disponible dans ce mode "
     "(module analysis_pipeline.py du flux C non fusionné). Utilisez le mode Données d'essai."
 )
+MSG_ANALYSIS_REFUSED = "L'idée ne peut pas être analysée : {reason}"
+MSG_PROFILE_NOT_COVERED = (
+    "Le pipeline n'a pas encore les données de calcul pour ce profil : les outils du "
+    "flux A ne sont pas fusionnés et les bouchons ne couvrent que Robert et Amira. "
+    "Choisissez l'un des deux, ou le mode Données d'essai."
+)
 MSG_FIXTURE_PROFILE_MISSING = (
     "Aucune donnée d'essai pour ce profil. En mode Données d'essai, seuls les profils "
     "ayant une fixture d'analyse sont disponibles."
