@@ -11,9 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from alphaforge.explanation_fallback import render_template  # noqa: E402
 from alphaforge.explanation_rendering import (  # noqa: E402
-    DISCLAIMER_FR, REFERENCE_PATTERN, format_percent, format_points, render_markdown,
+    REFERENCE_PATTERN, format_percent, format_points, render_markdown,
 )
 from alphaforge.governance import evaluate  # noqa: E402
+from alphaforge.reference_texts import disclaimers, mandatory_limits  # noqa: E402
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -115,7 +116,8 @@ def test_missing_info_check_in_details_with_reason():
 def test_disclaimer_idea_and_limits_are_always_shown():
     for level in ("novice", "pro"):
         text = rendered(level)
-        assert DISCLAIMER_FR in text
+        for item in disclaimers(level):
+            assert item["text"] in text
         assert "Idée simulée : « TSLA », poids cible 25 %" in text
         assert "**L1** : Données d’essai inventées" in text
         assert "pas des normes" in text
@@ -222,7 +224,7 @@ def test_rendered_statuses_match_governance_evaluate():
 def test_missing_slots_are_skipped():
     text = render_markdown(output_with(), make_brief())
     assert "## Résumé" not in text and "## Ce qui pèse" not in text
-    assert DISCLAIMER_FR in text
+    assert all(item["text"] in text for item in disclaimers("novice"))
 
 
 def test_deterministic_no_mutation_and_ascii_punctuation():

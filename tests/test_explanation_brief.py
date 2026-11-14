@@ -253,17 +253,18 @@ def test_no_variants_gives_empty_list():
 
 def test_limits_use_level_text():
     result = robert()
-    assert build_brief(result, "novice")["limits"] == [
-        {"limit_id": "L1", "text": result["limits"][0]["text_novice"]}]
-    assert build_brief(result, "pro")["limits"] == [
-        {"limit_id": "L1", "text": result["limits"][0]["text_pro"]}]
+    assert build_brief(result, "novice")["limits"][-1] == {
+        "limit_id": "L1", "text": result["limits"][0]["text_novice"]}
+    assert build_brief(result, "pro")["limits"][-1] == {
+        "limit_id": "L1", "text": result["limits"][0]["text_pro"]}
 
 
 def test_all_result_limits_are_kept_in_natural_order():
     result = robert()
     result["limits"] += [{"limit_id": "L10", "text_novice": "dix", "text_pro": "ten"},
                          {"limit_id": "L2", "text_novice": "deux", "text_pro": "two"}]
-    assert [i["limit_id"] for i in build_brief(result, "novice")["limits"]] == ["L1", "L2", "L10"]
+    assert [i["limit_id"] for i in build_brief(result, "novice")["limits"]] == [
+        "LM1", "LM2", "LM3", "LM4", "LM5", "L1", "L2", "L10"]
 
 
 def test_evidence_limit_missing_from_result_raises():

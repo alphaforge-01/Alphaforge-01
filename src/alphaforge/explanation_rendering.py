@@ -9,7 +9,9 @@ vérifiables du dossier :
 Il ajoute, sans aucun texte de modèle, les éléments factuels : idée simulée,
 détail des contrôles (valeur, seuils, marge), poids de conformité du
 contrefactuel, limites, preuves citées avec source, période, devise et
-transformation, glossaire des termes cités, et l'avertissement.
+transformation, glossaire des termes cités, et les avertissements fixes par niveau
+(`reference/fixed_texts.json`). Les limites obligatoires (`reference/limits.json`)
+sont toujours affichées, même si le dossier ne les contient pas.
 Un renvoi inconnu n'est jamais deviné : il est signalé dans le texte.
 """
 from __future__ import annotations
@@ -18,14 +20,11 @@ import re
 from typing import Any, List, Mapping, Optional
 
 from alphaforge.contracts import ExplainerOutput, ExplanationBrief
+from alphaforge.reference_texts import (
+    disclaimers, merge_mandatory_limits, threshold_assumption,
+)
 
 REFERENCE_PATTERN = re.compile(r"\[([EGT]\d+)\]")
-
-# Texte fixe provisoire : B7 le remplacera par `reference/fixed_texts.json`.
-DISCLAIMER_FR = (
-    "Simulation à but éducatif. Le profil, le portefeuille et le capital sont fictifs. "
-    "Ce texte ne constitue pas un conseil financier personnalisé et ne prédit aucun rendement."
-)
 
 STATUS_FR = {
     "compliant": "conforme",
@@ -154,7 +153,7 @@ def _details_table(brief: Mapping[str, Any], level: str, reg: _Registry) -> List
             label = reg.checks[check_id]["label_fr"]
             lines.append(f"- {label} : {reason}")
     if any(r.get("is_assumption") for r in rules.values()):
-        lines += ["", "Les seuils sont des hypothèses de l'équipe, pas des normes."]
+        lines += ["", threshold_assumption(level)]
     return lines
 
 
@@ -211,7 +210,9 @@ def render_markdown(output: ExplainerOutput, brief: ExplanationBrief) -> str:
     reg = _Registry(brief)
     sub = reg.substitute
     out: List[str] = [f"# Explication ({'niveau pro' if level == 'pro' else 'niveau novice'})", "",
-                      f"> {DISCLAIMER_FR}", ""]
+                      "> **Avertissement**"]
+    out += [f"> - {item['text']}" for item in disclaimers(level)]
+    out.append("")
     if brief.get("idea"):
         out += [_idea_line(brief["idea"]), ""]
 
@@ -238,7 +239,7 @@ def render_markdown(output: ExplainerOutput, brief: ExplanationBrief) -> str:
     if table:
         out += ["## Détail des contrôles", ""] + table + [""]
 
-    limits = brief.get("limits") or []
+    limits = merge_mandatory_limits(brief.get("limits") or [], level)
     if output.get("limits_context") or limits:
         out += ["## Limites", ""]
         if output.get("limits_context"):

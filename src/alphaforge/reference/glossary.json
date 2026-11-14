@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "status_fr": "Version de départ écrite pour B4, à relire et compléter par la tâche B7. Aucun chiffre dans les textes, aucune recommandation.",
+  "version": 2,
+  "status_fr": "Glossaire fermé du flux B (tâche B7). Définitions novice et pro écrites par l'équipe. Aucun chiffre dans les textes, aucune recommandation. Les termes sans type de règle (liste rule_types vide) ne sont pas ajoutés automatiquement au dossier d'explication : ils servent de référence à l'interface.",
   "terms": [
     {
       "term_id": "T1",
@@ -24,7 +24,7 @@
         "analogy": "La descente la plus raide d'un sentier déjà parcouru"
       },
       "pro": {
-        "definition": "Drawdown maximal : plus grand recul de la valeur du portefeuille depuis un sommet précédent, sur la fenêtre de la preuve, sans prévision",
+        "definition": "Drawdown maximal : plus grand recul de la valeur du portefeuille depuis un sommet précédent, sur la fenêtre de la preuve, sans projection",
         "analogy": ""
       }
     },
@@ -34,7 +34,7 @@
       "rule_types": ["max_single_asset_weight", "max_asset_class_weight", "excluded_asset_class"],
       "novice": {
         "definition": "Part du portefeuille placée dans un seul actif ou dans une seule catégorie d'actifs",
-        "analogy": "Mettre beaucoup d'œufs dans le même panier"
+        "analogy": "Mettre beaucoup d'oeufs dans le même panier"
       },
       "pro": {
         "definition": "Poids d'un actif ou d'une classe d'actifs dans le portefeuille simulé, rapporté à un plafond fixé par le profil",
@@ -77,6 +77,71 @@
       },
       "pro": {
         "definition": "Exclusion fondée sur des preuves datées et sourcées relatives à l'environnement, au social ou à la gouvernance, ou information manquante en leur absence",
+        "analogy": ""
+      }
+    },
+    {
+      "term_id": "T7",
+      "term": "Durée de récupération",
+      "rule_types": [],
+      "novice": {
+        "definition": "Temps qu'il a fallu pour revenir au niveau d'avant une baisse, ou absence de retour pendant la période étudiée",
+        "analogy": "Le temps de remonter une pente après une chute"
+      },
+      "pro": {
+        "definition": "Nombre de jours entre le creux de la perte maximale et le retour au sommet précédent, ou absence de retour dans la fenêtre de la preuve",
+        "analogy": ""
+      }
+    },
+    {
+      "term_id": "T8",
+      "term": "Exposition au change",
+      "rule_types": [],
+      "novice": {
+        "definition": "Part du portefeuille dont la valeur dépend du dollar américain plutôt que du dollar canadien",
+        "analogy": "Un voyage dont une partie du budget se dépense dans une autre monnaie"
+      },
+      "pro": {
+        "definition": "Poids des positions cotées en dollars américains, converties en dollars canadiens au taux USD/CAD de la Banque du Canada, la variation du taux s'ajoutant au rendement local",
+        "analogy": ""
+      }
+    },
+    {
+      "term_id": "T9",
+      "term": "Biais du survivant",
+      "rule_types": [],
+      "novice": {
+        "definition": "Effet qui rend le passé plus favorable quand on étudie seulement des actifs qui existent encore et sont grands aujourd'hui",
+        "analogy": "Juger une course en ne regardant que ceux qui ont franchi la ligne d'arrivée"
+      },
+      "pro": {
+        "definition": "Biais de sélection : univers constitué à la fin de la fenêtre à partir de titres de grande taille à cette date, ce qui tire les statistiques historiques vers le haut",
+        "analogy": ""
+      }
+    },
+    {
+      "term_id": "T10",
+      "term": "Contrefactuel",
+      "rule_types": [],
+      "novice": {
+        "definition": "Calcul de ce qui changerait si un seul réglage était différent, ici le poids de l'idée",
+        "analogy": "Rejouer une partie en changeant un seul coup"
+      },
+      "pro": {
+        "definition": "Plus grand poids cible testé, par balayage du seul poids de l'idée avec le reste fixe, pour lequel une règle donnée est conforme",
+        "analogy": ""
+      }
+    },
+    {
+      "term_id": "T11",
+      "term": "Hypothèse",
+      "rule_types": [],
+      "novice": {
+        "definition": "Choix posé par l'équipe pour permettre le calcul, qui n'est pas un fait observé",
+        "analogy": "Les règles d'un jeu de société fixées avant de commencer à jouer"
+      },
+      "pro": {
+        "definition": "Paramètre fixé par l'équipe (seuils des règles, rééquilibrage quotidien, calendrier commun), distinct des données observées et jamais présenté comme une norme",
         "analogy": ""
       }
     }
