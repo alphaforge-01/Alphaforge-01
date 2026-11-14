@@ -44,6 +44,7 @@ def init_state() -> None:
     st.session_state.setdefault("mode", data_source.resolve_mode(os.environ.get("ALPHAFORGE_MODE")))
     # Résultats déjà obtenus : (mode, profil, portefeuille, idée) -> AnalysisResult.
     st.session_state.setdefault("analysis", {})
+    st.session_state.setdefault("analysis_failures", {})
 
 
 def select_profile(profile_id: str, personas: Dict[str, Any]) -> None:
@@ -57,6 +58,14 @@ def use_custom_profile(persona: Dict[str, Any]) -> None:
     st.session_state.custom_persona = persona
     st.session_state.profile_id = CUSTOM_ID
     st.session_state.level = persona["profile"]["default_level"]
+
+
+def on_mode_change() -> None:
+    """Un profil construit garde le portefeuille de son mode : on le retire au changement."""
+    st.session_state.custom_persona = None
+    if st.session_state.profile_id == CUSTOM_ID:
+        st.session_state.profile_id = None
+        st.session_state.level = None
 
 
 def available_profiles(personas: Optional[Dict[str, Any]]) -> Dict[str, Any]:
@@ -81,6 +90,7 @@ def render_sidebar(personas: Dict[str, Any]) -> None:
             options=data_source.MODES,
             format_func=texts.MODE_LABELS.get,
             key="mode",
+            on_change=on_mode_change,
         )
         st.subheader(texts.SIDEBAR_ACTIVE_PROFILE)
         profile_id = st.session_state.profile_id
@@ -108,21 +118,31 @@ def load_analysis(mode: str, persona: Dict[str, Any], idea: Dict[str, Any]) -> O
     """Lit le résultat en cache de session, sinon le demande à data_source.
 
     Une donnée absente affiche un message d'information, une autre erreur un
-    message d'erreur : la page ne plante jamais (US-15).
+    message d'erreur : la page ne plante jamais (US-15). Un échec reste mémorisé
+    dans `analysis_failures` jusqu'au clic sur "Réessayer" (quotas Bedrock partagés).
     """
     cache_key = (mode, fingerprint(persona["profile"]), fingerprint(persona["portfolio"]),
                  fingerprint(idea))
     cache = st.session_state.analysis
     if cache_key in cache:
         return cache[cache_key]
+    # Un échec est mémorisé aussi : sans cela, chaque interaction relancerait l'appel
+    # (quotas Bedrock partagés). Le bouton "Réessayer" l'efface.
+    failures = st.session_state.analysis_failures
+    if cache_key in failures:
+        kind, message = failures[cache_key]
+        getattr(st, kind)(message)
+        if kind == "error":  # une donnée absente ne change pas en réessayant
+            st.button(texts.RETRY, key="retry_analysis", on_click=failures.pop, args=(cache_key,))
+        return None
     try:
         result = data_source.get_analysis(mode, persona["profile"], persona["portfolio"], idea)
     except data_source.DataUnavailable as exc:
-        st.info(str(exc))
-        return None
+        failures[cache_key] = ("info", str(exc))
+        st.rerun()
     except Exception as exc:  # la démo ne doit jamais afficher une trace Python
-        st.error(texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__))
-        return None
+        failures[cache_key] = ("error", texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__))
+        st.rerun()
     cache[cache_key] = result
     return result
 

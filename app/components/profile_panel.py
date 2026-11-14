@@ -121,19 +121,16 @@ def _render_issues(issues: List[Dict[str, Any]]) -> None:
                 show[severity](issue["message_fr"])
 
 
-def _pct(threshold: float) -> str:
-    whole = abs(threshold * 100 - round(threshold * 100)) < 1e-9
-    return format_pct(threshold, 0 if whole else 1)
-
-
 def _threshold_text(rule: Dict[str, Any], threshold: Optional[float]) -> str:
     """Seuil d'une règle (paramètre, pas un résultat de calcul)."""
     if threshold is None:
         return texts.RULE_NONE
     if rule["unit"] == "bool":
         return texts.RULE_EXCLUDED
+    if rule["direction"] == "min" and threshold <= 0:
+        return texts.RULE_NONE  # un plancher à 0 ne peut jamais être franchi
     template = texts.RULE_BELOW if rule["direction"] == "min" else texts.RULE_ABOVE
-    return template.format(value=_pct(threshold))
+    return template.format(value=format_pct(threshold))
 
 
 def render_rules_table(rules: List[Dict[str, Any]]) -> None:
@@ -161,20 +158,37 @@ def render_custom_profile_form(personas: Dict[str, Any], is_active: bool,
     st.caption(texts.CUSTOM_REMINDER)
     answers = _collect_answers()
     ids = ordered_ids(personas)
+    labels = [personas[pid]["portfolio"]["label_fr"] for pid in ids]
+
+    def portfolio_option(pid: str) -> str:
+        label = personas[pid]["portfolio"]["label_fr"]
+        if labels.count(label) > 1:  # libellés identiques : on ajoute le persona
+            return f"{label} ({personas[pid]['profile']['display_name']})"
+        return label
+
     portfolio_id = st.selectbox(
-        texts.CUSTOM_PORTFOLIO, ids, key="custom_portfolio",
-        format_func=lambda pid: personas[pid]["portfolio"]["label_fr"],
+        texts.CUSTOM_PORTFOLIO, ids, key="custom_portfolio", format_func=portfolio_option,
     )
     try:
         issues = data_source.check_profile_answers(answers)
     except data_source.DataUnavailable as exc:
         st.info(str(exc))
         return
+    except Exception as exc:  # la démo ne doit jamais afficher une trace Python
+        st.error(texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__))
+        return
     _render_issues(issues)
     if any(issue["severity"] == "error" for issue in issues):
         return
 
-    persona = data_source.build_custom_persona(answers, personas[portfolio_id]["portfolio"])
+    try:
+        persona = data_source.build_custom_persona(answers, personas[portfolio_id]["portfolio"])
+    except data_source.DataUnavailable as exc:
+        st.info(str(exc))
+        return
+    except Exception as exc:  # la démo ne doit jamais afficher une trace Python
+        st.error(texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__))
+        return
     st.subheader(texts.CUSTOM_RULES_TITLE)
     render_rules_table(persona["profile"]["rules"])
     st.button(

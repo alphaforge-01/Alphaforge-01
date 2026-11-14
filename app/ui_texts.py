@@ -139,8 +139,8 @@ NO_PROFILE_SELECTED = "Choisissez un profil fictif pour commencer."
 ANALYSIS_LOADED = "Analyse chargée : {run_id}, données au {as_of}."
 
 MSG_PROFILES_NOT_READY = (
-    "Les profils ne sont pas encore disponibles dans ce mode "
-    "(module profiles.py du flux B non fusionné). Utilisez le mode Données d'essai."
+    "Les profils ne sont pas disponibles dans ce mode "
+    "(fichier des personas ou module profiles introuvable). Utilisez le mode Données d'essai."
 )
 MSG_PROFILE_BUILDER_NOT_READY = (
     "La construction de profil n'est pas disponible (module profiles.py du flux B absent)."
@@ -156,6 +156,7 @@ MSG_FIXTURE_PROFILE_MISSING = (
 MSG_FIXTURE_IDEA_ONLY = (
     "En mode Données d'essai, seule l'idée \"25 % dans TSLA\", financée au prorata, est disponible."
 )
+RETRY = "Réessayer"
 MSG_UNEXPECTED_ERROR = (
     "Une erreur est survenue pendant le chargement ({error_type}). "
     "La page reste utilisable : changez de mode ou réessayez."

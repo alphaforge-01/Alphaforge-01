@@ -7,11 +7,12 @@ preuves, jamais avec ces fonctions (docs/ui_spec.md, règle d'affichage 1).
 """
 from __future__ import annotations
 
+from alphaforge.explanation_rendering import format_percent
 
-def format_pct(fraction: float, decimals: int = 0) -> str:
-    """0.25 -> "25 %". Virgule décimale, espace avant le signe."""
-    text = f"{fraction * 100:.{decimals}f}".replace(".", ",")
-    return f"{text} %"
+
+def format_pct(fraction: float) -> str:
+    """0.25 -> "25 %", 0.125 -> "12,5 %". Même règle que l'explication (src/alphaforge)."""
+    return format_percent(fraction)
 
 
 def format_cad(amount: float) -> str:
