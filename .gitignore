@@ -11,6 +11,10 @@ __pycache__/
 .ipynb_checkpoints/
 .pytest_cache/
 
+# Données générées (régénérables par le code)
+data/processed/*
+!data/processed/.gitkeep
+
 # Secrets / local config
 .env
 .env.*

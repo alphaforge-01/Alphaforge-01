@@ -2,7 +2,7 @@
 
 Usage:
     python -m venv .venv && .venv/bin/pip install pandas yfinance
-    .venv/bin/python build_dataset.py
+    .venv/bin/python scripts/build_dataset.py
 
 Edit UNIVERSE, START, END below and re-run. Everything is regenerated into OUT_DIR.
 """
@@ -17,7 +17,8 @@ from pathlib import Path
 import pandas as pd
 import yfinance as yf
 
-OUT_DIR = Path(__file__).parent
+# Les fichiers générés vont dans data/raw/ à la racine du projet
+OUT_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
 START = "2021-11-12"
 END = "2026-11-12"  # last complete trading day, inclusive
 RETRIEVED = date.today().isoformat()
