@@ -45,13 +45,17 @@ class PortfolioError(ValueError):
     """Portefeuille ou idée de placement invalide."""
 
 
+class UnknownTickerError(PortfolioError):
+    """Ticker absent de l'univers de données."""
+
+
 def _as_number(value, label: str) -> float:
     """Nombre fini (int ou float, pas bool ni chaîne), sinon `PortfolioError`."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise PortfolioError(f"{label} doit être un nombre (reçu : {value!r})")
+        raise PortfolioError(f"{label} doit être un nombre")
     number = float(value)
     if not math.isfinite(number):
-        raise PortfolioError(f"{label} doit être un nombre fini (reçu : {value!r})")
+        raise PortfolioError(f"{label} doit être un nombre fini")
     return number
 
 
@@ -68,7 +72,7 @@ def portfolio_weights(portfolio: Portfolio) -> pd.Series:
         raise PortfolioError("Un même ticker apparaît plusieurs fois dans le portefeuille")
     unknown = sorted(set(tickers) - set(load_universe()["ticker"]))
     if unknown:
-        raise PortfolioError(f"Tickers absents de l'univers : {unknown}")
+        raise UnknownTickerError(f"Tickers absents de l'univers : {unknown}")
     weights = pd.Series({
         position["ticker"]: _as_number(position["weight"], f"Le poids de {position['ticker']}")
         for position in positions
@@ -195,7 +199,7 @@ def apply_idea(
     weights = portfolio_weights(portfolio).to_dict()
     ticker = idea["ticker"]
     if ticker not in set(load_universe()["ticker"]):
-        raise PortfolioError(f"Ticker absent de l'univers : {ticker}")
+        raise UnknownTickerError(f"Ticker absent de l'univers : {ticker}")
     target = _as_number(idea["target_weight"], "Le poids visé")
     if not 0.0 <= target <= 1.0:
         raise PortfolioError("Le poids visé doit être compris entre 0 % et 100 %")
@@ -226,7 +230,7 @@ def apply_idea(
         new_weights = {t: w for t, w in weights.items() if t != ticker}
         new_weights[source] = max(remaining, 0.0)
     else:
-        raise PortfolioError(f"Source des fonds inconnue : {funding}")
+        raise PortfolioError("Source des fonds inconnue : attendu pro_rata ou from_ticker")
 
     new_weights[ticker] = target
     kept = {t: w for t, w in new_weights.items() if w > ZERO_WEIGHT}
