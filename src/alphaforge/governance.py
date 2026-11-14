@@ -55,6 +55,11 @@ _SNAPSHOT_FIELD = {
     "max_correlated_group_weight": "largest_correlated_group_weight",
 }
 
+def rule_metric(rule_type: str) -> Optional[str]:
+    """Métrique de preuve associée à un type de règle, ou `None` (règles par classe d'actifs)."""
+    return _SNAPSHOT_FIELD.get(rule_type)
+
+
 EvidenceInput = Union[Mapping[str, EvidenceEntry], Iterable[EvidenceEntry], None]
 
 
