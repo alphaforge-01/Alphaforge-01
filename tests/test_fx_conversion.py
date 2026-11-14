@@ -1,5 +1,6 @@
 """Tests de la conversion en CAD (taux du même jour, report du dernier taux connu)."""
 
+from datetime import timedelta
 import pandas as pd
 import pytest
 
@@ -144,8 +145,8 @@ def test_usdcad_on_calendar_refuse_un_taux_trop_ancien():
     from alphaforge.fx_conversion import MAX_FX_CARRY_DAYS, MissingFxRateError, usdcad_on_calendar
 
     fx = pd.DataFrame({"date": pd.to_datetime(["2024-01-01"]), "usdcad": [1.30]})
-    ok_day = pd.Timestamp("2024-01-01") + pd.Timedelta(days=MAX_FX_CARRY_DAYS)
+    ok_day = pd.Timestamp("2024-01-01") + timedelta(days=MAX_FX_CARRY_DAYS)
     assert usdcad_on_calendar(fx, pd.DatetimeIndex([ok_day])).iloc[0] == 1.30
-    too_old = ok_day + pd.Timedelta(days=1)
+    too_old = ok_day + timedelta(days=1)
     with pytest.raises(MissingFxRateError, match="trop ancien"):
         usdcad_on_calendar(fx, pd.DatetimeIndex([too_old]))

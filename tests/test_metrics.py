@@ -1,5 +1,6 @@
 """Tests des métriques de rendement et de risque (séries synthétiques calculables à la main)."""
 
+from datetime import timedelta
 import math
 
 import numpy as np
@@ -242,7 +243,7 @@ def test_drawdown_series_zero_at_peaks_positive_elsewhere():
 def test_drawdown_series_max_equals_max_drawdown():
     rng = np.random.default_rng(0)
     returns = _series(rng.normal(0, 0.01, 60))
-    base = returns.index[0] - pd.Timedelta(days=1)
+    base = returns.index[0] - timedelta(days=1)
     assert drawdown_series(returns, base).max() == pytest.approx(
         max_drawdown(returns, base).max_drawdown, abs=1e-15
     )
