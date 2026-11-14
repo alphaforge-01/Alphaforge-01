@@ -14,9 +14,20 @@ __pycache__/
 data/processed/*
 !data/processed/.gitkeep
 
-# Secrets / local config
+# Secrets / local config (ne jamais versionner d'identifiants AWS ou autres)
 .env
 .env.*
+!.env.example
+.aws/
+credentials
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.*
+*_secret*
+*accessKeys*.csv
+*credentials*.csv
 
 # Editors
 .vscode/

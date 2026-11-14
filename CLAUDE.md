@@ -22,6 +22,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `docs/` | Project documentation, methodology, presentation material. |
 | `tests/` | Tests for `src/alphaforge/`, mirroring its module names (`test_<module>.py`). |
 
+6. Secrets: never put AWS credentials (access key IDs `AKIA...`/`ASIA...`, secret keys, session tokens) or any other secret (API keys, passwords, tokens) in the repo: not in code, notebooks (including cell outputs), config files, docs, commit messages or test fixtures, not even temporarily or as "example" values. A key pushed to GitHub is considered compromised within minutes. Credentials come only from outside the repo: AWS CLI profiles (`~/.aws/`, `aws configure` / `aws sso login`), environment variables, a git-ignored `.env`, or IAM roles when running on AWS. Code reads them via boto3's default credential chain or `os.environ`, never hard-coded. Before every commit, check the staged diff for secrets; if one is found, stop and tell the user. If a secret was ever committed or pushed, tell the user to revoke/rotate it in AWS immediately: deleting it in a later commit or rewriting history is not enough.
+
 ## What this is
 
 Team project for the PolyFinances **AlphaForge AI** datathon (2026, sponsors: Banque Nationale and AWS). Simulation only, not investment advice. The repo currently holds the organizer starter dataset; the solution itself is still to be built. The case brief and organizer slides live outside the repo, one level up (`../Datathon - Case Officiel 2026 ENG.pdf` / `FR.pdf`, `../Presentation_AlphaForge_AI_Participants - EN V2.pptx`).
