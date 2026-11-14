@@ -100,8 +100,8 @@ Les personas et l'univers sont mis en cache avec `st.cache_data`.
 
 | Flux | Demande | Pourquoi |
 | --- | --- | --- |
-| B (Samer) | Trancher le niveau par défaut des personas : les fixtures disent "novice" pour Robert et Amira, `build_profile_from_answers` et US-01 disent "pro" sauf débutant | US-01 |
-| B | Revoir Amira avec "25 % dans TSLA" : la fixture la donne "conforme" avec une seule règle | Scène 2 |
+| B (Samer) | Réglé : `investor_profiles.json` met les trois personas en "pro", conforme à US-01. Seules les fixtures disent "novice" | US-01 |
+| B | Vérifier le verdict d'Amira avec "25 % dans TSLA" sur ses vraies règles (la fixture la donne "conforme" avec une seule règle) | Scène 2 |
 | B | Clé facultative `margin_display` dans `RuleCheck` | US-07, règle d'affichage 1 |
 | B | Liste fermée des objectifs pour le formulaire | US-02 sans texte libre |
 | B, C | Clé facultative `brief` (dossier transmis) dans `ExplanationResult` | US-13, "Ce que l'explicateur a vu" |
@@ -110,14 +110,14 @@ Les personas et l'univers sont mis en cache avec `st.cache_data`.
 | A | Écart avant/après : entrées de preuve dédiées, ou l'interface affiche seulement le sens | US-05 |
 | C (Godwin) | `run_analysis(mode="offline")` fusionné pour J2 (23 h 30), sinon l'interface reste en mode `fixture` | J2 |
 | C, B | Radiographie avant toute idée : aucune fonction gelée ne la fournit, car `run_analysis` exige une idée. Proposition : `run_xray(profile, portfolio, as_of=None) -> AnalysisResult` partiel (`snapshot_before`, `governance_before`, `evidence`, `limits`, trace), dans `analysis_pipeline.py`. Sinon, la radiographie ne s'affiche qu'après l'idée | US-03, parcours étape 2 |
-| B | La fixture d'Amira reprend le portefeuille de Robert (`label_fr` : "Portefeuille fictif de Robert") | Scène 2 |
+| D | Les fixtures d'analyse sont trop pauvres pour l'interface (une seule preuve "avant", aucune variante, trace sans appels d'outils, portefeuille de Robert réutilisé pour Amira). D ajoute ses propres fichiers `tests/fixtures/ui_*.json`, sans modifier ceux de B | D3 à D6 |
 
 ## 5. Tâches
 
 ### Sprint 1 : samedi soir, jusqu'à J2 (23 h 30)
 
 - [x] D1. Squelette : environnement Python 3.11, `streamlit_app.py`, onglets, avertissement, bandeau de données d'essai, mode affiché, `data_source.py` en mode `fixture`, `ui_texts.py`, `formatting.py` (US-12, US-15)
-- [x] D2a. Cartes des personas (Robert et Amira depuis les fixtures), badge "profil fictif", niveau prérempli (US-01). Reste : Mateo, l'âge, le métier et le résumé arrivent avec `load_personas` (flux B)
+- [x] D2a. Cartes des personas, badge "profil fictif", niveau prérempli (US-01). En mode `fixture` : Robert et Amira. En modes `offline` et `bedrock` : les trois personas avec âge et métier, par `load_personas` (fusionné dans la PR n° 8)
 - [ ] D3. Radiographie : cartes de métriques par le registre, période, poids par secteur et par classe, statut par règle (US-03)
 - [ ] D4a. Idée "25 % dans TSLA" en un clic, avant/après, règles triées par gravité, contrefactuel, marges (US-05, US-06, US-07)
 - [ ] J2. Brancher `offline` si C3 est fusionné. PR `feat(ui): ...` relue et fusionnée
