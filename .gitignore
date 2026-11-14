@@ -12,6 +12,9 @@ __pycache__/
 .ipynb_checkpoints/
 .pytest_cache/
 
+# Notebooks de vérification manuelle (personnels, non versionnés)
+notebooks/manual_checks/
+
 # Données générées (régénérables par le code)
 data/processed/*
 !data/processed/.gitkeep
