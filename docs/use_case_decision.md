@@ -2,7 +2,7 @@
 
 Statut : **proposition à valider par l'équipe**. Rien n'est choisi tant que l'équipe n'a pas tranché (voir CLAUDE.md, section "Exigences du projet et décisions"). Les notes ci-dessous sont un jugement, pas une mesure.
 
-Cette version fusionne la proposition initiale (cas A) avec les idées de Samer et d'Ibrahima. Le tableau "Ce qui change" résume les arbitrages.
+Cette version fusionne la proposition initiale (cas A) avec les idées de Samer et d'Ibrahima, dont l'agent explicateur séparé proposé par Ibrahima. Le tableau "Ce qui change" résume les arbitrages.
 
 ## Recommandation : un copilote de cohérence, pas un conseiller
 
@@ -51,7 +51,9 @@ Positionnement proposé par Ibrahima : le système ne dit pas quoi acheter. Il v
 | Fidélité aux données | Validateur de chiffres et repli sans modèle ajoutés | Samer |
 | Nouvelles libres | Écartées du MVP, remplacées par les annonces planifiées | Ibrahima (les deux idées) |
 | Rejeu | Extension, mais `as_of` posé dès le socle | Ibrahima |
-| Agents | Un agent analyste, pas quatre | arbitrage |
+| Agents | Deux agents aux pouvoirs séparés : un analyste (outils) et un explicateur (dossier seul). La gouvernance reste en code | Ibrahima (agent explicateur), arbitrage (conditions) |
+| Rédaction | L'analyste ne rédige plus : il soumet un résultat structuré. L'explicateur rédige dans des emplacements fixes | Ibrahima, arbitrage |
+| Limites et avertissement | Choisis et affichés par le code, jamais laissés au modèle | arbitrage |
 | Lambda | Extension, pas MVP | arbitrage |
 
 ## Profil : cases à cocher d'abord, texte libre ensuite
@@ -62,7 +64,7 @@ Combinaison des idées de Samer (cases) et d'Ibrahima (règle proposée puis con
 | --- | --- | --- |
 | 1. Choix rapide | Trois personas préremplis, modifiables | Utilisateur |
 | 2. Cases et curseurs | Objectif, horizon, tolérance au risque, expérience, ESG, crypto, plafond par titre, capital fictif | Code déterministe : réponses vers règles et seuils |
-| 3. "Autre contrainte" (optionnel) | Texte libre, par exemple "pas de pétrole" | L'agent propose une règle du catalogue, l'utilisateur confirme ou refuse |
+| 3. "Autre contrainte" (optionnel) | Texte libre, par exemple "pas de pétrole" | L'agent analyste propose une règle du catalogue, l'utilisateur confirme ou refuse |
 | 4. Contrôle du profil | Contradictions et champs manquants signalés | Code déterministe |
 
 Règles du jeu :
@@ -78,15 +80,17 @@ Règles du jeu :
 
 | Niveau | Forme | Identique partout |
 | --- | --- | --- |
-| Novice | Mots simples, montants en dollars, une analogie sans chiffre | Chiffres, statuts, limites |
-| Intermédiaire | Termes financiers définis au premier usage | Chiffres, statuts, limites |
-| Pro | Termes techniques, méthode et paramètres (fenêtre, annualisation, alignement) | Chiffres, statuts, limites |
+| Novice | Mots simples, montants en dollars, une analogie sans chiffre tirée du glossaire | Chiffres, statuts, limites, ordre des sections |
+| Intermédiaire | Termes financiers, définitions tirées du glossaire au premier usage | Chiffres, statuts, limites, ordre des sections |
+| Pro | Termes techniques, méthode et paramètres (fenêtre, annualisation, alignement) lus dans le registre | Chiffres, statuts, limites, ordre des sections |
 
 - Le niveau est prérempli selon l'expérience déclarée et modifiable à tout moment.
-- Le niveau est un paramètre de rédaction. Il ne relance aucun calcul et ne change aucun statut.
+- Changer de niveau relance **seulement l'agent explicateur** sur le même dossier d'explication figé. L'analyse, les outils et la gouvernance ne sont pas relancés : aucun chiffre et aucun statut ne peut bouger.
 - Les montants en dollars sont calculés par les outils (capital fictif fois pourcentage), pas par le modèle.
+- Les définitions et les analogies viennent d'un glossaire fermé écrit par l'équipe et fourni dans le dossier. L'explicateur choisit, il n'invente pas. Cela garde le texte vérifiable par le contrôle d'ancrage.
 - Le niveau pro détaille la méthode, jamais le raisonnement interne du modèle.
-- Les textes sont mis en cache par niveau pour que la bascule soit instantanée en démo.
+- Les textes sont générés à la demande : le niveau affiché d'abord, les autres au clic ou en arrière-plan. Ils sont mis en cache (clé : dossier, niveau, modèle, version du prompt) pour une bascule instantanée en démo.
+- Les limites obligatoires et l'avertissement ont un texte fixe par niveau, écrit par l'équipe et affiché par le code.
 
 ## Fidélité aux données : ce qui est garanti et ce qui ne l'est pas
 
@@ -94,16 +98,25 @@ Demande de Samer : l'agent ne doit jamais inventer. Aucun système ne peut prome
 
 | Mécanisme | Ce qu'il garantit | Ce qu'il ne garantit pas |
 | --- | --- | --- |
-| Calculs par outils déterministes testés | Aucun chiffre financier ne vient du modèle | L'absence d'erreur dans les données sources |
+| Calculs par outils déterministes testés | Aucun chiffre financier ne vient d'un modèle | L'absence d'erreur dans les données sources |
 | Registre de preuves | Chaque chiffre affiché a une source, une période, une devise et une transformation | Que la source elle-même soit exacte |
-| Rédaction par références | Le modèle écrit des renvois (`[E12]`), l'interface insère la valeur du registre | La justesse des phrases qualitatives autour |
-| Validateur de chiffres | Un texte contenant un chiffre hors registre ou une référence inconnue est rejeté | Rien sur les phrases sans chiffre |
-| Gouvernance déterministe | Le statut par règle ne dépend jamais du modèle | Que les seuils soient "les bons" (ce sont des hypothèses) |
+| Explicateur isolé (idée d'Ibrahima) | Le rédacteur ne voit que le dossier d'explication : ni texte libre de l'utilisateur, ni historique, ni données brutes, ni outil | Que le modèle n'utilise pas ses connaissances générales : l'isolation du contexte n'isole pas le modèle |
+| Rédaction par références | Le modèle écrit des renvois (`[E12]`, `[G3]`), l'interface insère la valeur ou le statut du registre | La justesse des phrases qualitatives autour |
+| Emplacements fixes | L'ordre des sections et des facteurs est fixé par le code (gravité du statut, puis marge) | La qualité du style dans chaque emplacement |
+| Validateur d'explication | Rejet de tout chiffre hors registre (y compris en lettres : "un quart", "le double"), de toute référence inconnue, de tout terme de recommandation ou de prédiction, et de tout texte qui ne cite pas chaque règle en tension, en conflit ou en information manquante | Rien sur le sens des phrases sans chiffre |
+| Limites et avertissement par le code | Les limites obligatoires (catalogue fermé, rattachées aux outils appelés) et l'avertissement sont toujours affichés, avec un texte fixe | Que l'utilisateur les lise |
+| Qualificatifs par seuil | "Élevé", "modéré", "faible" sont calculés par le code à partir de seuils affichés | Que les seuils soient "les bons" (ce sont des hypothèses) |
+| Gouvernance déterministe | Le statut par règle ne dépend d'aucun modèle. L'explicateur ne peut ni le changer ni ajouter de recommandation | Que les seuils soient "les bons" |
 | Refus si donnée manquante | Un outil sans donnée renvoie "information manquante", jamais une valeur par défaut | Sans objet |
-| Repli sans modèle | Après un rejet et un nouvel essai, une explication à gabarit fixe est affichée | La qualité de style du repli |
-| Garde-fou Bedrock | Sujets refusés (conseil personnalisé, exécution d'ordres, prédiction), contrôle d'ancrage sur le texte final | **L'exactitude factuelle** : c'est un filtre probabiliste à seuil |
+| Repli sans modèle | Après un rejet et un nouvel essai, une explication à gabarit fixe est affichée, avec les mêmes chiffres | La qualité de style du repli |
+| Garde-fou Bedrock | Sujets refusés (conseil personnalisé, exécution d'ordres, prédiction). Contrôle d'ancrage du texte final contre le dossier d'explication | **L'exactitude factuelle** : c'est un filtre probabiliste à seuil |
 
-Risque résiduel assumé : une formulation qualitative trompeuse ("faible", "rassurant"). Mesures : consignes de rédaction strictes, qualificatifs liés à des seuils affichés, contrôle d'ancrage, relecture d'un jeu de scénarios fixes avant la démo.
+Risques résiduels assumés :
+
+- **Formulation qualitative trompeuse** ("rassurant", "solide"). Mesures : qualificatifs par seuil, glossaire fermé, liste de termes interdits, contrôle d'ancrage, relecture d'un jeu de scénarios fixes avant la démo.
+- **Emphase à l'intérieur d'un emplacement.** L'ordre global est fixé, pas le poids des mots dans une phrase. Mesure : relecture du jeu fixe.
+- **Connaissances du modèle hors données** (par exemple une remarque sur une entreprise). Mesures : consigne stricte, contrôle d'ancrage, relecture.
+- **Motif d'une variante.** L'explicateur ne sait pas pourquoi l'analyste l'a proposée. Mesure : motif transmis sous forme de code fermé (`reduce_weight`, `change_funding_source`, `spread_across_existing`), jamais deviné.
 
 ## Annonces planifiées plutôt que nouvelles libres
 
@@ -140,7 +153,7 @@ Le rejeu (idée d'Ibrahima) est une extension. Sa discipline est posée dès le 
 | Biais du survivant | L'univers a été choisi en 2026. Le rejeu ne montre pas "ce qu'on aurait vu à l'époque" : limite affichée en permanence |
 | Preuves ESG et annonces | Filtrées par date de publication antérieure à `as_of` |
 | Secteurs et libellés | Ce sont ceux d'aujourd'hui : limite affichée |
-| Le modèle de langage connaît la suite | Les outils sont à l'aveugle, pas le modèle. En rejeu, explication à gabarit fixe ou très contrainte, et limite dite à l'écran |
+| Les modèles de langage connaissent la suite | Les outils sont à l'aveugle, pas les modèles. L'isolation de l'explicateur n'y change rien. En rejeu, explication à gabarit fixe, et limite dite à l'écran |
 
 Test obligatoire : pour une date donnée, le résultat d'un outil ne change pas si on supprime toutes les données postérieures.
 
@@ -181,32 +194,60 @@ Test obligatoire : pour une date donnée, le résultat d'un outil ne change pas 
 
 ## Architecture proposée
 
-### Un agent, pas quatre
+### Deux agents, un juge en code
 
-L'énoncé préfère explicitement une conception simple, ciblée et vérifiable à un grand nombre d'agents. Il décrit l'explicabilité et la gouvernance comme "agent ou mécanisme". Recommandation : **un agent analyste**, et des mécanismes déterministes pour le reste.
+L'énoncé préfère explicitement une conception simple, ciblée et vérifiable à un grand nombre d'agents. Il décrit l'explicabilité et la gouvernance comme "agent ou mécanisme". Ibrahima propose de séparer l'explication de l'analyse dans un second agent. Recommandation : **l'adopter sous conditions**. Un agent agit, le code juge, un agent explique.
 
 | Rôle | Nature | Pourquoi |
 | --- | --- | --- |
-| Analyste | Agent sur Bedrock, tours et appels bornés | Seul rôle qui demande du jugement : comprendre la demande, choisir les outils, proposer des variantes, rédiger |
-| Profil | Code, plus un appel à l'agent pour le texte libre | La traduction en règles doit être reproductible |
+| Analyste | Agent sur Bedrock avec outils, tours et appels bornés | Seul rôle qui demande du jugement : comprendre la demande, choisir les outils, proposer des variantes. Il ne rédige pas |
+| Profil | Code, plus un appel à l'analyste pour le texte libre | La traduction en règles doit être reproductible |
 | Gouvernance | Code déterministe testé | Un verdict ne doit pas varier d'un appel à l'autre |
-| Explication | Registre de preuves, validateur, niveau de rédaction | La fidélité s'obtient par construction, pas par un deuxième modèle |
+| Registre et dossier d'explication | Code | Les preuves, l'ordre des facteurs et les limites obligatoires ne dépendent d'aucun modèle |
+| Explicateur (idée d'Ibrahima) | Agent sur Bedrock, un appel borné, sans outil, dossier seul | Rédiger au niveau choisi sans pouvoir sortir de ce qui a été calculé |
+| Validateur et repli | Code | La fidélité se contrôle par construction, pas par un modèle |
 
-Raisons : chaque agent ajoute des appels (quotas partagés), de la latence en démo, des points de panne et une trace plus difficile à lire. Les quatre rôles restent **visibles dans l'interface** comme étapes de la trace. Les rôles exacts des quatre agents d'Ibrahima sont à confirmer avec lui.
+Chaîne d'exécution :
+
+1. **Analyste** (agent, outils) : structure l'idée, appelle les outils, propose des variantes, termine par `submit_analysis`.
+2. **Gouvernance** (code) : statut et marge par règle.
+3. **Registre et dossier** (code) : preuves numérotées, facteurs classés, limites obligatoires, glossaire du niveau.
+4. **Explicateur** (agent, dossier seul) : rédige dans des emplacements fixes, par renvois.
+5. **Validateur** (code) : un nouvel essai en cas de rejet, puis repli à gabarit fixe.
+6. **Garde-fou Bedrock** : sujets refusés et contrôle d'ancrage sur le texte rendu.
+
+Conditions de l'adoption :
+
+- **L'analyste ne rédige aucun texte destiné à l'utilisateur**, sauf une question de précision quand l'idée est incomplète. Son résultat est structuré : idée comprise, variantes (paramètres et motif en code fermé), au plus deux preuves à mettre en avant, demandes non prises en charge. Ni prose, ni chiffre, ni verdict.
+- **La trace vient du code**, pas d'une déclaration du modèle : appels d'outils, paramètres, numéros de preuve, erreurs.
+- **L'explicateur ne voit que le dossier d'explication** : niveau, règles du profil fictif, idée normalisée, preuves (source, période, devise, transformation, valeur, qualificatif), statuts et marges, variantes, facteurs classés, limites, glossaire. Le texte libre de l'utilisateur n'y entre jamais.
+- **L'explicateur ne juge pas** : il ne peut ni changer un statut, ni ajouter une recommandation, ni choisir les limites.
+- **Le repli à gabarit est construit en premier.** Il sert de filet, de référence de comparaison et de mode hors ligne.
+
+Ce que l'isolation apporte : pas de contamination par le contexte, pas d'injection par le texte libre, un contrôle d'ancrage applicable (source = dossier), un explicateur testable seul, des chiffres immobiles à la bascule de niveau.
+
+Ce qu'elle n'apporte pas : les chiffres étaient déjà protégés par les renvois et le validateur. Les formulations qualitatives restent un risque résiduel (voir "Fidélité aux données").
+
+Coût : environ un appel de modèle de plus par analyse, puis un appel et un contrôle de garde-fou par niveau affiché. Le dernier tour de l'analyste devient court. Les niveaux sont générés à la demande et mis en cache.
+
+Formulation honnête à tenir devant le jury : l'explicateur est un appel borné et contraint, sans outil. On ne multiplie pas les agents au-delà de ces deux rôles.
 
 ### Composants
 
 | Composant | Rôle |
 | --- | --- |
-| Agent analyste | Structure l'idée (actif, poids, source des fonds), pose une question si elle est incomplète, choisit les outils, propose les variantes et les repasse dans les mêmes outils, rédige par références au registre |
-| Gouvernance | Statut par règle : conforme, tension, conflit, information manquante. Donne aussi la marge avant changement de statut (contrefactuel). **Le modèle ne décide jamais du verdict** |
-| Registre de preuves | Une entrée numérotée par résultat d'outil : source, période, devise, transformation, valeur |
-| Validateur d'explication | Rejette tout chiffre hors registre et toute référence inconnue. Un nouvel essai, puis repli à gabarit fixe |
-| Garde-fou Bedrock | Sujets refusés et contrôle d'ancrage. Interventions visibles dans la trace |
+| Agent analyste | Structure l'idée (actif, poids, source des fonds), pose une question si elle est incomplète, choisit les outils, propose les variantes et les repasse dans les mêmes outils, soumet un résultat structuré. Ne rédige pas l'explication |
+| Gouvernance | Statut par règle : conforme, tension, conflit, information manquante. Donne aussi la marge avant changement de statut (contrefactuel). **Aucun modèle ne décide du verdict** |
+| Registre de preuves | Une entrée numérotée par résultat d'outil : source, période, devise, transformation, valeur, qualificatif par seuil, limites rattachées |
+| Dossier d'explication | Construit par le code à partir du résultat de l'analyste, de la gouvernance et du registre. Fixe l'ordre des facteurs, les limites obligatoires et le glossaire du niveau. C'est la seule entrée de l'explicateur, et la source du contrôle d'ancrage |
+| Agent explicateur (idée d'Ibrahima) | Un appel par niveau, sans outil ni historique. Rédige dans des emplacements fixes (résumé, facteurs, contrefactuel, variantes, contexte des limites), par renvois au dossier |
+| Validateur d'explication | Rejette tout chiffre hors registre, toute référence inconnue, tout terme de recommandation ou de prédiction, toute règle non conforme non citée. Un nouvel essai, puis repli à gabarit fixe |
+| Limites et avertissement | Texte fixe par niveau, affiché par le code sous l'explication. Jamais généré |
+| Garde-fou Bedrock | Sujets refusés sur la demande de l'utilisateur et sur le texte final. Contrôle d'ancrage du texte rendu contre le dossier. Interventions et scores visibles dans la trace |
 
-### Outils de l'agent
+### Outils de l'agent analyste
 
-Tous déterministes, tous avec `as_of`, aucun outil de passage d'ordres.
+Tous déterministes, tous avec `as_of`, aucun outil de passage d'ordres. L'agent explicateur n'a aucun outil.
 
 | Outil | Rend | Phase |
 | --- | --- | --- |
@@ -219,11 +260,23 @@ Tous déterministes, tous avec `as_of`, aucun outil de passage d'ordres.
 | `get_historical_episode` | Comportement pendant un épisode daté (par exemple 2022), en pourcentage et en dollars fictifs | MVP |
 | `get_esg_evidence` | Preuves datées, ou "aucune preuve disponible" | MVP |
 | `check_governance` | Statut et marge par règle | MVP |
+| `submit_analysis` | Clôt l'analyse : idée comprise, variantes avec motif en code fermé, preuves à mettre en avant, demandes non prises en charge | MVP |
 | `get_announcement_reactions` | Réaction du portefeuille aux annonces passées d'un même type | Extension 1 |
 
 ### Trace visible
 
-Idée comprise, règles confirmées, outils appelés (nom, paramètres, numéro de preuve), gouvernance appliquée, références validées, garde-fou passé ou intervenu. Le raisonnement interne du modèle n'est pas exposé.
+Six étapes, chacune avec une étiquette "agent" ou "code" :
+
+| Étape | Acteur | Ce qui est affiché |
+| --- | --- | --- |
+| 1. Analyse | Agent analyste (Bedrock) | Idée comprise, règles confirmées, outils appelés (nom, paramètres, numéro de preuve), variantes proposées, modèle, nombre de tours |
+| 2. Gouvernance | Code | Statut, seuil et marge par règle |
+| 3. Dossier | Code | Preuves retenues, ordre des facteurs, limites obligatoires. Bouton "Ce que l'explicateur a vu" |
+| 4. Explication | Agent explicateur (Bedrock) | Niveau, modèle, essai 1 ou 2, texte lu dans le cache ou généré |
+| 5. Validation | Code | Références vérifiées, motifs de rejet, repli utilisé ou non |
+| 6. Garde-fou | Bedrock Guardrails | Sujets refusés, scores d'ancrage et de pertinence, action prise |
+
+Les deux agents sont visuellement distincts et la frontière est lisible : l'analyste a des outils et pas de plume, l'explicateur a une plume et pas d'outil. Le raisonnement interne des modèles n'est pas exposé. La trace complète (sans secret) est enregistrée sur S3.
 
 ### Hypothèses affichées comme telles
 
@@ -247,11 +300,21 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 
 | Service | Rôle concret | Phase |
 | --- | --- | --- |
-| Bedrock, API Converse avec appels d'outils | L'agent analyste | MVP |
-| Garde-fou Bedrock | Sujets refusés, contrôle d'ancrage, testé avec des requêtes permises et refusées | MVP |
+| Bedrock, API Converse | Agent analyste (avec appels d'outils) et agent explicateur (un appel sans outil). Identifiants de modèle configurables séparément | MVP |
+| Garde-fou Bedrock | Sujets refusés sur l'entrée et sur le texte final. Contrôle d'ancrage par `ApplyGuardrail` : source = dossier d'explication, requête fixe, contenu = texte rendu. Testé avec des requêtes permises et refusées | MVP |
 | S3 privé | Traces d'exécution consultables (une par analyse) | MVP |
 | Hébergement de l'interface sur AWS | Démo accessible par URL | Extension 4 |
 | Lambda pour les outils | Outils appelables hors de l'application | Extension 4 |
+
+**Contrôle d'ancrage, points vérifiés dans la documentation AWS (2026-11-14) et à confirmer dans le compte :**
+
+- Cas pris en charge : résumé, paraphrase, questions-réponses. L'explicateur (dossier vers texte) entre dans ce cadre, pas la boucle d'outils de l'analyste.
+- Niveau Classic (par défaut) : français pris en charge, ancrage strict. Toute information absente de la source baisse le score, d'où le glossaire fourni dans le dossier.
+- Niveau Standard : tolère mieux la reformulation, mais exige l'inférence interrégionale du garde-fou. Disponibilité dans le compte de l'atelier non vérifiée.
+- Limites : 100 000 caractères pour la source, 1 000 pour la requête, 5 000 pour la réponse. L'explication est donc plafonnée en longueur.
+- Démarrer en mode détection (scores affichés, sans blocage), calibrer les seuils sur le jeu de scénarios fixes, puis décider du blocage.
+
+**Modèles :** commencer avec le même modèle peu coûteux pour les deux agents. L'analyste exige des appels d'outils fiables, l'explicateur un bon français et le respect d'un format. Ne séparer les modèles que si le jeu de scénarios fixes le justifie. Modèles actifs et prise en charge du choix d'outil forcé à vérifier dans le compte.
 
 **Lambda maintenant ou plus tard ?** Recommandation : plus tard.
 
@@ -266,8 +329,9 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
   - données : `data_loading.py` (avec `as_of`), `calendar_alignment.py`, `fx_conversion.py` ;
   - calculs : `metrics.py`, `portfolio.py`, `diversification.py` ;
   - profils : `profiles.py` (cases vers règles, catalogue de règles) ;
-  - contrôle et preuves : `governance.py`, `evidence.py`, `explanation.py` (validateur, niveaux, repli) ;
-  - agent : `agent_tools.py`, `agent.py`, `prompts/` ;
+  - contrôle et preuves : `governance.py`, `evidence.py` (registre, catalogue de limites) ;
+  - explication : `explanation_brief.py` (dossier, facteurs classés, glossaire), `explanation_validator.py`, `explanation_fallback.py` (gabarits par niveau) ;
+  - agents : `agent_tools.py`, `analyst_agent.py`, `explainer_agent.py`, `analysis_pipeline.py` (enchaînement des six étapes, cache par niveau), `bedrock_client.py` (Converse, garde-fou, nouvelles tentatives), `prompts/` (un prompt par agent, versionné) ;
   - extension : `scheduled_events.py`.
 - `app/` : interface. Nouveau dossier racine, à valider (il modifie la règle n°5).
 - `scripts/` : `build_processed.py`, `setup_guardrail.py`, `run_scenarios.py`.
@@ -283,10 +347,11 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 | Socle de calcul testé (alignement, devises, métriques, `as_of`) | Analyse de données |
 | Radiographie et avant/après pour les trois personas | Qualité, analyse de données |
 | Gouvernance avec statuts et contrefactuel | Agentique et explicabilité |
-| Agent Bedrock, registre, validateur, repli, trace | Agentique et explicabilité, AWS |
+| Agent analyste Bedrock, registre, dossier d'explication, trace à six étapes | Agentique et explicabilité, AWS |
+| Agent explicateur (idée d'Ibrahima), validateur, repli à gabarit | Agentique et explicabilité, AWS |
 | Garde-fou et traces S3 | AWS |
 | Profil par cases, idée par sélecteurs, panneau "Sources et méthode", avertissement | UX/UI |
-| Trois niveaux d'explication | UX/UI, explicabilité |
+| Trois niveaux d'explication, générés par l'explicateur seul | UX/UI, explicabilité |
 | ESG minimal pour Mateo | Qualité |
 
 ### Extensions, dans l'ordre
@@ -303,8 +368,8 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 | --- | --- | --- |
 | 1 | Robert veut 25 % de TSLA : tension nommée, contrefactuel, variante | MVP |
 | 2 | Même demande pour Amira : autre verdict, même mécanisme | MVP |
-| 3 | Bascule novice, intermédiaire, pro : le texte change, les chiffres restent | MVP |
-| 4 | Clic sur un chiffre : calcul, source, date, limites. Puis une requête refusée par le garde-fou | MVP |
+| 3 | Bascule novice, intermédiaire, pro : seul l'explicateur est relancé, le texte change, les chiffres restent. La trace montre "ce que l'explicateur a vu" | MVP |
+| 4 | Clic sur un chiffre : calcul, source, date, limites. Puis une requête refusée par le garde-fou, et le score d'ancrage du texte | MVP |
 | 5 | Mateo et une annonce de la Banque du Canada | Extension 1 |
 
 ## Feuille de route
@@ -312,11 +377,11 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 1. **Décisions.** Répondre aux questions ouvertes, vérifier le compte AWS et les modèles actifs, obtenir l'accord d'un mentor pour les données.
 2. **Socle de calcul.** Chargement avec `as_of`, alignement, devises, métriques, simulation avant/après, tests.
 3. **Profils et gouvernance.** Trois personas, catalogue de règles, statuts, marges, tests.
-4. **Première démo de bout en bout.** Robert et TSLA : agent, registre, validateur, repli, page avec avertissement.
+4. **Première démo de bout en bout.** Robert et TSLA, dans cet ordre : dossier d'explication et repli à gabarit (la page fonctionne sans modèle), validateur et ses tests, agent analyste avec `submit_analysis`, puis agent explicateur avec un nouvel essai et le cache. Page avec avertissement.
 5. **Interface.** Cases du profil, sélecteurs de l'idée, radiographie, deux profils côte à côte, panneau de preuves, niveaux d'explication.
-6. **AWS.** Garde-fou testé et visible dans la trace, traces sur S3.
+6. **AWS.** Garde-fou testé (requêtes permises et refusées), contrôle d'ancrage en mode détection puis seuils calibrés sur le jeu de scénarios fixes, interventions et scores visibles dans la trace, traces sur S3.
 7. **ESG minimal et fausse diversification.** Scénarios de Mateo et d'Amira.
-8. **Gel du MVP et enregistrement d'une première vidéo.** Avant toute extension.
+8. **Gel du MVP et enregistrement d'une première vidéo.** Avant toute extension. Si l'explicateur ne passe pas le jeu de scénarios fixes à cette date, livrer le repli à gabarit pour deux niveaux et garder l'explicateur pour le troisième.
 9. **Extensions**, dans l'ordre ci-dessus, selon le temps restant.
 10. **Livrables.** README, documentation technique, one pager, vidéo finale.
 
@@ -324,27 +389,33 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 
 - **Dérive du périmètre :** 12 cas d'usage, c'est trop. Geler le MVP avant les extensions.
 - **Compte AWS temporaire :** enregistrer la vidéo pendant qu'il est actif.
-- **Quotas partagés :** modèle peu coûteux, tours bornés, nouvelles tentatives espacées, cache des textes par niveau.
-- **Perception "pas assez agentique" avec un seul agent :** montrer dans la trace le choix des outils, la question de précision et les variantes repassées dans les outils.
+- **Quotas partagés :** modèle peu coûteux, tours bornés, nouvelles tentatives espacées, niveaux générés à la demande, cache des textes par niveau. Pire cas par analyse : trois niveaux avec un nouvel essai chacun, soit six appels explicateur et six contrôles de garde-fou.
+- **Second agent perçu comme décoratif :** montrer ce qu'il change (dossier fermé, bascule de niveau sans recalcul, contrôle d'ancrage) et le présenter honnêtement comme un appel borné sans outil.
+- **Perception "pas assez agentique" :** montrer dans la trace le choix des outils, la question de précision, les variantes repassées dans les outils et la séparation "agir, juger, expliquer".
+- **Explicateur trop contraint, texte plat :** acceptable. La fidélité prime sur le style, et le repli donne le plancher.
+- **Taux de rejet élevé du validateur :** chaque rejet coûte un appel. Le mesurer sur le jeu de scénarios fixes et corriger le prompt avant la démo. Le repli garantit un affichage.
+- **Contrôle d'ancrage trop strict :** au niveau Classic, une analogie ou une définition hors dossier baisse le score. Glossaire fourni dans le dossier, mode détection d'abord, seuils calibrés.
+- **Perte d'information utile :** ce qui n'est pas dans le dossier n'existe pas pour l'explicateur. C'est voulu. Si une nuance manque, on l'ajoute au registre par un outil, pas au prompt.
+- **Deux prompts à maintenir :** versionnés dans `prompts/`, version incluse dans la clé de cache et dans la trace.
 - **Promesse "zéro hallucination" :** ne pas la faire. Présenter le tableau des garanties.
 - **Seuils arbitraires :** les présenter comme des hypothèses réglables.
-- **Table ESG contestable :** rester factuel et daté.
-- **Montants en dollars lus comme une prévision :** toujours écrire "perte historique observée sur telle période, appliquée au capital fictif".
-- **Analogies du niveau novice :** sans chiffre, sinon rejetées par le validateur.
-- **Contrôle d'ancrage du garde-fou :** compatibilité avec les appels d'outils à vérifier dans le compte. Sinon l'appliquer au texte final seulement.
+- **Table ESG contestable :** rester factuel et daté. Les libellés des preuves ESG entrent dans le dossier : ils sont rédigés par l'équipe, pas copiés d'une source.
+- **Montants en dollars lus comme une prévision :** toujours écrire "perte historique observée sur telle période, appliquée au capital fictif". Formule portée par le gabarit du registre, pas par le modèle.
+- **Analogies du niveau novice :** tirées du glossaire, sans chiffre, sinon rejetées par le validateur.
+- **Rejeu :** l'explicateur connaît la suite, comme tout modèle. En rejeu, repli à gabarit fixe.
 
 ## Questions ouvertes
 
 1. Date limite et consignes de dépôt ?
 2. Taille de l'équipe et répartition (socle de calcul, agent et AWS, interface, données ESG et annonces, livrables) ?
-3. Date de fin du compte Workshop Studio, et modèles Bedrock actifs ?
+3. Date de fin du compte Workshop Studio ? Quels modèles Bedrock sont actifs, lesquels acceptent le choix d'outil forcé, et le niveau Standard du garde-fou (inférence interrégionale) est-il disponible ?
 4. Streamlit pour l'interface ? Interface en français ?
 5. Hébergement sur AWS exigé, ou Bedrock, garde-fou et S3 suffisent-ils ? Sinon, Lambda remonte-t-il dans le MVP ?
 6. Un mentor autorise-t-il le téléversement des CSV dans le compte ?
 7. Qui monte la table ESG, et pour quels titres en premier ?
 8. Accepte-t-on le dossier racine `app/` et les seuils comme hypothèses réglables ?
-9. Ibrahima : quels étaient les rôles des quatre agents ? L'arbitrage "un agent et des mécanismes" convient-il ?
+9. Ibrahima : l'agent explicateur est adopté sous conditions (dossier seul, pas d'outil, pas de verdict, limites affichées par le code, emplacements fixes). Ces conditions te conviennent-elles ? Avec un analyste et un explicateur, reste-t-il un rôle de ta proposition à quatre agents qui ne serait couvert ni par un agent ni par le code ?
 10. Samer et Ibrahima : la combinaison "cases d'abord, texte libre confirmé ensuite" convient-elle ?
-11. Trois niveaux d'explication dès le MVP, ou deux (novice et pro) pour commencer ?
+11. Trois niveaux d'explication dès le MVP, ou deux (novice et pro) pour commencer ? Chaque niveau coûte un appel explicateur, un contrôle de garde-fou, un gabarit de repli et une entrée de glossaire. Qui rédige le glossaire et les textes fixes des limites ?
 12. Annonces planifiées : qui saisit le calendrier de la Banque du Canada, et ses conditions d'utilisation permettent-elles de le versionner ?
 13. Accepte-t-on d'écarter les nouvelles libres et le cas "comment en profiter ?" ?
