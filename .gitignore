@@ -1,0 +1,25 @@
+# Claude Code
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Secrets / local config
+.env
+.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
