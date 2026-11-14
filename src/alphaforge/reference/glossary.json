@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "status_fr": "Version de départ écrite pour B4, à relire et compléter par la tâche B7. Aucun chiffre dans les textes, aucune recommandation.",
+  "terms": [
+    {
+      "term_id": "T1",
+      "term": "Volatilité",
+      "rule_types": ["max_portfolio_volatility"],
+      "novice": {
+        "definition": "Mesure de l'ampleur des variations de la valeur d'un placement dans le temps",
+        "analogy": "Une route de montagne avec des hauts et des bas plus ou moins marqués"
+      },
+      "pro": {
+        "definition": "Écart-type des rendements quotidiens, annualisé sur une base de jours ouvrables, mesuré sur la période indiquée dans la preuve",
+        "analogy": ""
+      }
+    },
+    {
+      "term_id": "T2",
+      "term": "Perte maximale historique",
+      "rule_types": ["max_portfolio_drawdown"],
+      "novice": {
+        "definition": "La plus forte baisse observée dans le passé entre un sommet et le creux suivant, sur la période étudiée",
+        "analogy": "La descente la plus raide d'un sentier déjà parcouru"
+      },
+      "pro": {
+        "definition": "Drawdown maximal : plus grand recul de la valeur du portefeuille depuis un sommet précédent, sur la fenêtre de la preuve, sans prévision",
+        "analogy": ""
+      }
+    },
+    {
+      "term_id": "T3",
+      "term": "Concentration",
+      "rule_types": ["max_single_asset_weight", "max_asset_class_weight", "excluded_asset_class"],
+      "novice": {
+        "definition": "Part du portefeuille placée dans un seul actif ou dans une seule catégorie d'actifs",
+        "analogy": "Mettre beaucoup d'œufs dans le même panier"
+      },
+      "pro": {
+        "definition": "Poids d'un actif ou d'une classe d'actifs dans le portefeuille simulé, rapporté à un plafond fixé par le profil",
+        "analogy": ""
+      }
+    },
+    {
+      "term_id": "T4",
+      "term": "Part défensive",
+      "rule_types": ["min_defensive_share"],
+      "novice": {
+        "definition": "Part du portefeuille placée dans des actifs dont la valeur varie en général moins que celle des actions",
+        "analogy": "Le filet de sécurité sous un funambule"
+      },
+      "pro": {
+        "definition": "Somme des poids des positions classées défensives par l'outil de radiographie, comparée à un plancher du profil",
+        "analogy": ""
+      }
+    },
+    {
+      "term_id": "T5",
+      "term": "Corrélation",
+      "rule_types": ["max_correlated_group_weight"],
+      "novice": {
+        "definition": "Tendance de plusieurs placements à monter et à baisser ensemble",
+        "analogy": "Des danseurs qui suivent le même rythme"
+      },
+      "pro": {
+        "definition": "Mesure statistique de la co-évolution des rendements de deux actifs, utilisée pour regrouper les actifs qui bougent ensemble",
+        "analogy": ""
+      }
+    },
+    {
+      "term_id": "T6",
+      "term": "Critère ESG",
+      "rule_types": ["esg_exclusion"],
+      "novice": {
+        "definition": "Prise en compte de l'environnement, du social et de la gouvernance d'une entreprise en plus de sa performance financière",
+        "analogy": "Regarder la façon dont une entreprise se comporte, pas seulement ses résultats"
+      },
+      "pro": {
+        "definition": "Exclusion fondée sur des preuves datées et sourcées relatives à l'environnement, au social ou à la gouvernance, ou information manquante en leur absence",
+        "analogy": ""
+      }
+    }
+  ]
+}
