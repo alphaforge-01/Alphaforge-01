@@ -1,6 +1,8 @@
-# Claude Code (config personnelle, CLAUDE.md est partagé)
+# Claude Code (CLAUDE.md, .claude/settings.json et .claude/agents/ sont partagés, le reste est personnel)
 CLAUDE.local.md
-.claude/
+.claude/*
+!.claude/settings.json
+!.claude/agents/
 
 # Python
 .venv/
