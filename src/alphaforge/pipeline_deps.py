@@ -51,7 +51,11 @@ def load_real_deps() -> PipelineDeps | None:
     for module_name, attributes in _REQUIRED.items():
         try:
             module = importlib.import_module(f"alphaforge.{module_name}")
-        except ImportError:
+        except ModuleNotFoundError as error:
+            # Seul un module absent est un cas normal. Une erreur d'import DANS un module existant
+            # est un vrai bogue : elle remonte au lieu de basculer en silence sur les bouchons.
+            if error.name != f"alphaforge.{module_name}":
+                raise
             return None
         for attribute in attributes:
             if not hasattr(module, attribute):

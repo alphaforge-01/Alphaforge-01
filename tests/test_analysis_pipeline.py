@@ -386,10 +386,10 @@ def test_variants_go_back_through_governance():
     base = fixture_deps()
     evaluations = []
 
-    def evaluate(profile, snapshot, simulate_fn=None, idea=None):
+    def evaluate(profile, snapshot, simulate_fn=None, idea=None, *, evidence=None):
         evaluations.append({"subject": snapshot.get("subject"), "idea": copy.deepcopy(idea),
                             "has_simulate_fn": simulate_fn is not None})
-        return base.evaluate(profile, snapshot, simulate_fn=simulate_fn, idea=idea)
+        return base.evaluate(profile, snapshot, simulate_fn=simulate_fn, idea=idea, evidence=evidence)
 
     simulated = []
 
@@ -399,7 +399,13 @@ def test_variants_go_back_through_governance():
 
     deps = replace(base, is_fixture=False, supports_variants=True, evaluate=evaluate,
                    simulate_portfolio_change=simulate)
-    result = run("robert", deps=deps)
+    # SPY pese 30 % : il peut financer les 25 % demandes (sinon aucune variante de financement)
+    funded = load("portfolio_robert.json")
+    for position in funded["positions"]:
+        position["weight"] = {"SPY": 0.30, "XIU.TO": 0.10, "XBB.TO": 0.20, "AGG": 0.15, "ZST.TO": 0.15,
+                              "GLD": 0.10}[position["ticker"]]
+    result = run_analysis(load("profile_robert.json"), funded, load("idea_tsla_25.json"), deps=deps,
+                          mode="offline", config=BedrockConfig())
     assert result["is_fixture"] is False
     assert [v["variant_id"] for v in result["variants"]] == ["V1", "V2"]
     assert [v["reason_code"] for v in result["variants"]] == ["reduce_weight", "change_funding_source"]

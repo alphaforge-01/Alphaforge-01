@@ -26,14 +26,16 @@ from .contracts import (
     AnalysisResult, AnalystSubmission, ExplanationResult, GovernanceResult, GuardrailResult,
     InvestmentIdea, InvestorProfile, Level, Portfolio, PortfolioSnapshot, TraceStep, Variant,
 )
+from .explainer_agent import PROMPT_VERSION as EXPLAINER_PROMPT_VERSION
+from .explanation_cache import ExplanationCache
 from .pipeline_deps import PipelineDeps, resolve_deps
+from .trace_store import TraceStore, TraceStoreError, build_trace_document
 from .tool_specs import (
-    MAX_HIGHLIGHTS, MAX_VARIANTS, REASON_CODES, AnalystFailure, AnalystOutcome, ToolBox,
+    MAX_HIGHLIGHTS, MAX_VARIANTS, REASON_CODES, AgentFailure, AnalystOutcome, ToolBox,
     ToolBudgetExceeded, normalize_idea,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-LIMITS_FILE = PROJECT_ROOT / "src" / "alphaforge" / "reference" / "limits.json"
 VALID_MODES = ("offline", "bedrock")
 _SEVERITY = {"conflict": 0, "tension": 1, "missing_info": 2, "compliant": 3}
 
@@ -56,7 +58,8 @@ def _idea_params(idea: InvestmentIdea) -> dict[str, Any]:
 def _step(step: int, name: str, actor: str, status: str, started: float,
           details: dict[str, Any], model_id: str | None = None) -> TraceStep:
     return TraceStep(
-        step=step, name=name, actor=actor, status=status, model_id=model_id,  # type: ignore[typeddict-item]
+        step=step, name=name, actor=actor, status=status,  # type: ignore[typeddict-item]
+        model_id=redact_text(model_id) if model_id else None,
         duration_ms=int((time.perf_counter() - started) * 1000), details=details,
     )
 
@@ -75,6 +78,21 @@ def _snapshots_from_simulation(result: dict[str, Any]) -> tuple[PortfolioSnapsho
 
 def _worst_status(governance: GovernanceResult) -> str:
     return governance["overall_status"]
+
+
+def _relabel_evidence(tool_result: dict[str, Any], old_subject: str, new_subject: str) -> None:
+    """Change le sujet des preuves d'un resultat d'outil, pour qu'un meme couple (metrique, sujet) designe une seule preuve.
+
+    Les simulations d'une variante ou explorees par l'analyste produisent des preuves de sujet
+    ``portfolio_after`` : sans reetiquetage, elles se confondraient avec celles de l'idee demandee.
+    """
+    for entry in tool_result.get("evidence", []) or []:
+        if entry.get("subject") != old_subject:
+            continue
+        entry["subject"] = new_subject
+        key = entry.get("evidence_key")
+        if isinstance(key, str) and key.endswith(f":{old_subject}"):
+            entry["evidence_key"] = key[: -len(old_subject)] + new_subject
 
 
 def propose_variants(
@@ -100,9 +118,12 @@ def propose_variants(
         variants.append({"reason_code": "reduce_weight", "idea": {**idea, "target_weight": reduced}})
     # 2. changer la source des fonds (ou repartir sur les positions existantes)
     if idea["funding_source"] == "pro_rata":
-        others = [p for p in portfolio["positions"] if p["ticker"] != idea["ticker"]]
-        if others:
-            largest = max(others, key=lambda p: p["weight"])["ticker"]
+        # Une position ne peut financer l'ajout que si elle pese au moins le poids demande : sinon
+        # l'outil refuse la simulation. On ne propose donc que des variantes finançables.
+        fundable = [p for p in portfolio["positions"]
+                    if p["ticker"] != idea["ticker"] and p["weight"] >= idea["target_weight"]]
+        if fundable:
+            largest = max(fundable, key=lambda p: p["weight"])["ticker"]
             variants.append({
                 "reason_code": "change_funding_source",
                 "idea": {**idea, "funding_source": "from_ticker", "funding_ticker": largest},
@@ -126,14 +147,19 @@ def scripted_sequence(toolbox: ToolBox, idea: InvestmentIdea) -> AnalystOutcome:
 
 
 def _load_limits(deps: PipelineDeps, limit_ids: list[str]) -> list[dict]:
+    """Catalogue des limites du resultat, au format ``{limit_id, text_novice, text_pro}``.
+
+    Sans ``limits_for`` fourni par les dependances, on reprend le catalogue complet du flux B
+    (``reference_texts.load_limits``) : le dossier d'explication affiche toutes les limites
+    obligatoires, pas seulement celles citees par une preuve.
+    """
     if deps.limits_for is not None:
         return deps.limits_for(limit_ids)
-    if LIMITS_FILE.exists():
-        raw = json.loads(LIMITS_FILE.read_text(encoding="utf-8"))
-        items = list(raw.values()) if isinstance(raw, dict) else raw
-        wanted = set(limit_ids)
-        return [item for item in items if not wanted or item.get("limit_id") in wanted]
-    return []
+    try:
+        from .reference_texts import load_limits
+    except ImportError:
+        return []
+    return list(load_limits())
 
 
 def _load_analyst_runner() -> Callable[..., AnalystOutcome] | None:
@@ -174,6 +200,7 @@ def run_analysis(
     client: BedrockClient | None = None,
     config: BedrockConfig | None = None,
     analyst_runner: Callable[..., AnalystOutcome] | None = None,
+    trace_store: TraceStore | None = None,
 ) -> AnalysisResult:
     """Analyse une idee de placement fictive pour un profil fictif.
 
@@ -203,26 +230,43 @@ def run_analysis(
             try:
                 bedrock_client = client or BedrockClient(config)
                 outcome = runner(bedrock_client, config.analyst_model_id, toolbox, idea, profile)
-            except (BedrockError, AnalystFailure, ToolBudgetExceeded) as error:
-                fallback_reason = f"{type(error).__name__}: {redact_text(str(error))}"
+            except Exception as error:  # US-15 : aucune erreur d'agent ne doit faire planter la page
+                known = isinstance(error, (BedrockError, AgentFailure, ToolBudgetExceeded))
+                fallback_reason = (
+                    f"{type(error).__name__}: {redact_text(str(error))}" if known else type(error).__name__)
                 outcome = None
                 toolbox = ToolBox(deps, portfolio, as_of=as_of, capital_cad=capital)
     if outcome is None:
         outcome = scripted_sequence(toolbox, idea)
-    if not any(r["tool_name"] == "simulate_portfolio_change" and r["status"] == "ok" for r in toolbox.results):
-        toolbox.call("simulate_portfolio_change", _idea_params(idea))
-    if not any(r["tool_name"] == "analyze_portfolio" and r["status"] == "ok" for r in toolbox.results):
-        toolbox.call("analyze_portfolio")
-    understood, _ = normalize_idea(outcome.submission.get("understood_idea"))
-    simulation = next(
-        (r for r in toolbox.results if r["tool_name"] == "simulate_portfolio_change" and r["status"] == "ok"
-         and r["params"].get("ticker") == (understood or idea)["ticker"]
-         and r["params"].get("target_weight") == (understood or idea)["target_weight"]),
-        None,
-    ) or next((r for r in toolbox.results if r["tool_name"] == "simulate_portfolio_change" and r["status"] == "ok"), None)
+    def _simulation_of_idea() -> dict[str, Any] | None:
+        # Seule la simulation de l'idee EXACTE demandee sert de snapshot "apres" : jamais une variante.
+        for call, simulated in zip(toolbox.calls, toolbox.results):
+            if call["tool_name"] != "simulate_portfolio_change" or simulated["status"] != "ok":
+                continue
+            candidate, _ = normalize_idea(call["params"])
+            if candidate == idea:
+                return simulated
+        return None
+
+    try:
+        simulation = _simulation_of_idea()
+        if simulation is None:
+            toolbox.call("simulate_portfolio_change", _idea_params(idea))
+            simulation = _simulation_of_idea()
+        if not any(r["tool_name"] == "analyze_portfolio" and r["status"] == "ok" for r in toolbox.results):
+            toolbox.call("analyze_portfolio")
+    except ToolBudgetExceeded as error:
+        raise AnalysisError("Budget d'appels d'outils epuise avant la simulation de l'idee.") from error
     if simulation is None:
         raise AnalysisError("La simulation de l'idee n'a pas abouti : aucun resultat exploitable.")
     snapshot_before, snapshot_after = _snapshots_from_simulation(simulation)
+    snapshot_before = {**snapshot_before, "subject": "portfolio_before"}
+    snapshot_after = {**snapshot_after, "subject": "portfolio_after"}
+    for call, explored in zip(toolbox.calls, toolbox.results):
+        if call["tool_name"] == "simulate_portfolio_change" and explored["status"] == "ok" and explored is not simulation:
+            label = f"explored:{explored['call_id']}"
+            _relabel_evidence(explored, "portfolio_after", label)
+            _relabel_evidence(explored, "portfolio_before", label)
     step1_status = "fallback" if (mode == "bedrock" and fallback_reason) else "ok"
     details: dict[str, Any] = {
         "tool_calls": list(toolbox.calls), "turns": outcome.turns, "stop_reason": outcome.stop_reason,
@@ -239,8 +283,9 @@ def run_analysis(
         return _snapshots_from_simulation(
             deps.simulate_portfolio_change(portfolio, candidate, as_of=as_of, capital_cad=capital))[1]
 
-    governance_before = deps.evaluate(profile, snapshot_before)
-    governance_after = deps.evaluate(profile, snapshot_after, simulate_fn=simulate_fn, idea=idea)
+    governance_before = deps.evaluate(profile, snapshot_before, evidence=toolbox.evidence())
+    governance_after = deps.evaluate(
+        profile, snapshot_after, simulate_fn=simulate_fn, idea=idea, evidence=toolbox.evidence())
 
     # Variantes : repassent par les memes outils et la meme gouvernance
     raw_variants = list(outcome.submission.get("variants", []))
@@ -253,15 +298,19 @@ def run_analysis(
             continue
         if toolbox.calls_used >= toolbox.max_calls:
             break
+        variant_id = f"V{len(variants) + 1}"
         simulated = toolbox.call("simulate_portfolio_change", _idea_params(variant_idea))
         if simulated["status"] != "ok":
             continue
-        variant_id = f"V{len(variants) + 1}"
+        _relabel_evidence(simulated, "portfolio_after", f"variant:{variant_id}")
+        _relabel_evidence(simulated, "portfolio_before", f"explored:{simulated['call_id']}")
         snapshot = {**_snapshots_from_simulation(simulated)[1], "subject": f"variant:{variant_id}"}
         variants.append(Variant(
-            variant_id=variant_id, reason_code=raw["reason_code"], idea=variant_idea,
-            snapshot=snapshot, governance=deps.evaluate(profile, snapshot, simulate_fn=simulate_fn, idea=variant_idea),
+            variant_id=variant_id, reason_code=raw["reason_code"], idea=variant_idea, snapshot=snapshot,
+            governance=deps.evaluate(
+                profile, snapshot, simulate_fn=simulate_fn, idea=variant_idea, evidence=toolbox.evidence()),
         ))
+    trace[0]["details"]["tool_calls"] = list(toolbox.calls)  # inclut les simulations de variantes
     trace.append(_step(2, "governance", "code", "ok", started, {
         "overall_before": governance_before["overall_status"], "overall_after": governance_after["overall_status"],
         "checks": [{"check_id": c["check_id"], "status": c["status"], "margin": c["margin"]}
@@ -278,10 +327,9 @@ def run_analysis(
         highlight_evidence_ids=[e for e in outcome.submission.get("highlight_evidence_ids", []) if e in evidence][:MAX_HIGHLIGHTS],
         unsupported_requests=list(outcome.submission.get("unsupported_requests", [])),
     )
-    as_of_value = as_of or next((e["as_of"] for e in evidence.values() if e.get("as_of")), None) \
-        or datetime.now(timezone.utc).date().isoformat()
+    as_of_value = as_of or next((e["as_of"] for e in evidence.values() if e.get("as_of")), None) or "inconnue"
     result = AnalysisResult(
-        run_id=uuid.uuid4().hex[:12], created_at=_now_iso(), as_of=as_of_value,
+        run_id=uuid.uuid4().hex[:16], created_at=_now_iso(), as_of=as_of_value,
         mode="bedrock" if outcome.actor == "agent" else "offline",
         is_fixture=deps.is_fixture, profile=profile, portfolio_before=portfolio, idea=idea,
         snapshot_before=snapshot_before, snapshot_after=snapshot_after,
@@ -301,6 +349,9 @@ def run_analysis(
         }))
     except Exception as error:  # le dossier ne doit pas faire perdre l'analyse deja calculee
         trace.append(_step(3, "brief", "code", "error", started, {"error": type(error).__name__}))
+    if mode == "bedrock":
+        outcome_store = persist_trace(result, config=config, store=trace_store)
+        trace[-1]["details"]["trace_saved"] = outcome_store
     return result
 
 
@@ -313,6 +364,8 @@ def explain(
     client: BedrockClient | None = None,
     config: BedrockConfig | None = None,
     explainer_runner: Callable[..., Any] | None = None,
+    cache: ExplanationCache | None = None,
+    trace_store: TraceStore | None = None,
 ) -> ExplanationResult:
     """Explication au niveau demande : dossier, texte, validation, controle du garde-fou.
 
@@ -322,28 +375,44 @@ def explain(
     deps = deps or resolve_deps()
     config = config or BedrockConfig.from_env()
     effective_mode, config_fallback = _resolve_mode(mode, config, client)
-    brief = deps.build_brief(result, level)
+    try:
+        brief = deps.build_brief(result, level)
+    except ValueError as error:
+        raise AnalysisError(f"Dossier d'explication impossible : {redact_text(str(error))}") from error
 
     # Etape 4 : explication
     started = time.perf_counter()
     output: dict[str, Any] | None = None
     fallback_reason = config_fallback
     model_id: str | None = None
+    from_cache = False
+    cache_key: str | None = None
     if effective_mode == "bedrock":
         runner = explainer_runner or _load_explainer_runner()
         if runner is None:
             fallback_reason = "explicateur_indisponible"
         else:
-            try:
-                bedrock_client = client or BedrockClient(config)
-                output = runner(bedrock_client, config.explainer_model_id, brief, deps.validate)
-                model_id = config.explainer_model_id
-            except (BedrockError, AnalystFailure) as error:
-                fallback_reason = f"{type(error).__name__}: {redact_text(str(error))}"
+            if cache is not None and config.explainer_model_id:
+                cache_key = ExplanationCache.make_key(
+                    brief["brief_id"], level, config.explainer_model_id, EXPLAINER_PROMPT_VERSION)
+                output = cache.get(cache_key)
+                if output is not None:
+                    from_cache = True
+                    model_id = config.explainer_model_id
+            if output is None:
+                try:
+                    bedrock_client = client or BedrockClient(config)
+                    output = runner(bedrock_client, config.explainer_model_id, brief, deps.validate)
+                    model_id = config.explainer_model_id
+                except Exception as error:  # US-15 : repli sur le gabarit, jamais de plantage
+                    known = isinstance(error, (BedrockError, AgentFailure))
+                    fallback_reason = (
+                        f"{type(error).__name__}: {redact_text(str(error))}" if known else type(error).__name__)
     if output is None:
         output = deps.render_template(brief)
     details: dict[str, Any] = {
         "level": level, "origin": output["origin"], "attempt": output["attempt"], "brief_id": brief["brief_id"],
+        "from_cache": from_cache,
     }
     wanted_llm = mode == "bedrock"
     if wanted_llm and output["origin"] == "template":
@@ -387,15 +456,62 @@ def explain(
                 "action": guardrail["action"], "grounding_score": guardrail["grounding_score"],
                 "relevance_score": guardrail["relevance_score"], "mode": guardrail["mode"],
             }
-        except BedrockError as error:
+            flags = getattr(bedrock_client, "last_grounding_flags", None)
+            if isinstance(flags, dict) and flags.get("below_threshold"):
+                guard_details["grounding_below_threshold"] = flags.get("filters", [])
+        except Exception as error:  # le controle d'ancrage est accessoire : jamais de plantage
             guard_status = "error"
             guard_details = {"error": type(error).__name__}
     elif effective_mode == "bedrock":
         guard_details = {"reason": "garde_fou_non_configure"}
+    if guardrail["action"] == "intervened" and output["origin"] == "llm":
+        # Le garde-fou a refuse le texte du modele : on n'affiche que le gabarit construit par le code.
+        output = deps.render_template(brief)
+        validation = deps.validate(output, brief)
+        markdown = deps.render_markdown(output, brief)
+        trace[0]["status"] = "fallback"
+        trace[0]["details"]["fallback_reason"] = "garde_fou_sortie"
+        guard_details["replaced_by_template"] = True
+        guard_details["denied_topics"] = guardrail["denied_topics"]
+        if cache is not None and cache_key and from_cache:
+            cache.discard(cache_key)
+    elif cache is not None and cache_key and output["origin"] == "llm" and validation["is_valid"] and not from_cache:
+        cache.put(cache_key, output)
     trace.append(_step(6, "guardrail", "guardrail", guard_status, started, guard_details))
 
-    return ExplanationResult(
+    explanation = ExplanationResult(
         output=output, validation=validation, guardrail=guardrail, rendered_markdown=markdown, trace=trace)  # type: ignore[typeddict-item]
+    # Cle facultative demandee par l'interface : le dossier exact transmis a l'explicateur (US-13).
+    explanation["brief"] = brief  # type: ignore[typeddict-unknown-key]
+    if mode == "bedrock":
+        trace[-1]["details"]["trace_saved"] = persist_trace(
+            result, explanation, config=config, store=trace_store)
+    return explanation
+
+
+def persist_trace(
+    result: AnalysisResult,
+    explanation: ExplanationResult | None = None,
+    *,
+    config: BedrockConfig | None = None,
+    store: TraceStore | None = None,
+) -> dict[str, Any]:
+    """Ecrit la trace sur S3 prive si un compartiment est configure. Ne leve jamais d'exception.
+
+    Rend ``{"saved": bool, "location": cle ou None, "reason": code ou None}``. Aucun
+    identifiant de compte n'est rendu, seulement la cle de l'objet.
+    """
+    config = config or BedrockConfig.from_env()
+    try:
+        trace_target = store or (TraceStore(config.trace_bucket, region=config.region) if config.trace_bucket else None)
+        if trace_target is None:
+            return {"saved": False, "location": None, "reason": "bucket_non_configure"}
+        key = trace_target.save(build_trace_document(result, explanation))
+        return {"saved": True, "location": key, "reason": None}
+    except TraceStoreError as error:
+        return {"saved": False, "location": None, "reason": redact_text(str(error))}
+    except Exception as error:  # la trace est accessoire : jamais de plantage pour elle
+        return {"saved": False, "location": None, "reason": type(error).__name__}
 
 
 def check_request(
