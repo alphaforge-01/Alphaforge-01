@@ -386,10 +386,10 @@ def test_variants_go_back_through_governance():
     base = fixture_deps()
     evaluations = []
 
-    def evaluate(profile, snapshot, simulate_fn=None, idea=None):
+    def evaluate(profile, snapshot, simulate_fn=None, idea=None, *, evidence=None):
         evaluations.append({"subject": snapshot.get("subject"), "idea": copy.deepcopy(idea),
                             "has_simulate_fn": simulate_fn is not None})
-        return base.evaluate(profile, snapshot, simulate_fn=simulate_fn, idea=idea)
+        return base.evaluate(profile, snapshot, simulate_fn=simulate_fn, idea=idea, evidence=evidence)
 
     simulated = []
 

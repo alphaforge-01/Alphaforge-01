@@ -8,6 +8,7 @@ Aucun outil de passage d'ordres n'existe, ni ici ni ailleurs.
 from __future__ import annotations
 
 import copy
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,7 +20,9 @@ MAX_TOOL_CALLS = 12
 MAX_VARIANTS = 2
 MAX_HIGHLIGHTS = 2
 REASON_CODES = ("reduce_weight", "change_funding_source", "spread_across_existing")
+UNSUPPORTED_CODES = ("return_prediction", "personalized_advice", "order_execution", "other")
 FUNDING_SOURCES = ("pro_rata", "from_ticker")
+_TICKER = re.compile(r"^[A-Z0-9.\-]{1,12}$")
 DATA_TOOL_NAMES = ("analyze_portfolio", "get_asset_facts", "simulate_portfolio_change")
 
 _IDEA_SCHEMA: dict[str, Any] = {
@@ -76,7 +79,7 @@ TOOL_SPECS: list[dict[str, Any]] = [
                     },
                 },
                 "highlight_evidence_ids": {"type": "array", "maxItems": MAX_HIGHLIGHTS, "items": {"type": "string"}},
-                "unsupported_requests": {"type": "array", "items": {"type": "string"}},
+                "unsupported_requests": {"type": "array", "items": {"type": "string", "enum": list(UNSUPPORTED_CODES)}},
             },
             "required": ["understood_idea"],
         }},
@@ -124,15 +127,15 @@ def normalize_idea(raw: Any) -> tuple[InvestmentIdea | None, str | None]:
     weight = raw.get("target_weight")
     source = raw.get("funding_source")
     funding_ticker = raw.get("funding_ticker")
-    if not isinstance(ticker, str) or not ticker.strip():
-        return None, "ticker manquant ou invalide."
+    if not isinstance(ticker, str) or not _TICKER.match(ticker.strip().upper()):
+        return None, "ticker manquant ou invalide (lettres, chiffres, point ou tiret, 12 caracteres au plus)."
     if isinstance(weight, bool) or not isinstance(weight, (int, float)) or not 0 < float(weight) <= 1:
         return None, "target_weight doit etre un nombre entre 0 (exclu) et 1 (inclus)."
     if source not in FUNDING_SOURCES:
         return None, "funding_source doit valoir pro_rata ou from_ticker."
     if source == "from_ticker":
-        if not isinstance(funding_ticker, str) or not funding_ticker.strip():
-            return None, "funding_ticker est requis quand funding_source vaut from_ticker."
+        if not isinstance(funding_ticker, str) or not _TICKER.match(funding_ticker.strip().upper()):
+            return None, "funding_ticker est requis et valide quand funding_source vaut from_ticker."
     else:
         funding_ticker = None
     return InvestmentIdea(
