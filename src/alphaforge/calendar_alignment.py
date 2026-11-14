@@ -63,6 +63,10 @@ class MissingPriceError(ValueError):
     """Un actif n'a pas de prix à une date du calendrier commun."""
 
 
+class NoDataError(ValueError):
+    """Aucune donnée (ou pas assez de dates) jusqu'à la date `as_of` demandée."""
+
+
 def common_trading_calendar(prices: pd.DataFrame, reference_tickers: list[str]) -> pd.DatetimeIndex:
     """Dates où chacun des `reference_tickers` a un prix (intersection des calendriers)."""
     if not reference_tickers:
@@ -108,7 +112,7 @@ def _aligned_cad_prices_cached(cutoff: pd.Timestamp | None) -> pd.DataFrame:
     prices = load_prices(as_of=cutoff)
     if prices.empty:
         first = load_prices()["date"].min().date()
-        raise ValueError(f"Aucune donnée au {cutoff.date()} ou avant (début des données : {first})")
+        raise NoDataError(f"Aucune donnée au {cutoff.date()} ou avant (début des données : {first})")
     calendar = common_trading_calendar(prices, _reference_tickers())
     tickers = load_universe()["ticker"].tolist()
     local = pivot_on_calendar(prices, calendar, tickers)
@@ -156,7 +160,7 @@ def daily_cad_returns(as_of: AsOf = None, tickers: str | list[str] | None = None
     """
     prices = aligned_cad_prices(as_of=as_of, tickers=tickers)
     if len(prices) < 2:
-        raise ValueError("Moins de deux dates disponibles : aucun rendement calculable")
+        raise NoDataError("Moins de deux dates disponibles : aucun rendement calculable")
     return prices.pct_change().iloc[1:]
 
 
