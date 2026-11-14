@@ -36,7 +36,6 @@ from .tool_specs import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-LIMITS_FILE = PROJECT_ROOT / "src" / "alphaforge" / "reference" / "limits.json"
 VALID_MODES = ("offline", "bedrock")
 _SEVERITY = {"conflict": 0, "tension": 1, "missing_info": 2, "compliant": 3}
 
@@ -145,14 +144,19 @@ def scripted_sequence(toolbox: ToolBox, idea: InvestmentIdea) -> AnalystOutcome:
 
 
 def _load_limits(deps: PipelineDeps, limit_ids: list[str]) -> list[dict]:
+    """Catalogue des limites du resultat, au format ``{limit_id, text_novice, text_pro}``.
+
+    Sans ``limits_for`` fourni par les dependances, on reprend le catalogue complet du flux B
+    (``reference_texts.load_limits``) : le dossier d'explication affiche toutes les limites
+    obligatoires, pas seulement celles citees par une preuve.
+    """
     if deps.limits_for is not None:
         return deps.limits_for(limit_ids)
-    if LIMITS_FILE.exists():
-        raw = json.loads(LIMITS_FILE.read_text(encoding="utf-8"))
-        items = list(raw.values()) if isinstance(raw, dict) else raw
-        wanted = set(limit_ids)
-        return [item for item in items if not wanted or item.get("limit_id") in wanted]
-    return []
+    try:
+        from .reference_texts import load_limits
+    except ImportError:
+        return []
+    return list(load_limits())
 
 
 def _load_analyst_runner() -> Callable[..., AnalystOutcome] | None:

@@ -126,3 +126,22 @@ def test_build_brief_value_error_becomes_a_readable_analysis_error():
 
     with pytest.raises(AnalysisError, match="Dossier d'explication impossible"):
         explain(result, "novice", deps=replace(deps, build_brief=failing), config=BedrockConfig())
+
+
+def test_default_limits_come_from_the_flux_b_catalog():
+    from alphaforge.analysis_pipeline import _load_limits
+    from alphaforge.pipeline_deps import PipelineDeps
+
+    base = fixture_deps()
+    deps = replace(base, limits_for=None)
+    assert isinstance(deps, PipelineDeps)
+    limits = _load_limits(deps, ["LM1"])
+    ids = [item["limit_id"] for item in limits]
+    assert "LM1" in ids and len(ids) >= 2   # catalogue complet, pas seulement les limites citees
+    assert all(item["text_novice"] and item["text_pro"] for item in limits)
+
+
+def test_limits_for_from_deps_still_wins():
+    deps = replace(fixture_deps(), limits_for=lambda ids: [{"limit_id": "X", "text_novice": "a", "text_pro": "b"}])
+    from alphaforge.analysis_pipeline import _load_limits
+    assert _load_limits(deps, []) == [{"limit_id": "X", "text_novice": "a", "text_pro": "b"}]
