@@ -1,0 +1,434 @@
+{
+  "schema_version": 1,
+  "is_fictional": true,
+  "assumption_notice_fr": "Personas, portefeuilles et capitaux fictifs. Tous les seuils de risque sont des hypothèses de l'équipe AlphaForge, réglables, et non des normes réglementaires ni des conseils personnalisés.",
+  "personas": {
+    "amira": {
+      "age": 26,
+      "occupation_fr": "Ingénieure logiciel",
+      "summary_fr": "Croissance à long terme, ouverte aux technologies émergentes et aux cryptoactifs, avec une diversification minimale.",
+      "profile": {
+        "profile_id": "amira",
+        "display_name": "Amira",
+        "is_fictional": true,
+        "objective": "Croissance à long terme avec diversification",
+        "horizon_years_min": 15,
+        "horizon_years_max": 30,
+        "risk_tolerance": "high",
+        "experience": "intermediate",
+        "esg_preference": "none",
+        "crypto_allowed": true,
+        "capital_cad": 100000.0,
+        "default_level": "pro",
+        "rules": [
+          {
+            "rule_id": "R1",
+            "rule_type": "max_single_asset_weight",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": 0.35,
+            "limit_threshold": 0.5,
+            "unit": "pct",
+            "label_fr": "Concentration par actif",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R2",
+            "rule_type": "max_portfolio_volatility",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": 0.3,
+            "limit_threshold": 0.45,
+            "unit": "pct",
+            "label_fr": "Volatilité annuelle",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R3",
+            "rule_type": "max_portfolio_drawdown",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": 0.4,
+            "limit_threshold": 0.65,
+            "unit": "pct",
+            "label_fr": "Perte maximale historique",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R4",
+            "rule_type": "min_defensive_share",
+            "params": {},
+            "direction": "min",
+            "warn_threshold": 0.05,
+            "limit_threshold": 0.0,
+            "unit": "pct",
+            "label_fr": "Part défensive minimale",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R5",
+            "rule_type": "max_asset_class_weight",
+            "params": {
+              "asset_class": "crypto"
+            },
+            "direction": "max",
+            "warn_threshold": 0.2,
+            "limit_threshold": 0.35,
+            "unit": "pct",
+            "label_fr": "Concentration en cryptoactifs",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R6",
+            "rule_type": "max_asset_class_weight",
+            "params": {
+              "asset_class": "equity"
+            },
+            "direction": "max",
+            "warn_threshold": 0.7,
+            "limit_threshold": 0.85,
+            "unit": "pct",
+            "label_fr": "Concentration par catégorie",
+            "origin": "persona",
+            "is_assumption": true
+          }
+        ]
+      },
+      "portfolio": {
+        "portfolio_id": "portfolio_amira",
+        "label_fr": "Portefeuille fictif d'Amira",
+        "is_fictional": true,
+        "base_currency": "CAD",
+        "positions": [
+          {
+            "ticker": "NVDA",
+            "weight": 0.15
+          },
+          {
+            "ticker": "QQQ",
+            "weight": 0.2
+          },
+          {
+            "ticker": "MSFT",
+            "weight": 0.1
+          },
+          {
+            "ticker": "AAPL",
+            "weight": 0.05
+          },
+          {
+            "ticker": "SHOP.TO",
+            "weight": 0.05
+          },
+          {
+            "ticker": "XIU.TO",
+            "weight": 0.1
+          },
+          {
+            "ticker": "SPY",
+            "weight": 0.1
+          },
+          {
+            "ticker": "BTC-USD",
+            "weight": 0.1
+          },
+          {
+            "ticker": "ETH-USD",
+            "weight": 0.05
+          },
+          {
+            "ticker": "XBB.TO",
+            "weight": 0.05
+          },
+          {
+            "ticker": "GLD",
+            "weight": 0.05
+          }
+        ]
+      }
+    },
+    "mateo": {
+      "age": 41,
+      "occupation_fr": "Gestionnaire des opérations",
+      "summary_fr": "Croissance équilibrée, forte préférence ESG, peu d'intérêt pour les actifs spéculatifs.",
+      "profile": {
+        "profile_id": "mateo",
+        "display_name": "Mateo",
+        "is_fictional": true,
+        "objective": "Croissance équilibrée avec critères ESG",
+        "horizon_years_min": 8,
+        "horizon_years_max": 12,
+        "risk_tolerance": "moderate",
+        "experience": "intermediate",
+        "esg_preference": "strong",
+        "crypto_allowed": false,
+        "capital_cad": 100000.0,
+        "default_level": "pro",
+        "rules": [
+          {
+            "rule_id": "R1",
+            "rule_type": "max_single_asset_weight",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": 0.25,
+            "limit_threshold": 0.3,
+            "unit": "pct",
+            "label_fr": "Concentration par actif",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R2",
+            "rule_type": "max_portfolio_volatility",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": 0.22,
+            "limit_threshold": 0.32,
+            "unit": "pct",
+            "label_fr": "Volatilité annuelle",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R3",
+            "rule_type": "max_portfolio_drawdown",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": 0.3,
+            "limit_threshold": 0.5,
+            "unit": "pct",
+            "label_fr": "Perte maximale historique",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R4",
+            "rule_type": "min_defensive_share",
+            "params": {},
+            "direction": "min",
+            "warn_threshold": 0.25,
+            "limit_threshold": 0.15,
+            "unit": "pct",
+            "label_fr": "Part défensive minimale",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R5",
+            "rule_type": "excluded_asset_class",
+            "params": {
+              "asset_class": "crypto"
+            },
+            "direction": "max",
+            "warn_threshold": null,
+            "limit_threshold": 0.0,
+            "unit": "bool",
+            "label_fr": "Cryptoactifs exclus",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R6",
+            "rule_type": "max_asset_class_weight",
+            "params": {
+              "asset_class": "equity"
+            },
+            "direction": "max",
+            "warn_threshold": 0.7,
+            "limit_threshold": 0.85,
+            "unit": "pct",
+            "label_fr": "Concentration par catégorie",
+            "origin": "persona",
+            "is_assumption": true
+          }
+        ]
+      },
+      "portfolio": {
+        "portfolio_id": "portfolio_mateo",
+        "label_fr": "Portefeuille fictif de Mateo",
+        "is_fictional": true,
+        "base_currency": "CAD",
+        "positions": [
+          {
+            "ticker": "ESGV",
+            "weight": 0.2
+          },
+          {
+            "ticker": "XIU.TO",
+            "weight": 0.15
+          },
+          {
+            "ticker": "MSFT",
+            "weight": 0.08
+          },
+          {
+            "ticker": "JNJ",
+            "weight": 0.07
+          },
+          {
+            "ticker": "FTS.TO",
+            "weight": 0.07
+          },
+          {
+            "ticker": "CNR.TO",
+            "weight": 0.05
+          },
+          {
+            "ticker": "PG",
+            "weight": 0.03
+          },
+          {
+            "ticker": "XBB.TO",
+            "weight": 0.15
+          },
+          {
+            "ticker": "AGG",
+            "weight": 0.1
+          },
+          {
+            "ticker": "ZST.TO",
+            "weight": 0.05
+          },
+          {
+            "ticker": "GLD",
+            "weight": 0.05
+          }
+        ]
+      }
+    },
+    "robert": {
+      "age": 59,
+      "occupation_fr": "Professionnel de la santé",
+      "summary_fr": "Préservation du capital avant la retraite, avec une part de croissance. Préfère les entreprises établies.",
+      "profile": {
+        "profile_id": "robert",
+        "display_name": "Robert",
+        "is_fictional": true,
+        "objective": "Préserver le capital avant la retraite",
+        "horizon_years_min": 3,
+        "horizon_years_max": 5,
+        "risk_tolerance": "low_moderate",
+        "experience": "advanced",
+        "esg_preference": "none",
+        "crypto_allowed": false,
+        "capital_cad": 100000.0,
+        "default_level": "pro",
+        "rules": [
+          {
+            "rule_id": "R1",
+            "rule_type": "max_single_asset_weight",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": 0.2,
+            "limit_threshold": 0.22,
+            "unit": "pct",
+            "label_fr": "Concentration par actif",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R2",
+            "rule_type": "max_portfolio_volatility",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": 0.16,
+            "limit_threshold": 0.25,
+            "unit": "pct",
+            "label_fr": "Volatilité annuelle",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R3",
+            "rule_type": "max_portfolio_drawdown",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": 0.2,
+            "limit_threshold": 0.35,
+            "unit": "pct",
+            "label_fr": "Perte maximale historique",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R4",
+            "rule_type": "min_defensive_share",
+            "params": {},
+            "direction": "min",
+            "warn_threshold": 0.4,
+            "limit_threshold": 0.3,
+            "unit": "pct",
+            "label_fr": "Part défensive minimale",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R5",
+            "rule_type": "excluded_asset_class",
+            "params": {
+              "asset_class": "crypto"
+            },
+            "direction": "max",
+            "warn_threshold": null,
+            "limit_threshold": 0.0,
+            "unit": "bool",
+            "label_fr": "Cryptoactifs exclus",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R6",
+            "rule_type": "max_asset_class_weight",
+            "params": {
+              "asset_class": "equity"
+            },
+            "direction": "max",
+            "warn_threshold": 0.65,
+            "limit_threshold": 0.8,
+            "unit": "pct",
+            "label_fr": "Concentration par catégorie",
+            "origin": "persona",
+            "is_assumption": true
+          }
+        ]
+      },
+      "portfolio": {
+        "portfolio_id": "portfolio_robert",
+        "label_fr": "Portefeuille fictif de Robert",
+        "is_fictional": true,
+        "base_currency": "CAD",
+        "positions": [
+          {
+            "ticker": "SPY",
+            "weight": 0.2
+          },
+          {
+            "ticker": "XIU.TO",
+            "weight": 0.15
+          },
+          {
+            "ticker": "XBB.TO",
+            "weight": 0.2
+          },
+          {
+            "ticker": "AGG",
+            "weight": 0.15
+          },
+          {
+            "ticker": "ZST.TO",
+            "weight": 0.2
+          },
+          {
+            "ticker": "GLD",
+            "weight": 0.1
+          }
+        ]
+      }
+    }
+  }
+}

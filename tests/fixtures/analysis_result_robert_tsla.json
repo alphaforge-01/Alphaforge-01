@@ -217,7 +217,7 @@
         "value": 0.2,
         "warn_threshold": 0.2,
         "limit_threshold": 0.22,
-        "margin": 0.02,
+        "margin": 0.0,
         "unit": "pct",
         "evidence_ids": [
           "E5"
