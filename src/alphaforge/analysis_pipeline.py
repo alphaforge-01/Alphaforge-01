@@ -26,7 +26,10 @@ from .contracts import (
     AnalysisResult, AnalystSubmission, ExplanationResult, GovernanceResult, GuardrailResult,
     InvestmentIdea, InvestorProfile, Level, Portfolio, PortfolioSnapshot, TraceStep, Variant,
 )
+from .explainer_agent import PROMPT_VERSION as EXPLAINER_PROMPT_VERSION
+from .explanation_cache import ExplanationCache
 from .pipeline_deps import PipelineDeps, resolve_deps
+from .trace_store import TraceStore, TraceStoreError, build_trace_document
 from .tool_specs import (
     MAX_HIGHLIGHTS, MAX_VARIANTS, REASON_CODES, AgentFailure, AnalystOutcome, ToolBox,
     ToolBudgetExceeded, normalize_idea,
@@ -174,6 +177,7 @@ def run_analysis(
     client: BedrockClient | None = None,
     config: BedrockConfig | None = None,
     analyst_runner: Callable[..., AnalystOutcome] | None = None,
+    trace_store: TraceStore | None = None,
 ) -> AnalysisResult:
     """Analyse une idee de placement fictive pour un profil fictif.
 
@@ -301,6 +305,9 @@ def run_analysis(
         }))
     except Exception as error:  # le dossier ne doit pas faire perdre l'analyse deja calculee
         trace.append(_step(3, "brief", "code", "error", started, {"error": type(error).__name__}))
+    if mode == "bedrock":
+        outcome_store = persist_trace(result, config=config, store=trace_store)
+        trace[-1]["details"]["trace_saved"] = outcome_store
     return result
 
 
@@ -313,6 +320,8 @@ def explain(
     client: BedrockClient | None = None,
     config: BedrockConfig | None = None,
     explainer_runner: Callable[..., Any] | None = None,
+    cache: ExplanationCache | None = None,
+    trace_store: TraceStore | None = None,
 ) -> ExplanationResult:
     """Explication au niveau demande : dossier, texte, validation, controle du garde-fou.
 
@@ -329,21 +338,32 @@ def explain(
     output: dict[str, Any] | None = None
     fallback_reason = config_fallback
     model_id: str | None = None
+    from_cache = False
+    cache_key: str | None = None
     if effective_mode == "bedrock":
         runner = explainer_runner or _load_explainer_runner()
         if runner is None:
             fallback_reason = "explicateur_indisponible"
         else:
-            try:
-                bedrock_client = client or BedrockClient(config)
-                output = runner(bedrock_client, config.explainer_model_id, brief, deps.validate)
-                model_id = config.explainer_model_id
-            except (BedrockError, AgentFailure) as error:
-                fallback_reason = f"{type(error).__name__}: {redact_text(str(error))}"
+            if cache is not None and config.explainer_model_id:
+                cache_key = ExplanationCache.make_key(
+                    brief["brief_id"], level, config.explainer_model_id, EXPLAINER_PROMPT_VERSION)
+                output = cache.get(cache_key)
+                if output is not None:
+                    from_cache = True
+                    model_id = config.explainer_model_id
+            if output is None:
+                try:
+                    bedrock_client = client or BedrockClient(config)
+                    output = runner(bedrock_client, config.explainer_model_id, brief, deps.validate)
+                    model_id = config.explainer_model_id
+                except (BedrockError, AgentFailure) as error:
+                    fallback_reason = f"{type(error).__name__}: {redact_text(str(error))}"
     if output is None:
         output = deps.render_template(brief)
     details: dict[str, Any] = {
         "level": level, "origin": output["origin"], "attempt": output["attempt"], "brief_id": brief["brief_id"],
+        "from_cache": from_cache,
     }
     wanted_llm = mode == "bedrock"
     if wanted_llm and output["origin"] == "template":
@@ -369,6 +389,8 @@ def explain(
         "rejection_codes": [r["code"] for r in validation["rejections"]],
     }))
     markdown = deps.render_markdown(output, brief)
+    if cache is not None and cache_key and output["origin"] == "llm" and validation["is_valid"] and not from_cache:
+        cache.put(cache_key, output)
 
     # Etape 6 : garde-fou (ancrage du texte rendu contre le dossier)
     started = time.perf_counter()
@@ -394,8 +416,37 @@ def explain(
         guard_details = {"reason": "garde_fou_non_configure"}
     trace.append(_step(6, "guardrail", "guardrail", guard_status, started, guard_details))
 
-    return ExplanationResult(
+    explanation = ExplanationResult(
         output=output, validation=validation, guardrail=guardrail, rendered_markdown=markdown, trace=trace)  # type: ignore[typeddict-item]
+    if mode == "bedrock":
+        trace[-1]["details"]["trace_saved"] = persist_trace(
+            result, explanation, config=config, store=trace_store)
+    return explanation
+
+
+def persist_trace(
+    result: AnalysisResult,
+    explanation: ExplanationResult | None = None,
+    *,
+    config: BedrockConfig | None = None,
+    store: TraceStore | None = None,
+) -> dict[str, Any]:
+    """Ecrit la trace sur S3 prive si un compartiment est configure. Ne leve jamais d'exception.
+
+    Rend ``{"saved": bool, "location": cle ou None, "reason": code ou None}``. Aucun
+    identifiant de compte n'est rendu, seulement la cle de l'objet.
+    """
+    config = config or BedrockConfig.from_env()
+    try:
+        trace_target = store or (TraceStore(config.trace_bucket, region=config.region) if config.trace_bucket else None)
+        if trace_target is None:
+            return {"saved": False, "location": None, "reason": "bucket_non_configure"}
+        key = trace_target.save(build_trace_document(result, explanation))
+        return {"saved": True, "location": key, "reason": None}
+    except TraceStoreError as error:
+        return {"saved": False, "location": None, "reason": redact_text(str(error))}
+    except BedrockError as error:
+        return {"saved": False, "location": None, "reason": type(error).__name__}
 
 
 def check_request(
