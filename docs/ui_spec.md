@@ -86,13 +86,13 @@ En mode `fixture`, les profils et les portefeuilles viennent aussi des fixtures 
 | Clé | Contenu |
 | --- | --- |
 | `profile_id` | "robert", "amira", "mateo" ou "custom" |
-| `custom_profile` | `InvestorProfile` construit, ou absent |
+| `custom_persona` | persona (profil et portefeuille) construit, ou absent; retiré au changement de mode |
 | `idea` | `InvestmentIdea` en cours, conservée au changement de profil |
-| `analysis` | dictionnaire `(profile_id, idée) -> AnalysisResult` |
+| `analysis` | dictionnaire `(mode, profil, portefeuille, idée) -> AnalysisResult`; les échecs sont mémorisés à part (`analysis_failures`) avec un bouton Réessayer |
 | `explanations` | dictionnaire `(run_id, level) -> ExplanationResult` |
 | `level` | "novice" ou "pro" |
 
-Les personas et l'univers sont mis en cache avec `st.cache_data`.
+Les personas sont relus à chaque exécution (fichiers JSON locaux, coût négligeable).
 
 ## 4. Demandes aux autres flux
 

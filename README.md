@@ -9,6 +9,7 @@ data/
   raw/          Données de départ fournies par les organisateurs (ne pas modifier à la main)
   external/     Données ajoutées par l'équipe (source, date et traitement documentés)
   processed/    Données nettoyées ou alignées, générées par le code (non versionnées)
+app/            Interface Streamlit (flux D), texte en français
 src/alphaforge/ Code réutilisable (chargement, alignement, stratégies, métriques)
 scripts/        Scripts exécutables en ligne de commande
 notebooks/      Exploration et analyses
@@ -29,3 +30,14 @@ python -m venv .venv
 ```
 
 Toutes les commandes se lancent depuis la racine du projet.
+
+## Lancer l'interface
+
+```bash
+.venv/bin/pip install -r requirements.txt      # .venv/Scripts/pip sous Windows
+.venv/bin/streamlit run app/streamlit_app.py
+```
+
+La configuration `.streamlit/config.toml` limite l'écoute à 127.0.0.1 et masque les traces Python.
+
+Variable optionnelle `ALPHAFORGE_MODE` : `fixture` (données d'essai, par défaut), `offline` ou `bedrock`.
