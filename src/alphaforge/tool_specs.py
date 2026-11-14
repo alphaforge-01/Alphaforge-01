@@ -190,33 +190,50 @@ class ToolBox:
             raise ToolBudgetExceeded(f"Budget de {self.max_calls} appels d'outils atteint.")
         params = dict(params or {})
         index = self.calls_used + 1
-        result = self._execute(tool_name, params, index)
+        # Ce que le modele a demande n'entre jamais tel quel dans la trace : nom d'outil connu ou code fixe,
+        # parametres reduits aux cles validees (la trace est affichee et ecrite sur S3).
+        safe_name = tool_name if tool_name in DATA_TOOL_NAMES else "outil_inconnu"
+        clean = self._clean_params(safe_name, params)
+        result = self._execute(safe_name, params, index, clean)
         evidence_ids = [entry["evidence_id"] for entry in result.get("evidence", []) or []]
         self.calls.append({
-            "tool_name": tool_name,
-            "params": params,
+            "tool_name": safe_name,
+            "params": clean,
             "status": result["status"],
             "evidence_ids": evidence_ids,
         })
         self.results.append(result)
         return result
 
-    def _execute(self, tool_name: str, params: dict[str, Any], index: int) -> ToolResult:
+    @staticmethod
+    def _clean_params(tool_name: str, params: dict[str, Any]) -> dict[str, Any]:
+        """Parametres valides et normalises, ou dictionnaire vide si l'entree est invalide."""
+        if tool_name == "simulate_portfolio_change":
+            idea, _ = normalize_idea(params)
+            return dict(idea) if idea else {}
+        if tool_name == "get_asset_facts":
+            ticker = params.get("ticker")
+            ticker = ticker.strip().upper() if isinstance(ticker, str) else ""
+            return {"ticker": ticker} if _TICKER.match(ticker) else {}
+        return {}
+
+    def _execute(self, tool_name: str, params: dict[str, Any], index: int,
+                 clean: dict[str, Any] | None = None) -> ToolResult:
+        clean = clean if clean is not None else self._clean_params(tool_name, params)
         if tool_name not in DATA_TOOL_NAMES:
-            return self._error(tool_name, params, index, f"Outil inconnu : {tool_name}.")
+            return self._error("outil_inconnu", {}, index, "Outil inconnu : seuls les outils du catalogue sont permis.")
         try:
             if tool_name == "analyze_portfolio":
                 raw = self._deps.analyze_portfolio(
                     self._portfolio, as_of=self._as_of, capital_cad=self._capital_cad)
             elif tool_name == "get_asset_facts":
-                ticker = params.get("ticker")
-                if not isinstance(ticker, str) or not ticker.strip():
-                    return self._error(tool_name, params, index, "ticker manquant ou invalide.")
-                raw = self._deps.get_asset_facts(ticker.strip().upper(), as_of=self._as_of)
+                if not clean:
+                    return self._error(tool_name, clean, index, "ticker manquant ou invalide.")
+                raw = self._deps.get_asset_facts(clean["ticker"], as_of=self._as_of)
             else:
                 idea, problem = normalize_idea(params)
                 if idea is None:
-                    return self._error(tool_name, params, index, problem or "Idee invalide.")
+                    return self._error(tool_name, clean, index, problem or "Idee invalide.")
                 raw = self._deps.simulate_portfolio_change(
                     self._portfolio, idea, as_of=self._as_of, capital_cad=self._capital_cad)
             result = copy.deepcopy(raw)
@@ -225,7 +242,7 @@ class ToolBox:
                 result = self._registry.register(result)
             return result
         except Exception as error:  # un outil defaillant ne doit jamais faire planter la boucle
-            return self._error(tool_name, params, index, f"Echec de l'outil ({type(error).__name__}).")
+            return self._error(tool_name, clean, index, f"Echec de l'outil ({type(error).__name__}).")
 
     @staticmethod
     def _error(tool_name: str, params: dict[str, Any], index: int, message: str) -> ToolResult:

@@ -375,6 +375,9 @@ def explain(
     deps = deps or resolve_deps()
     config = config or BedrockConfig.from_env()
     effective_mode, config_fallback = _resolve_mode(mode, config, client)
+    if effective_mode == "bedrock" and not config.has_guardrail:
+        # Regle 8 : aucun texte de modele n'est affiche sans garde-fou. Repli sur le gabarit, signale dans la trace.
+        effective_mode, config_fallback = "offline", "garde_fou_non_configure"
     try:
         brief = deps.build_brief(result, level)
     except ValueError as error:
@@ -445,7 +448,9 @@ def explain(
         check="output_grounding", action="not_run", denied_topics=[],
         grounding_score=None, relevance_score=None, mode="detect")
     guard_status = "skipped"
-    guard_details: dict[str, Any] = {"reason": "mode_offline" if effective_mode == "offline" else "non_execute"}
+    guard_details: dict[str, Any] = {
+        "reason": (config_fallback if config_fallback == "garde_fou_non_configure"
+                   else "mode_offline" if effective_mode == "offline" else "non_execute")}
     if effective_mode == "bedrock" and config.has_guardrail:
         try:
             bedrock_client = client or BedrockClient(config)
@@ -462,17 +467,20 @@ def explain(
         except Exception as error:  # le controle d'ancrage est accessoire : jamais de plantage
             guard_status = "error"
             guard_details = {"error": type(error).__name__}
-    elif effective_mode == "bedrock":
-        guard_details = {"reason": "garde_fou_non_configure"}
-    if guardrail["action"] == "intervened" and output["origin"] == "llm":
-        # Le garde-fou a refuse le texte du modele : on n'affiche que le gabarit construit par le code.
+    below_threshold = bool(guard_details.get("grounding_below_threshold"))
+    verified = guardrail["action"] == "none" and not below_threshold
+    if output["origin"] == "llm" and not verified:
+        # Le texte du modele n'est affiche que si le garde-fou l'a verifie et laisse passer : refus, ancrage
+        # sous le seuil, erreur ou controle impossible (taille) donnent le gabarit construit par le code.
+        unavailable = guardrail["action"] == "not_run"
         output = deps.render_template(brief)
         validation = deps.validate(output, brief)
         markdown = deps.render_markdown(output, brief)
         trace[0]["status"] = "fallback"
-        trace[0]["details"]["fallback_reason"] = "garde_fou_sortie"
+        trace[0]["details"]["fallback_reason"] = "garde_fou_indisponible" if unavailable else "garde_fou_sortie"
         guard_details["replaced_by_template"] = True
-        guard_details["denied_topics"] = guardrail["denied_topics"]
+        if guardrail["denied_topics"]:
+            guard_details["denied_topics"] = guardrail["denied_topics"]
         if cache is not None and cache_key and from_cache:
             cache.discard(cache_key)
     elif cache is not None and cache_key and output["origin"] == "llm" and validation["is_valid"] and not from_cache:
