@@ -20,15 +20,8 @@ def test_chaque_famille_de_metriques_documentee():
     assert absentes == [], f"Familles absentes de docs/evidence_keys.md : {absentes}"
 
 
-def test_run_analysis_offline_robert_reel(monkeypatch):
-    # Contournement temporaire du bogue du flux C : analysis_pipeline._load_limits
-    # n'attend pas le format reel de limits.json. A retirer une fois corrige.
-    def load_limits_ok(deps, limit_ids):
-        wanted = set(limit_ids)
-        return [item for item in reference_texts.load_limits()
-                if not wanted or item["limit_id"] in wanted]
-
-    monkeypatch.setattr(analysis_pipeline, "_load_limits", load_limits_ok)
+def test_run_analysis_offline_robert_reel():
+    """Bout en bout réel : vrais outils, gouvernance, gabarit et validateur (sans AWS)."""
     persona = load_personas()["robert"]
     idea = {"ticker": "TSLA", "target_weight": 0.25, "funding_source": "pro_rata", "funding_ticker": None}
     result = analysis_pipeline.run_analysis(persona["profile"], persona["portfolio"], idea, mode="offline")
