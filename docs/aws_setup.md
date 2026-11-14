@@ -80,7 +80,7 @@ Préfixe `alphaforge-`. Seule la personne du flux C crée ou modifie des ressour
 | Compartiment S3 privé | `alphaforge-traces-<suffixe>` (préfixe `alphaforge-`) | Une trace JSON sans secret par analyse | À écrire (tâche C7), quatre options Block Public Access activées | À faire |
 | Rôle d'exécution | Rôle de l'atelier pour le développement local ; rôle dédié seulement si hébergement | Inférence Bedrock, `ApplyGuardrail`, écriture S3 sur le seul compartiment des traces | À décider avec l'équipe | À faire |
 
-Permissions minimales visées pour un éventuel rôle d'application (moindre privilège, pas de `AmazonBedrockFullAccess`) : `bedrock:InvokeModel` (utilisé par Converse) sur les modèles et profils choisis, `bedrock:ApplyGuardrail` sur `alphaforge-guardrail`, `s3:PutObject` et `s3:GetObject` sur le préfixe des traces. Les actions de création de garde-fou (`bedrock:CreateGuardrail`, `UpdateGuardrail`, `CreateGuardrailVersion`, `ListGuardrails`, `GetGuardrail`) restent réservées au rôle de console du flux C.
+Permissions minimales visées pour un éventuel rôle d'application (moindre privilège, pas de `AmazonBedrockFullAccess`) : `bedrock:InvokeModel` (utilisé par Converse) sur les modèles et profils choisis, `bedrock:ApplyGuardrail` sur `alphaforge-guardrail`, `s3:PutObject` sur le préfixe des traces et `s3:GetBucketPublicAccessBlock` sur le compartiment (le code vérifie les quatre options Block Public Access avant toute écriture et refuse d'écrire sinon). Aucune lecture S3 n'est nécessaire au code. Les actions de création de garde-fou (`bedrock:CreateGuardrail`, `UpdateGuardrail`, `CreateGuardrailVersion`, `ListGuardrails`, `GetGuardrail`) restent réservées au rôle de console du flux C.
 
 ## 6. Services AWS utilisés et pourquoi
 
