@@ -7,7 +7,8 @@ code, sans modèle, et ne contient que ce qui a été calculé :
 - `checks` : contrôles de gouvernance de `governance_after`, avec leurs preuves ;
 - `ranked_factors` : contrôles non conformes classés par gravité, puis par marge ;
 - `evidence` : preuves du registre réellement utilisées, copiées telles quelles ;
-- `limits` : limites obligatoires du résultat, au texte du niveau ;
+- `limits` : limites obligatoires du catalogue `reference/limits.json` (toujours
+  présentes, texte fixe du niveau), puis les limites du résultat ;
 - `glossary` : termes fermés du glossaire utiles aux règles présentes, au niveau ;
 - `variants` : motif (code fermé), statut global et preuves de chaque variante.
 
@@ -26,6 +27,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from alphaforge.contracts import AnalysisResult, ExplanationBrief, Level, check_keys
 from alphaforge.governance import STATUS_SEVERITY, rule_metric
+from alphaforge.reference_texts import merge_mandatory_limits, mandatory_limits
 
 LEVELS = ("novice", "pro")
 MAX_CHARS_PER_SLOT = 400
@@ -93,9 +95,11 @@ def _glossary_for(rule_types: Sequence[str], level: str,
 
 
 def _limits_for(result: Mapping[str, Any], level: str, evidence: Sequence[Mapping[str, Any]]):
+    """Limites du dossier : catalogue obligatoire d'abord, puis limites du résultat."""
     catalog = {item["limit_id"]: item for item in result.get("limits") or []}
+    mandatory_ids = {item["limit_id"] for item in mandatory_limits(level)}
     needed = {lid for entry in evidence for lid in entry.get("limit_ids") or []}
-    unknown = sorted(needed - set(catalog), key=_numeric_key)
+    unknown = sorted(needed - set(catalog) - mandatory_ids, key=_numeric_key)
     if unknown:
         raise ValueError("Limite obligatoire absente du résultat : " + ", ".join(unknown))
     field = "text_novice" if level == "novice" else "text_pro"
@@ -105,7 +109,7 @@ def _limits_for(result: Mapping[str, Any], level: str, evidence: Sequence[Mappin
         if not isinstance(text, str) or not text.strip():
             raise ValueError(f"Texte de limite manquant pour {limit_id} ({field}).")
         limits.append({"limit_id": limit_id, "text": text})
-    return limits
+    return merge_mandatory_limits(limits, level)
 
 
 def _registry(result: Mapping[str, Any]) -> Dict[str, Mapping[str, Any]]:

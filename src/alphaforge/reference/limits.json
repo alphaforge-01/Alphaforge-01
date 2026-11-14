@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "status_fr": "Limites obligatoires du flux B (tâche B7). Texte fixe par niveau, affiché par le code dans chaque explication, jamais écrit par un modèle. Les identifiants LM1 à LM5 sont réservés à ce catalogue. Aucun chiffre dans les textes.",
+  "limits": [
+    {
+      "limit_id": "LM1",
+      "topic": "survivorship_bias",
+      "text_novice": "Les actifs étudiés ont été choisis à la fin de la période, parmi des noms qui sont aujourd'hui de grandes entreprises ou des fonds connus. Les résultats passés peuvent donc paraître meilleurs que ceux d'un choix fait au début de la période.",
+      "text_pro": "Biais du survivant : l'univers a été constitué à la fin de la fenêtre à partir de titres de grande taille à cette date. Les statistiques historiques sont biaisées vers le haut par rapport à un univers fixé au début de la fenêtre. Secteurs et libellés sont ceux d'aujourd'hui."
+    },
+    {
+      "limit_id": "LM2",
+      "topic": "limited_history",
+      "text_novice": "L'historique couvre seulement cinq ans et contient une seule grande baisse des marchés. Ce qui ne s'est pas produit pendant ces cinq ans n'apparaît pas dans les chiffres, et le passé ne dit pas ce qui arrivera.",
+      "text_pro": "Fenêtre d'historique limitée à cinq ans : peu d'observations indépendantes et un seul épisode de baisse marquée. La volatilité et la perte maximale dépendent de cette fenêtre. Ces mesures décrivent le passé et ne constituent pas une projection."
+    },
+    {
+      "limit_id": "LM3",
+      "topic": "dates_and_currencies",
+      "text_novice": "Les actifs américains sont cotés en dollars américains et ceux de la Bourse de Toronto en dollars canadiens. Les montants sont convertis en dollars canadiens au taux de la Banque du Canada. Les jours sans cotation commune sont écartés et les cryptomonnaies, qui s'échangent tous les jours, sont ramenées au même calendrier. Chaque chiffre indique sa période et sa devise.",
+      "text_pro": "Conversion en dollars canadiens au taux USD/CAD de la Banque du Canada, reporté en avant les jours sans publication. Calendrier commun : jours où tous les actifs hors crypto ont un prix, crypto ramenée à ce calendrier, journées crypto en UTC. Seuls les rendements sont utilisés, les niveaux de prix ajustés étant rétro-ajustés. Aucune donnée postérieure à la date d'analyse."
+    },
+    {
+      "limit_id": "LM4",
+      "topic": "simulation_assumptions",
+      "text_novice": "La simulation calcule ce que l'idée aurait donné dans le passé, avec des parts gardées identiques chaque jour. Les frais, les impôts et les coûts d'exécution ne sont pas pris en compte. Les seuils du profil sont des hypothèses de l'équipe, pas des règles officielles.",
+      "text_pro": "Hypothèses : poids fixes rééquilibrés chaque jour, rendements historiques recalculés avec les poids de l'idée, capital fictif, aucun frais, impôt ni coût d'exécution. Les seuils des règles sont des hypothèses de l'équipe, réglables, et non des normes."
+    },
+    {
+      "limit_id": "LM5",
+      "topic": "data_quality_availability",
+      "text_novice": "Les données viennent de sources publiques gratuites, sans certification officielle, et peuvent contenir des erreurs ou des trous. Aucune note ESG, aucune nouvelle et aucune donnée sur les comptes des entreprises ne sont incluses, sauf preuve datée citée. Quand une donnée manque, le résultat affiché est : information manquante, jamais une valeur devinée.",
+      "text_pro": "Prix : Yahoo Finance via yfinance, non certifiés par une bourse, ajustés des dividendes et des fractionnements. Taux de change et taux directeurs : Banque du Canada. Séries FRED : valeurs révisées, non les premières publications. Aucune note ESG, nouvelle ni donnée fondamentale dans les données de base. Donnée absente : statut information manquante, aucune valeur par défaut."
+    }
+  ]
+}

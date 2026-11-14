@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "status_fr": "Textes fixes du flux B (tâche B7). Avertissements affichés par le code sous chaque explication, par niveau, jamais écrits par un modèle. Ils respectent la règle 8 de CLAUDE.md : simulation fictive, usage éducatif, absence de conseil personnalisé, absence de transactions réelles.",
+  "disclaimers": [
+    {
+      "warning_id": "W1",
+      "topic": "fictional_simulation",
+      "text_novice": "Tout est fictif : le profil, le portefeuille et le capital sont inventés pour la simulation.",
+      "text_pro": "Simulation fictive : profil, portefeuille et capital sont fictifs, et les montants viennent du capital fictif."
+    },
+    {
+      "warning_id": "W2",
+      "topic": "educational_use",
+      "text_novice": "Cet outil sert à apprendre et à comprendre. Il ne décide rien à votre place.",
+      "text_pro": "Usage éducatif seulement : l'outil illustre une vérification de cohérence entre une idée et un profil fictif."
+    },
+    {
+      "warning_id": "W3",
+      "topic": "no_personalized_advice",
+      "text_novice": "Ce texte n'est pas un conseil financier personnalisé. Il ne dit pas quoi acheter ni quoi vendre.",
+      "text_pro": "Aucun conseil financier personnalisé : les verdicts mesurent la cohérence avec des règles hypothétiques, sans recommandation sur un actif."
+    },
+    {
+      "warning_id": "W4",
+      "topic": "no_real_transactions",
+      "text_novice": "Aucune transaction réelle n'est faite et aucun compte de courtage n'est relié.",
+      "text_pro": "Aucune transaction réelle : aucun ordre n'est passé, aucun compte de courtage ni interface de négociation n'est connecté."
+    }
+  ],
+  "threshold_assumption": {
+    "text_novice": "Les seuils sont des hypothèses de l'équipe, pas des normes.",
+    "text_pro": "Les seuils sont des hypothèses de l'équipe, pas des normes, et sont réglables."
+  }
+}
