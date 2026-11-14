@@ -166,10 +166,10 @@ def _counterfactual_lines(brief: Mapping[str, Any]) -> List[str]:
             continue
         bound = cf.get("compliant_at_or_below")
         if bound is None:
-            lines.append(f"- {check['label_fr']} : aucun poids cible testé n'est conforme.")
+            lines.append(f"- {check['label_fr']} : aucun poids testé n'est conforme à cette règle.")
         else:
             shown = cf.get("display_value") or format_percent(bound)
-            lines.append(f"- {check['label_fr']} : conforme avec un poids cible de {shown} ou moins.")
+            lines.append(f"- {check['label_fr']} : le plus grand poids testé conforme à cette règle est {shown}.")
     return lines
 
 

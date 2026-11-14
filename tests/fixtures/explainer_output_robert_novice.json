@@ -1,7 +1,7 @@
 {
   "brief_id": "fixture-brief-robert-novice",
   "level": "novice",
-  "summary": "Le poids de l’actif atteint [E1] et dépasse la limite de [G1].",
+  "summary": "Le poids de l’actif atteint [E1] et dépasse la limite de [G1]. La perte historique maximale [E3] relève aussi de [G3].",
   "factors": [
     {
       "check_id": "G1",
