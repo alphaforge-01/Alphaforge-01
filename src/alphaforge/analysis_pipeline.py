@@ -28,7 +28,7 @@ from .contracts import (
 )
 from .pipeline_deps import PipelineDeps, resolve_deps
 from .tool_specs import (
-    MAX_HIGHLIGHTS, MAX_VARIANTS, REASON_CODES, AnalystFailure, AnalystOutcome, ToolBox,
+    MAX_HIGHLIGHTS, MAX_VARIANTS, REASON_CODES, AgentFailure, AnalystOutcome, ToolBox,
     ToolBudgetExceeded, normalize_idea,
 )
 
@@ -203,7 +203,7 @@ def run_analysis(
             try:
                 bedrock_client = client or BedrockClient(config)
                 outcome = runner(bedrock_client, config.analyst_model_id, toolbox, idea, profile)
-            except (BedrockError, AnalystFailure, ToolBudgetExceeded) as error:
+            except (BedrockError, AgentFailure, ToolBudgetExceeded) as error:
                 fallback_reason = f"{type(error).__name__}: {redact_text(str(error))}"
                 outcome = None
                 toolbox = ToolBox(deps, portfolio, as_of=as_of, capital_cad=capital)
@@ -338,7 +338,7 @@ def explain(
                 bedrock_client = client or BedrockClient(config)
                 output = runner(bedrock_client, config.explainer_model_id, brief, deps.validate)
                 model_id = config.explainer_model_id
-            except (BedrockError, AnalystFailure) as error:
+            except (BedrockError, AgentFailure) as error:
                 fallback_reason = f"{type(error).__name__}: {redact_text(str(error))}"
     if output is None:
         output = deps.render_template(brief)

@@ -93,8 +93,16 @@ class ToolBudgetExceeded(Exception):
     """Le nombre maximal d'appels d'outils est atteint."""
 
 
-class AnalystFailure(Exception):
+class AgentFailure(Exception):
+    """Un agent Bedrock n'a pas produit de sortie exploitable : le pipeline utilise le repli code."""
+
+
+class AnalystFailure(AgentFailure):
     """L'analyste n'a pas produit de soumission exploitable : le pipeline bascule sur la sequence scriptee."""
+
+
+class ExplainerFailure(AgentFailure):
+    """L'explicateur n'a pas produit de JSON exploitable : le pipeline utilise le gabarit."""
 
 
 @dataclass
