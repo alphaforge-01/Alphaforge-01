@@ -14,13 +14,13 @@ Positionnement proposé par Ibrahima : le système ne dit pas quoi acheter. Il v
 
 1. **Profil.** Choisir Amira, Mateo ou Robert, ou construire un profil fictif avec des cases à cocher.
 2. **Radiographie.** Voir le portefeuille fictif de départ et son état : volatilité, perte maximale historique, concentration, exposition USD/CAD, statut par règle du profil.
-3. **Idée.** Soumettre une idée avec des sélecteurs (actif, poids, source des fonds) ou en texte libre, par exemple "mettre 25 % dans TSLA".
+3. **Idée.** Soumettre une idée avec des sélecteurs (actif, poids, source des fonds), par exemple "mettre 25 % dans TSLA". Le texte libre vient après le MVP.
 4. **Résultat.**
    - comparaison avant/après ;
    - tensions avec le profil, statut par règle ;
    - contrefactuel : ce qui ferait changer le statut (par exemple "conforme sous 8 %") ;
    - une ou deux variantes simulées qui réduisent les tensions ;
-   - explication au niveau choisi (novice, intermédiaire, pro).
+   - explication au niveau choisi (novice ou pro).
 5. **Vérification.** Cliquer sur un chiffre pour voir le calcul, la source, la période, la devise et les limites.
 
 **Couverture des personas :**
@@ -36,17 +36,17 @@ Positionnement proposé par Ibrahima : le système ne dit pas quoi acheter. Il v
 
 - Les trois tests des personas sont le même mécanisme : une tension entre une demande et un profil.
 - Le système évalue une idée de l'utilisateur au lieu de prescrire un actif. C'est défendable face à "pas de conseil personnalisé" et "pas d'association automatique entre un profil et un actif".
-- Deux scènes de démo fortes : même demande et deux profils donnent deux verdicts ; même résultat et trois niveaux d'explication donnent trois textes avec les mêmes chiffres.
+- Deux scènes de démo fortes : même demande et deux profils donnent deux verdicts ; même résultat et deux niveaux d'explication donnent deux textes avec les mêmes chiffres.
 
 ## Ce qui change par rapport à la version précédente
 
 | Sujet | Décision proposée | Origine |
 | --- | --- | --- |
-| Saisie | Cases et sélecteurs par défaut, texte libre optionnel | Samer |
+| Saisie | Cases et sélecteurs uniquement pour le MVP (décision d'équipe). Texte libre confirmé après le MVP | Samer, Ibrahima |
 | Positionnement | "Copilote de cohérence, pas un conseiller" | Ibrahima |
 | Radiographie du portefeuille | Ajoutée comme étape 2 | Ibrahima |
 | Contrefactuel | Ajouté, calculé par la gouvernance | Ibrahima |
-| Niveaux d'explication | Ajoutés (3 niveaux, mêmes chiffres) | Ibrahima |
+| Niveaux d'explication | Ajoutés : novice et pro (décision d'équipe), mêmes chiffres | Ibrahima |
 | Fausse diversification | Ajoutée, version par corrélations | Ibrahima |
 | Fidélité aux données | Validateur de chiffres et repli sans modèle ajoutés | Samer |
 | Nouvelles libres | Écartées du MVP, remplacées par les annonces planifiées. Le recadrage en scénarios hypothétiques fournis par l'équipe a été étudié, puis écarté pour le moment par l'équipe | Ibrahima (les deux idées), décision d'équipe |
@@ -64,7 +64,7 @@ Combinaison des idées de Samer (cases) et d'Ibrahima (règle proposée puis con
 | --- | --- | --- |
 | 1. Choix rapide | Trois personas préremplis, modifiables | Utilisateur |
 | 2. Cases et curseurs | Objectif, horizon, tolérance au risque, expérience, ESG, crypto, plafond par titre, capital fictif | Code déterministe : réponses vers règles et seuils |
-| 3. "Autre contrainte" (optionnel) | Texte libre, par exemple "pas de pétrole" | L'agent analyste propose une règle du catalogue, l'utilisateur confirme ou refuse |
+| 3. "Autre contrainte" (après le MVP) | Texte libre, par exemple "pas de pétrole" | L'agent analyste propose une règle du catalogue, l'utilisateur confirme ou refuse |
 | 4. Contrôle du profil | Contradictions et champs manquants signalés | Code déterministe |
 
 Règles du jeu :
@@ -73,7 +73,7 @@ Règles du jeu :
 - Une contrainte hors catalogue s'affiche "non prise en charge". Elle n'est jamais ignorée en silence.
 - Aucune règle issue du texte libre n'est active sans confirmation de l'utilisateur. La confirmation apparaît dans la trace.
 - Les seuils sont des **hypothèses de l'équipe**, affichées comme telles et réglables (test de sensibilité).
-- L'idée de placement suit le même principe : sélecteurs d'abord, texte libre possible, idées suggérées en un clic pour la démo.
+- L'idée de placement suit le même principe : sélecteurs pour le MVP, idées suggérées en un clic pour la démo, texte libre après le MVP.
 - Le profil est **fictif**. Aucune donnée personnelle réelle n'est demandée ni conservée (règle n°7). L'interface le rappelle.
 
 ## Niveaux d'explication (idée d'Ibrahima)
@@ -81,7 +81,6 @@ Règles du jeu :
 | Niveau | Forme | Identique partout |
 | --- | --- | --- |
 | Novice | Mots simples, montants en dollars, une analogie sans chiffre tirée du glossaire | Chiffres, statuts, limites, ordre des sections |
-| Intermédiaire | Termes financiers, définitions tirées du glossaire au premier usage | Chiffres, statuts, limites, ordre des sections |
 | Pro | Termes techniques, méthode et paramètres (fenêtre, annualisation, alignement) lus dans le registre | Chiffres, statuts, limites, ordre des sections |
 
 - Le niveau est prérempli selon l'expérience déclarée et modifiable à tout moment.
@@ -170,7 +169,7 @@ Test obligatoire : pour une date donnée, le résultat d'un outil ne change pas 
 | 7. Scénarios "et si ça dure ?" | Extension 3 |
 | 8. "Comment en profiter ?" | Pas une fonction. Requête refusée dans les tests du garde-fou |
 | 9. Rejeu | Extension 2 |
-| 10. Définir le profil | MVP (cases, puis texte libre confirmé) |
+| 10. Définir le profil | MVP par cases. Texte libre confirmé après le MVP |
 | 11. Niveau d'explication | MVP |
 | 12. Vérifier un chiffre | MVP (registre de preuves) |
 
@@ -252,7 +251,7 @@ Tous déterministes, tous avec `as_of`, aucun outil de passage d'ordres. L'agent
 | Outil | Rend | Phase |
 | --- | --- | --- |
 | `get_profile` | Profil fictif et ses règles | MVP |
-| `propose_profile_rule` | Règle du catalogue proposée à partir d'un texte libre, à confirmer | MVP |
+| `propose_profile_rule` | Règle du catalogue proposée à partir d'un texte libre, à confirmer | Après le MVP |
 | `analyze_portfolio` | Radiographie : volatilité, perte maximale, concentration, exposition USD/CAD | MVP |
 | `get_asset_facts` | Rendement et volatilité annualisés sur une période explicite, perte maximale, durée de récupération | MVP |
 | `simulate_portfolio_change` | Avant/après en CAD : poids, volatilité, concentration par titre, secteur, classe d'actifs | MVP |
@@ -351,7 +350,7 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 | Agent explicateur (idée d'Ibrahima), validateur, repli à gabarit | Agentique et explicabilité, AWS |
 | Garde-fou et traces S3 | AWS |
 | Profil par cases, idée par sélecteurs, panneau "Sources et méthode", avertissement | UX/UI |
-| Trois niveaux d'explication, générés par l'explicateur seul | UX/UI, explicabilité |
+| Deux niveaux d'explication (novice et pro), générés par l'explicateur seul | UX/UI, explicabilité |
 | ESG minimal pour Mateo | Qualité |
 
 ### Extensions, dans l'ordre
@@ -368,7 +367,7 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 | --- | --- | --- |
 | 1 | Robert veut 25 % de TSLA : tension nommée, contrefactuel, variante | MVP |
 | 2 | Même demande pour Amira : autre verdict, même mécanisme | MVP |
-| 3 | Bascule novice, intermédiaire, pro : seul l'explicateur est relancé, le texte change, les chiffres restent. La trace montre "ce que l'explicateur a vu" | MVP |
+| 3 | Bascule novice, pro : seul l'explicateur est relancé, le texte change, les chiffres restent. La trace montre "ce que l'explicateur a vu" | MVP |
 | 4 | Clic sur un chiffre : calcul, source, date, limites. Puis une requête refusée par le garde-fou, et le score d'ancrage du texte | MVP |
 | 5 | Mateo et une annonce de la Banque du Canada | Extension 1 |
 
@@ -389,7 +388,7 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 
 - **Dérive du périmètre :** 12 cas d'usage, c'est trop. Geler le MVP avant les extensions.
 - **Compte AWS temporaire :** enregistrer la vidéo pendant qu'il est actif.
-- **Quotas partagés :** modèle peu coûteux, tours bornés, nouvelles tentatives espacées, niveaux générés à la demande, cache des textes par niveau. Pire cas par analyse : trois niveaux avec un nouvel essai chacun, soit six appels explicateur et six contrôles de garde-fou.
+- **Quotas partagés :** modèle peu coûteux, tours bornés, nouvelles tentatives espacées, niveaux générés à la demande, cache des textes par niveau. Pire cas par analyse : deux niveaux avec un nouvel essai chacun, soit quatre appels explicateur et quatre contrôles de garde-fou.
 - **Second agent perçu comme décoratif :** montrer ce qu'il change (dossier fermé, bascule de niveau sans recalcul, contrôle d'ancrage) et le présenter honnêtement comme un appel borné sans outil.
 - **Perception "pas assez agentique" :** montrer dans la trace le choix des outils, la question de précision, les variantes repassées dans les outils et la séparation "agir, juger, expliquer".
 - **Explicateur trop contraint, texte plat :** acceptable. La fidélité prime sur le style, et le repli donne le plancher.
@@ -404,18 +403,28 @@ Chaque fichier a son entrée dans `data/external/sources.md`. Conditions de redi
 - **Analogies du niveau novice :** tirées du glossaire, sans chiffre, sinon rejetées par le validateur.
 - **Rejeu :** l'explicateur connaît la suite, comme tout modèle. En rejeu, repli à gabarit fixe.
 
+## Décisions de l'équipe (14 novembre 2026)
+
+| Sujet | Décision |
+| --- | --- |
+| Équipe | 4 personnes |
+| Temps disponible | Le compte Workshop Studio expire environ 1 jour et 20 heures après le 14 novembre en début d'après-midi, soit vers le 16 novembre en matinée. Vidéo à enregistrer avant |
+| Hébergement | Local : l'interface tourne sur un poste de l'équipe et appelle Bedrock. Pas d'hébergement sur AWS ni de Lambda |
+| Données sur AWS | Le mentor autorise le téléversement des CSV dans le compte |
+| Agents | Deux agents : analyste et explicateur, aux conditions décrites plus haut |
+| Saisie | Cases et sélecteurs uniquement pour le MVP (idée de Samer) |
+| Niveaux d'explication | Deux : novice et pro |
+| Nouvelles libres et scénarios hypothétiques | Écartés pour le moment |
+
+Modèles Bedrock et options du garde-fou : suivre la section AWS de CLAUDE.md et vérifier directement dans le compte.
+
 ## Questions ouvertes
 
-1. Date limite et consignes de dépôt ?
-2. Taille de l'équipe et répartition (socle de calcul, agent et AWS, interface, données ESG et annonces, livrables) ?
-3. Date de fin du compte Workshop Studio ? Quels modèles Bedrock sont actifs, lesquels acceptent le choix d'outil forcé, et le niveau Standard du garde-fou (inférence interrégionale) est-il disponible ?
-4. Streamlit pour l'interface ? Interface en français ?
-5. Hébergement sur AWS exigé, ou Bedrock, garde-fou et S3 suffisent-ils ? Sinon, Lambda remonte-t-il dans le MVP ?
-6. Un mentor autorise-t-il le téléversement des CSV dans le compte ?
-7. Qui monte la table ESG, et pour quels titres en premier ?
-8. Accepte-t-on le dossier racine `app/` et les seuils comme hypothèses réglables ?
-9. Ibrahima : l'agent explicateur est adopté sous conditions (dossier seul, pas d'outil, pas de verdict, limites affichées par le code, emplacements fixes). Ces conditions te conviennent-elles ? Avec un analyste et un explicateur, reste-t-il un rôle de ta proposition à quatre agents qui ne serait couvert ni par un agent ni par le code ?
-10. Samer et Ibrahima : la combinaison "cases d'abord, texte libre confirmé ensuite" convient-elle ?
-11. Trois niveaux d'explication dès le MVP, ou deux (novice et pro) pour commencer ? Chaque niveau coûte un appel explicateur, un contrôle de garde-fou, un gabarit de repli et une entrée de glossaire. Qui rédige le glossaire et les textes fixes des limites ?
-12. Annonces planifiées : qui saisit le calendrier de la Banque du Canada, et ses conditions d'utilisation permettent-elles de le versionner ?
-13. Accepte-t-on d'écarter le cas "comment en profiter ?" ? (Les nouvelles libres et leur recadrage en scénarios sont écartés pour le moment : décision d'équipe.)
+1. Date limite et heure exacte de remise ? (Non trouvée dans l'énoncé ni dans la présentation : l'énoncé renvoie aux consignes logistiques.)
+2. Répartition des blocs entre les 4 personnes (socle de calcul, agents et AWS, interface, données ESG et livrables) ?
+3. Streamlit pour l'interface ? Interface en français ?
+4. Qui monte la table ESG, et pour quels titres en premier ?
+5. Accepte-t-on le dossier racine `app/` et les seuils comme hypothèses réglables ?
+6. Qui rédige le glossaire et les textes fixes des limites pour les niveaux novice et pro ?
+7. Annonces planifiées : à abandonner faute de temps ?
+8. Accepte-t-on d'écarter le cas "comment en profiter ?" ?
