@@ -310,6 +310,17 @@ Chacun peut ajouter ses propres fixtures (nouveau fichier), jamais modifier cell
 
 ## 4. Flux de travail
 
+Attribution (décision d'équipe) :
+
+| Flux | Responsable |
+| --- | --- |
+| A : données, métriques, outils | Naoufal |
+| B : contrats, profils, gouvernance, explication en code, intégration des PR | Samer |
+| C : agents, Bedrock, garde-fou | Godwin |
+| D : interface, script de démo, vidéo | Ibrahima |
+
+Les user stories du MVP, avec leurs critères d'acceptation et leur flux, sont dans `docs/user_stories.md`.
+
 Règles communes :
 
 - Un fichier a un seul propriétaire. Fichiers partagés : `contracts.py` et `requirements.txt` (B), `README.md` et `data/external/sources.md` (A). Pour y changer quelque chose, on demande au propriétaire.
@@ -503,7 +514,7 @@ yfinance
 ## 10. Questions ouvertes
 
 1. Date et heure exactes de remise ?
-2. Qui prend quel flux ? Proposition : la personne qui utilise Claude Code prend le flux B (contrats, plus gros volume de code testable, intégration des PR). Alternative : elle prend le flux C, le plus risqué techniquement.
+2. Réglée : A Naoufal, B Samer, C Godwin, D Ibrahima (voir section 4).
 3. Streamlit et interface en français : confirmés ? Langue de la vidéo ?
 4. Panneau de test du garde-fou : requêtes prédéfinies seulement (par défaut), ou un champ de texte limité à ce panneau ?
 5. Dossier racine `app/` accepté ?
