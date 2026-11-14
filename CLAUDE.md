@@ -40,6 +40,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Code review before committing a feature | `code-reviewer` | Opus |
 
 Run `planner` before any non-trivial feature, `code-reviewer` before committing a feature, and `security-auditor` before pushes touching AWS or data sources. Skip delegation for trivial tasks where it costs more than it saves. Relay subagent results to the user, since they do not see them.
+10. Branches: never commit directly to `main`; it only receives merged pull requests. Start every piece of work on its own branch created from an up-to-date `main` (`git switch main && git pull && git switch -c <branch>`). Branch names reuse the commit types: `<type>/<short-description>` in English kebab-case, e.g. `feat/profile-builder`, `fix/fx-conversion`, `docs/use-case-decision`, `data/esg-evidence`, `chore/branch-workflow`. One branch per topic; keep it short-lived. Push with `git push -u origin <branch>` and merge into `main` through a GitHub pull request (title follows rule 3, description in French, no AI attribution per rule 2). Never force-push `main`; never rewrite history on a branch others use. If you find yourself on `main` with uncommitted work, create the branch before committing.
 
 ## What this is
 
