@@ -5,7 +5,7 @@ All percentage values are fractions: 0.25 means 25%.
 """
 from __future__ import annotations
 
-from typing import Literal, TypedDict
+from typing import ForwardRef, Literal, NotRequired, TypedDict, get_origin
 
 Level = Literal["novice", "pro"]
 RuleStatus = Literal["compliant", "tension", "conflict", "missing_info"]
@@ -220,6 +220,20 @@ class ExplanationResult(TypedDict):
     guardrail: GuardrailResult
     rendered_markdown: str      # renvois remplacés par les valeurs du registre
     trace: list[TraceStep]      # étapes 4 à 6
+    brief: NotRequired[ExplanationBrief]   # dossier lu par l'explicateur, facultatif (ajout rétrocompatible)
+
+
+def _is_not_required(annotation: object) -> bool:
+    """Vrai si l'annotation est `NotRequired[...]`, écrite en texte ou évaluée.
+
+    Ce module utilise `from __future__ import annotations` : `TypedDict` ne voit alors
+    pas `NotRequired` et classe la clé comme obligatoire dans `__required_keys__`.
+    """
+    if isinstance(annotation, ForwardRef):      # TypedDict enveloppe les textes dans un ForwardRef
+        annotation = annotation.__forward_arg__
+    if isinstance(annotation, str):
+        return annotation.replace(" ", "").startswith(("NotRequired[", "typing.NotRequired["))
+    return get_origin(annotation) is NotRequired
 
 
 def check_keys(obj: object, contract: type) -> list[str]:
@@ -231,4 +245,6 @@ def check_keys(obj: object, contract: type) -> list[str]:
     if not isinstance(obj, dict):
         return ["<not a dictionary>"]
     required = getattr(contract, "__required_keys__", frozenset())
-    return sorted(str(key) for key in required if key not in obj)
+    annotations = getattr(contract, "__annotations__", {})
+    return sorted(str(key) for key in required
+                  if key not in obj and not _is_not_required(annotations.get(key)))

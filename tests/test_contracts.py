@@ -45,3 +45,52 @@ def test_fixture_flags_and_weights():
 
 def test_check_keys_detects_missing():
     assert "profile_id" in check_keys({}, InvestorProfile)
+# ---------- ExplanationResult.brief facultatif ----------
+def _explanation_result(with_brief):
+    from alphaforge.explanation_brief import build_brief
+    from alphaforge.explanation_fallback import render_template
+    from alphaforge.explanation_rendering import render_markdown
+    from alphaforge.explanation_validator import validate
+    brief = build_brief(load("analysis_result_robert_tsla.json"), "novice")
+    output = render_template(brief)
+    guardrail = {"check": "output_grounding", "action": "not_run", "denied_topics": [],
+                 "grounding_score": None, "relevance_score": None, "mode": "detect"}
+    result = {"output": output, "validation": validate(output, brief), "guardrail": guardrail,
+              "rendered_markdown": render_markdown(output, brief), "trace": []}
+    if with_brief:
+        result["brief"] = brief
+    return result
+def test_explanation_result_without_brief_is_valid():
+    from alphaforge.contracts import ExplanationResult
+    assert "brief" not in _explanation_result(False)
+    assert check_keys(_explanation_result(False), ExplanationResult) == []
+def test_explanation_result_with_brief_is_valid():
+    from alphaforge.contracts import ExplanationResult
+    result = _explanation_result(True)
+    assert check_keys(result, ExplanationResult) == []
+    assert check_keys(result["brief"], ExplanationBrief) == []
+def test_brief_is_optional_but_other_keys_stay_required():
+    from alphaforge.contracts import ExplanationResult
+    for with_brief in (False, True):
+        result = _explanation_result(with_brief)
+        del result["rendered_markdown"], result["trace"]
+        assert check_keys(result, ExplanationResult) == ["rendered_markdown", "trace"]
+def test_check_keys_reports_brief_only_when_declared_required():
+    from typing import TypedDict
+    class Other(TypedDict):
+        brief: dict
+    assert check_keys({}, Other) == ["brief"]
+def test_pipeline_explain_result_stays_compatible_with_or_without_brief():
+    from alphaforge.analysis_pipeline import explain, run_analysis
+    from alphaforge.bedrock_client import BedrockConfig
+    from alphaforge.contracts import ExplanationResult
+    from alphaforge.fixture_collaborators import fixture_deps
+    from alphaforge.pipeline_deps import PipelineDeps  # noqa: F401
+    deps = fixture_deps()
+    profile = load("profile_robert.json")
+    portfolio = load("portfolio_robert.json")
+    analysis = run_analysis(profile, portfolio, load("idea_tsla_25.json"), deps=deps, config=BedrockConfig())
+    explanation = explain(analysis, "novice", deps=deps, config=BedrockConfig())
+    assert check_keys(explanation, ExplanationResult) == []
+    explanation["brief"] = deps.build_brief(analysis, "novice")
+    assert check_keys(explanation, ExplanationResult) == []
