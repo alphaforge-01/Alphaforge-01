@@ -1,0 +1,11 @@
+# Configuration locale de l'interface : aucun secret ici.
+[server]
+# Écoute en local seulement : l'URL réseau exposerait l'app (et le quota Bedrock partagé).
+address = "127.0.0.1"
+
+[browser]
+gatherUsageStats = false
+
+[client]
+# Pas de trace Python (chemins locaux) affichée dans l'interface.
+showErrorDetails = "none"
