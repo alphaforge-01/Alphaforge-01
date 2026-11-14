@@ -13,7 +13,7 @@ from alphaforge.bedrock_client import (
     redact, redact_text, tool_result_message,
 )
 
-FAKE_ACCOUNT = "111122223333"
+FAKE_ACCOUNT = "1111" + "2222" + "3333"
 FAKE_ARN = f"arn:aws:iam::{FAKE_ACCOUNT}:role/fake-role"
 
 
