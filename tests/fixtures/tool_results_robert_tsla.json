@@ -1,0 +1,149 @@
+[
+  {
+    "tool_name": "analyze_portfolio",
+    "call_id": "fixture-call-1",
+    "params": {
+      "portfolio_id": "portfolio_robert",
+      "as_of": "2026-11-12"
+    },
+    "status": "ok",
+    "error_message": null,
+    "data": {
+      "subject": "portfolio_after",
+      "weights": {
+        "SPY": 0.15,
+        "XIU.TO": 0.1125,
+        "XBB.TO": 0.15,
+        "AGG": 0.1125,
+        "ZST.TO": 0.15,
+        "GLD": 0.075,
+        "TSLA": 0.25
+      },
+      "volatility_ann": 0.21,
+      "max_drawdown": 0.29,
+      "max_drawdown_start": "2022-01-03",
+      "max_drawdown_end": "2022-10-12",
+      "recovery_days": null,
+      "top_asset": "TSLA",
+      "top_asset_weight": 0.25,
+      "weight_by_sector": {
+        "broad_or_other": 0.5875,
+        "bonds": 0.4125
+      },
+      "weight_by_asset_class": {
+        "etf_equity": 0.2625,
+        "etf_bond": 0.4125,
+        "etf_commodity": 0.075,
+        "equity": 0.25
+      },
+      "currency_exposure": {
+        "CAD": 0.4125,
+        "USD": 0.5875
+      },
+      "defensive_share": 0.4125,
+      "largest_correlated_group_weight": null
+    },
+    "evidence": [
+      {
+        "evidence_id": "E1",
+        "evidence_key": "top_asset_weight:portfolio_after",
+        "tool_name": "analyze_portfolio",
+        "metric": "top_asset_weight",
+        "subject": "portfolio_after",
+        "label_fr": "Poids du plus gros actif",
+        "value": 0.25,
+        "unit": "pct",
+        "display_value": "25 %",
+        "qualifier": null,
+        "period_start": "2021-11-12",
+        "period_end": "2026-11-12",
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "transformation": "Chiffres fictifs pour tests uniquement",
+        "n_observations": 1000,
+        "limit_ids": [
+          "L1"
+        ]
+      },
+      {
+        "evidence_id": "E2",
+        "evidence_key": "volatility_ann:portfolio_after",
+        "tool_name": "analyze_portfolio",
+        "metric": "volatility_ann",
+        "subject": "portfolio_after",
+        "label_fr": "Volatilité annualisée",
+        "value": 0.21,
+        "unit": "pct",
+        "display_value": "21 %",
+        "qualifier": null,
+        "period_start": "2021-11-12",
+        "period_end": "2026-11-12",
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "transformation": "Chiffres fictifs pour tests uniquement",
+        "n_observations": 1000,
+        "limit_ids": [
+          "L1"
+        ]
+      },
+      {
+        "evidence_id": "E3",
+        "evidence_key": "max_drawdown:portfolio_after",
+        "tool_name": "analyze_portfolio",
+        "metric": "max_drawdown",
+        "subject": "portfolio_after",
+        "label_fr": "Perte historique maximale",
+        "value": 0.29,
+        "unit": "pct",
+        "display_value": "29 %",
+        "qualifier": null,
+        "period_start": "2021-11-12",
+        "period_end": "2026-11-12",
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "transformation": "Chiffres fictifs pour tests uniquement",
+        "n_observations": 1000,
+        "limit_ids": [
+          "L1"
+        ]
+      },
+      {
+        "evidence_id": "E4",
+        "evidence_key": "defensive_share:portfolio_after",
+        "tool_name": "analyze_portfolio",
+        "metric": "defensive_share",
+        "subject": "portfolio_after",
+        "label_fr": "Part défensive",
+        "value": 0.4125,
+        "unit": "pct",
+        "display_value": "41,25 %",
+        "qualifier": null,
+        "period_start": "2021-11-12",
+        "period_end": "2026-11-12",
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "transformation": "Chiffres fictifs pour tests uniquement",
+        "n_observations": 1000,
+        "limit_ids": [
+          "L1"
+        ]
+      }
+    ]
+  }
+]
