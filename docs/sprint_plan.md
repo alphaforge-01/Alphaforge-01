@@ -4,8 +4,17 @@ Statut : proposition à valider par l'équipe. Ce plan applique les décisions d
 
 ## 1. Cadre et horloge
 
-- H0 = samedi 14 novembre, 14 h 30 (Montréal). Expiration du compte AWS : vers H+44 (lundi 16 novembre, environ 10 h 30).
-- Date de remise inconnue : on suppose qu'elle tombe au plus tard à l'expiration du compte. Si elle est plus tôt, on livre l'état du dernier jalon atteint.
+- H0 = samedi 14 novembre, 14 h 30 (Montréal).
+- Échéances officielles (site PolyFinances, reprises dans `AWS_WORKSHOP.md`, hors du dépôt) :
+
+| Quand | Quoi |
+| --- | --- |
+| Dimanche 15 novembre, 16 h | Fin du travail sur place |
+| **Dimanche 15 novembre, 23 h 59** | **Dépôt GitHub et application** |
+| Lundi 16 novembre, 13 h 59 | Fermeture des comptes AWS et destruction des données |
+| Lundi 16 novembre, 14 h | Dépôt de la vidéo, du one pager et de la documentation technique |
+
+- Conséquences : le code et l'application doivent être sur `main` **dimanche avant 23 h 59**. Le bloc S6 de lundi ne sert plus qu'à la vidéo et aux documents, jamais au code. Le compte à rebours de Workshop Studio ne correspond pas exactement à l'heure de fermeture annoncée : enregistrer la démo dimanche soir.
 - Capacité : 4 personnes, environ 16 h de développement chacune avant le gel, plus une soirée pour la vidéo et les livrables.
 
 | Bloc | Horaire | Heures depuis H0 |
@@ -16,7 +25,7 @@ Statut : proposition à valider par l'équipe. Ce plan applique les décisions d
 | S3 | Dimanche 9 h à 13 h | H+18,5 à H+22,5 |
 | S4 | Dimanche 14 h à 18 h 30 | H+23,5 à H+28 |
 | S5 | Dimanche 19 h 30 à 22 h 30 | H+29 à H+32 (vidéo, livrables) |
-| S6 | Lundi 7 h 30 à 10 h | H+41 à H+43,5 (réserve) |
+| S6 | Lundi 7 h 30 à 13 h | H+41 à H+46,5 (vidéo, one pager, documentation technique ; aucun code) |
 
 ## 2. Périmètre
 
@@ -442,7 +451,8 @@ Ordre de fusion à chaque jalon : B, A, C, D. B (ou la personne désignée) reli
 | J4 | H+24 (dimanche 14 h 30) | Bedrock de bout en bout : analyste, explicateur, validateur, scores du garde-fou, trace S3 | Analyste instable : séquence scriptée et explicateur seul sur Bedrock. Explicateur instable : gabarit et analyste seul sur Bedrock. Les deux instables : mode `offline`, le garde-fou reste la partie AWS démontrée |
 | J5 | H+28 (dimanche 18 h 30) | Gel des fonctionnalités. Jeu de scénarios fixes exécuté, textes mis en cache, P2 fusionné ou abandonné | Tout P2 non fusionné est abandonné |
 | J6 | H+29 à H+32 (dimanche soir) | Vidéo enregistrée, captures de la console AWS (garde-fou, S3), copie de quelques traces dans `outputs/reports/` | Reprise en S6 |
-| J7 | H+41 à H+43,5 (lundi matin) | Réserve : reprise de la vidéo, livrables finaux, PR finale | Sans objet |
+| Remise du code | Dimanche avant 23 h 59 | `main` contient l'application finale, README à jour (dépôt GitHub officiel) | Livrer l'état du dernier jalon atteint |
+| J7 | H+41 à H+46,5 (lundi, avant 13 h) | Reprise éventuelle de la vidéo, one pager et documentation technique finaux (remise à 14 h). Aucun changement de code | Sans objet |
 
 Après J5 : corrections de bogues seulement, chacune dans une branche `fix/...`.
 
@@ -513,7 +523,7 @@ yfinance
 
 ## 10. Questions ouvertes
 
-1. Date et heure exactes de remise ?
+1. Réglée : code et application dimanche 23 h 59, vidéo et documents lundi 14 h (voir section 1).
 2. Réglée : A Naoufal, B Samer, C Godwin, D Ibrahima (voir section 4).
 3. Streamlit et interface en français : confirmés ? Langue de la vidéo ?
 4. Panneau de test du garde-fou : requêtes prédéfinies seulement (par défaut), ou un champ de texte limité à ce panneau ?
