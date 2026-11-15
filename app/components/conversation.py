@@ -87,7 +87,8 @@ def render_compact(entry: Mapping[str, Any], result: Optional[Mapping[str, Any]]
         st.caption(texts.CHAT_PREVIOUS.format(idea=describe))
         return
     status = result["governance_after"]["overall_status"]
-    html(f'{pill(status)} <span>{escape(describe)}</span>')
+    html(f'{pill(status)} <span>{escape(describe)}</span>'
+         f'{result_panel.split_verdict_html(result["governance_after"])}')
 
 
 def _render_sources_and_limits(result: Mapping[str, Any], ctx: ProofContext, threshold_notice: str) -> None:

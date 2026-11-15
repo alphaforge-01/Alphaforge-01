@@ -48,7 +48,7 @@ HOME_LEVEL_DESCRIPTIONS = {
     "pro": "Pro : vocabulaire précis, mesures et méthode, plus concis.",
 }
 HOME_PREVIEW_TITLE = "Exemple de réponse en mode {level}"
-HOME_LEVEL_HOVER_HINT = "Survolez Novice ou Pro pour voir comment l'agent s'exprime, puis réglez le curseur."
+HOME_LEVEL_HOVER_HINT = "Cliquez sur l'interrupteur pour passer de Novice à Pro. Survolez un niveau pour voir comment l'agent s'exprime."
 HOME_PREVIEW_SOURCE = (
     "Passage (Résumé) rédigé par l'agent explicateur pour {persona} et l'idée \"25 % dans TSLA\", "
     "modèle {model}, chiffres à la date de la trace. Texte réel, tiré de {source}."
@@ -379,6 +379,12 @@ VERDICT_HEADLINES = {
     "compliant": "Cette idée respecte les règles du profil.",
 }
 VERDICT_RULE = "{label} : {status}."
+# Verdicts séparés (flux B, P1-9), affichés seulement si le profil a une règle ESG.
+VERDICT_SPLIT_FINANCIAL = "Financier"
+VERDICT_SPLIT_ESG = "ESG"
+VERDICT_SPLIT_HELP = (
+    "Le verdict global est le plus sévère des deux : règles financières d'un côté, règles ESG de l'autre."
+)
 VERDICT_FOOTNOTE = "Règles et seuils : hypothèses de l'équipe. Détail sous \"Voir le détail\"."
 
 TAB_COMPARE = "Avant / après"

@@ -19,6 +19,7 @@ import ui_texts as texts
 
 # Préfixes de clés de conteneurs reconnus par le CSS ci-dessous.
 CARD_KEY = "card-"
+PERSONA_CARD_KEY = "persona-"
 ZONE_KEY = "zone-"
 NEXT_KEY = "next-step"
 
@@ -57,6 +58,8 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .af-verdict--conflict { border-left-color: #c62828; }
 .af-verdict-head { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
   font-size: 1.05rem; font-weight: 650; }
+.af-split { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: .35rem; font-size: .82rem; color: #5b6675; }
+.af-split-item { display: inline-flex; align-items: center; gap: .35rem; }
 .af-verdict-sub { color: #5b6675; font-size: .85rem; margin-top: .2rem; }
 .af-verdict ul { margin: .5rem 0 0 1.1rem; padding: 0; }
 .af-verdict li { margin: .15rem 0; font-size: .92rem; }
@@ -72,12 +75,19 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 [class*="st-key-zone-simulation"] { border-left: 4px solid #7b4fc0 !important; }
 
 [class*="st-key-card-"] { min-height: 7.4rem; }
+
+/* Cartes des personas : même hauteur dans une rangée, bouton "Choisir" aligné en bas. */
+[data-testid="stHorizontalBlock"]:has([class*="st-key-persona-"]) { align-items: stretch; }
+[data-testid="stColumn"]:has([class*="st-key-persona-"]) > [data-testid="stVerticalBlock"],
+[data-testid="stColumn"]:has([class*="st-key-persona-"]) [data-testid="stLayoutWrapper"]:has(> [class*="st-key-persona-"]) {
+  flex: 1 1 auto; height: 100%; display: flex; flex-direction: column; }
+[class*="st-key-persona-"] { flex: 1 1 auto; height: 100%; }
+[class*="st-key-persona-"] [class*="st-key-choose_profile_"] { margin-top: auto; }
 [class*="st-key-card-"] [data-testid="stPopover"] button p { font-size: 1.35rem; font-weight: 650; }
 
 [class*="st-key-next-step"] a { background: #1d4e89; border-radius: .5rem; padding: .35rem .9rem; }
 [class*="st-key-next-step"] a p, [class*="st-key-next-step"] a span { color: #ffffff !important; }
 
-.af-levels { display: flex; justify-content: space-between; margin: .2rem 0 -.2rem; }
 .af-level { position: relative; display: inline-block; cursor: help; outline: none;
   font-size: .85rem; font-weight: 600; padding: .15rem .7rem; border-radius: 999px;
   background: #eef2f7; border: 1px solid #dbe2ea; color: #1a2332; }
@@ -90,15 +100,16 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .af-bubble::before { content: ""; position: absolute; top: -.45rem; left: 1.2rem;
   border-width: 0 .45rem .45rem; border-style: solid;
   border-color: transparent transparent #c9d3df; }
-.af-level--end .af-bubble { left: auto; right: 0; }
-.af-level--end .af-bubble::before { left: auto; right: 1.2rem; }
+.af-level--left .af-bubble { left: auto; right: 0; }
+.af-level--left .af-bubble::before { left: auto; right: 1.2rem; }
 .af-level:hover .af-bubble, .af-level:focus .af-bubble { visibility: visible; opacity: 1; }
 .af-bubble-title { font-weight: 650; margin-bottom: .2rem; }
 .af-bubble-desc { color: #5b6675; margin-bottom: .45rem; }
 .af-bubble-source { color: #5b6675; font-size: .75rem; margin-top: .45rem; }
-/* Curseur de l'accueil : les étiquettes à bulle nomment déjà les niveaux, on masque ceux du curseur. */
-[class*="st-key-home_level"] [data-testid="stSliderThumbValue"],
-[class*="st-key-home_level"] [data-testid="stSliderTickBar"] { display: none; }
+/* Interrupteur Novice / Pro de l'accueil : rangée centrée, compacte. */
+[class*="st-key-home-level-row"] { margin: .3rem 0 .4rem; }
+[class*="st-key-home-level-row"] [data-testid="stElementContainer"] { width: auto !important; }
+[class*="st-key-home_level"] { margin-top: .45rem; }
 
 [data-testid="stSidebar"] .af-side-disclaimer { font-size: .78rem; color: #5c4700;
   background: #fff8e6; border: 1px solid #f0dfa8; border-radius: .45rem; padding: .4rem .6rem; }
@@ -131,28 +142,27 @@ def _inline_html(text: str) -> str:
     return "<br>".join(line for line in safe.splitlines() if line.strip())
 
 
-def level_bubbles(items: list) -> None:
-    """Étiquettes de niveau alignées sur les extrémités du curseur ; une bulle s'ouvre au survol.
+def level_bubble(item: dict, side: str) -> None:
+    """Étiquette d'un niveau, à côté de l'interrupteur de l'accueil ; une bulle s'ouvre au survol.
 
-    `items` : dicts {label, title, description, example, source, active}, dans l'ordre du curseur.
-    Les étiquettes sont focalisables : la bulle s'ouvre aussi au clavier et au toucher.
+    `item` : dict {label, title, description, example, source, active}. `side` vaut "left" ou
+    "right" : la bulle s'ouvre vers l'extérieur, sans couvrir l'interrupteur. L'étiquette est
+    focalisable : la bulle s'ouvre aussi au clavier et au toucher.
     """
-    parts = []
-    for position, item in enumerate(items):
-        classes = ["af-level"]
-        if item["active"]:
-            classes.append("af-level--active")
-        if position == len(items) - 1 and position > 0:
-            classes.append("af-level--end")
-        parts.append(
-            f'<span class="{" ".join(classes)}" tabindex="0">{escape(item["label"])}'
-            f'<span class="af-bubble" role="tooltip">'
-            f'<div class="af-bubble-title">{escape(item["title"])}</div>'
-            f'<div class="af-bubble-desc">{escape(item["description"])}</div>'
-            f'<div>{_inline_html(item["example"])}</div>'
-            f'<div class="af-bubble-source">{escape(item["source"])}</div>'
-            f'</span></span>')
-    html(f'<div class="af-levels">{"".join(parts)}</div>')
+    classes = ["af-level", f"af-level--{side}"]
+    if item["active"]:
+        classes.append("af-level--active")
+    # Bloc <div> englobant : sans lui, le moteur Markdown traite l'étiquette comme du texte en ligne
+    # et casse la bulle (ses <div> internes sortent du <span>).
+    st.markdown(
+        f'<div class="af-level-wrap"><span class="{" ".join(classes)}" tabindex="0">{escape(item["label"])}'
+        f'<span class="af-bubble" role="tooltip">'
+        f'<div class="af-bubble-title">{escape(item["title"])}</div>'
+        f'<div class="af-bubble-desc">{escape(item["description"])}</div>'
+        f'<div>{_inline_html(item["example"])}</div>'
+        f'<div class="af-bubble-source">{escape(item["source"])}</div>'
+        f'</span></span></div>',
+        unsafe_allow_html=True, width="content")
 
 
 def zone_label(kind: str) -> None:

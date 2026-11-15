@@ -12,12 +12,26 @@ from typing import Any, Callable, Dict, Mapping, Optional
 
 import streamlit as st
 
+import data_source
 import ui_texts as texts
 from components.evidence import ProofContext, index_by_key, lookup, render_card, render_value
 from components.idea_panel import describe_idea
 from components.rules import render_checks, sort_checks, status_badge, counterfactual_text
 from components.style import html, pill, zone
 from components.xray import render_composition
+
+
+def split_verdict_html(governance: Mapping[str, Any]) -> str:
+    """Pastilles "Financier" et "ESG" si le profil a une règle ESG, sinon rien (verdict global seul)."""
+    verdicts = data_source.split_verdicts(dict(governance))
+    if verdicts.get("esg") is None:
+        return ""
+    parts = [f'<span class="af-split-item">{escape(label)} {pill(status)}</span>'
+             for label, status in ((texts.VERDICT_SPLIT_FINANCIAL, verdicts.get("financial")),
+                                   (texts.VERDICT_SPLIT_ESG, verdicts.get("esg")))
+             if status]
+    return (f'<div class="af-split" title="{escape(texts.VERDICT_SPLIT_HELP)}">{"".join(parts)}</div>'
+            if parts else "")
 
 
 def render_verdict(result: Mapping[str, Any]) -> None:
@@ -42,6 +56,7 @@ def render_verdict(result: Mapping[str, Any]) -> None:
         f'<div class="af-verdict-sub">'
         f'{escape(texts.VERDICT_TITLE.format(status=texts.STATUS_LABELS.get(after, after)))}. '
         f'{escape(texts.VERDICT_BEFORE.format(status=texts.STATUS_LABELS.get(before, before)))}.</div>'
+        f'{split_verdict_html(result["governance_after"])}'
         f'{rules_html}'
         f'<div class="af-verdict-note">{escape(texts.VERDICT_FOOTNOTE)}</div></div>'
     )
@@ -121,6 +136,9 @@ def render_variants(result: Mapping[str, Any], rules_by_id: Mapping[str, Dict[st
             st.markdown(f"**{texts.VARIANT_HEADER.format(variant_id=variant['variant_id'], reason=reason)}**")
             st.caption(describe_variant(variant["idea"]))
             status_badge(variant["governance"]["overall_status"])
+            split = split_verdict_html(variant["governance"])
+            if split:
+                html(split)
             metrics = ("volatility_ann", "max_drawdown", "top_asset_weight", "defensive_share")
             for row_start in (0, 2):
                 for cell, metric in zip(st.columns(2), metrics[row_start:row_start + 2]):
