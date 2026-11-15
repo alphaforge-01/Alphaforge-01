@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import shutil
 import sys
 from pathlib import Path
 
@@ -79,6 +80,60 @@ def test_venv_python_prefers_windows_layout(tmp_path):
 def test_repository_root_is_compliant():
     """Le dépôt local respecte déjà la règle 5 (mêmes fichiers que le clone)."""
     root = SCRIPT.parents[1]
+    if not (root / ".git").exists() or shutil.which("git") is None:
+        pytest.skip("dépôt Git ou commande git indisponible (archive)")
     files = ccc.tracked_files(root)
     assert files, "git ls-files doit lister des fichiers"
     assert ccc.root_violations(root, files) == []
+
+
+# ---------- corrections de la relecture ----------
+
+
+def test_same_text_ignores_line_endings(tmp_path):
+    lf = tmp_path / "a.md"
+    crlf = tmp_path / "b.md"
+    lf.write_bytes(b"ligne 1\nligne 2\n")
+    crlf.write_bytes(b"ligne 1\r\nligne 2\r\n")
+    assert ccc.same_text(lf, crlf)
+    other = tmp_path / "c.md"
+    other.write_bytes(b"ligne 1\nautre\n")
+    assert not ccc.same_text(lf, other)
+
+
+@pytest.mark.parametrize("name,expected", [
+    (".env", True), (".env.local", True), (".env.production", True), (".env.example", False), ("env.py", False),
+])
+def test_is_env_file(name, expected):
+    assert ccc.is_env_file(name) is expected
+
+
+@pytest.mark.parametrize("text,expected", [("a\nb\n\n", "b"), ("", ""), ("   \n", "")])
+def test_last_line(text, expected):
+    assert ccc.last_line(text) == expected
+
+
+def test_remove_tree_handles_read_only_files(tmp_path):
+    import os
+    import stat
+
+    folder = tmp_path / "clone" / ".git" / "objects"
+    locked = _write(folder / "pack.idx", "x")
+    os.chmod(locked, stat.S_IREAD)
+    assert ccc.remove_tree(tmp_path / "clone")
+
+
+def test_secret_patterns_cover_env_and_yaml_styles(tmp_path):
+    """Formes `AWS_SECRET_ACCESS_KEY=...` et `aws_secret_access_key: ...`, valeurs assemblées à l'exécution."""
+    value = "A" * 20 + "b" * 20
+    env_style = _write(tmp_path / "a.example", "AWS_SECRET_ACCESS_KEY=" + value + "\n")
+    yaml_style = _write(tmp_path / "b.yaml", "aws_secret_access_key: " + value + "\n")
+    empty = _write(tmp_path / ".env.example", "AWS_SECRET_ACCESS_KEY=\n")
+    found = ccc.scan_text([env_style, yaml_style, empty])["secrets"]
+    assert found == sorted([env_style.as_posix(), yaml_style.as_posix()])
+
+
+def test_emoji_range_includes_star_symbols(tmp_path):
+    star = _write(tmp_path / "a.md", "note " + chr(0x2B50) + "\n")
+    arrow = _write(tmp_path / "b.md", "a " + chr(0x2192) + " b\n")
+    assert ccc.scan_text([star, arrow])["emoji"] == [star.as_posix()]

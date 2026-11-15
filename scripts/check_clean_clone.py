@@ -32,6 +32,7 @@ import argparse
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -50,11 +51,13 @@ TEXT_SUFFIXES = frozenset({".py", ".md", ".txt", ".json", ".toml", ".yaml", ".ym
 # Formes de secrets AWS ; les mentions de la règle elle-même (`AKIA...`) ne sont pas des clés.
 SECRET_PATTERNS = (
     re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
-    re.compile(r"aws_secret_access_key\s*=\s*['\"]?[A-Za-z0-9/+]{40}"),
-    re.compile(r"aws_session_token\s*=\s*['\"]?[A-Za-z0-9/+=]{100,}", re.IGNORECASE),
+    re.compile(r"aws_secret_access_key['\"]?\s*[=:]\s*['\"]?[A-Za-z0-9/+]{40}", re.IGNORECASE),
+    re.compile(r"aws_session_token['\"]?\s*[=:]\s*['\"]?[A-Za-z0-9/+=]{100,}", re.IGNORECASE),
 )
 EM_DASH = "\u2014"
-EMOJI = re.compile("[\U0001F300-\U0001FAFF\u2600-\u27BF]")
+# Pictogrammes et emoji (symboles divers, dingbats, \u00E9toiles, plans emoji). Les symboles comme
+# U+2713 ou U+2605 comptent aussi : la r\u00E8gle 1 demande une ponctuation ASCII simple.
+EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF]")
 SUMMARY_LINE = re.compile(r"(\d+) passed")
 
 APP_SMOKE = r'''
@@ -97,13 +100,49 @@ class Report:
         return all(check.ok for check in self.checks)
 
 
+CLONE_TIMEOUT = 300
+
+
 def run(command: list, cwd: Path, timeout: int = 1800) -> tuple[int, str, float]:
-    """Exécute une commande ; rend (code, sortie combinée, durée)."""
+    """Exécute une commande ; rend (code, sortie combinée, durée).
+
+    `PYTHONIOENCODING` : accents lisibles. `GIT_TERMINAL_PROMPT=0` : sans identifiants, git
+    échoue au lieu d'attendre un mot de passe.
+    """
     start = time.perf_counter()
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}  # accents des sous-processus lisibles
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "GIT_TERMINAL_PROMPT": "0"}
     proc = subprocess.run(command, cwd=cwd, capture_output=True, text=True, encoding="utf-8",
                           errors="replace", timeout=timeout, env=env)
     return proc.returncode, (proc.stdout or "") + (proc.stderr or ""), time.perf_counter() - start
+
+
+def last_line(text: str, limit: int = 300) -> str:
+    """Dernière ligne non vide d'une sortie (chaîne vide si aucune)."""
+    lines = [line for line in text.strip().splitlines() if line.strip()]
+    return lines[-1][:limit] if lines else ""
+
+
+def same_text(first: Path, second: Path) -> bool:
+    """Contenu identique aux fins de ligne près (LF versionné, CRLF possible sous Windows)."""
+    return first.read_bytes().replace(b"\r\n", b"\n") == second.read_bytes().replace(b"\r\n", b"\n")
+
+
+def is_env_file(name: str) -> bool:
+    """`.env` et ses variantes (`.env.local`...), sauf le modèle `.env.example`."""
+    return name == ".env" or (name.startswith(".env.") and name != ".env.example")
+
+
+def remove_tree(path: Path) -> bool:
+    """Supprime un dossier, y compris les fichiers en lecture seule de `.git` sous Windows."""
+    def make_writable_and_retry(function, target, *_):
+        os.chmod(target, stat.S_IWRITE)
+        function(target)
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=make_writable_and_retry)
+    else:  # Python 3.11
+        shutil.rmtree(path, onerror=make_writable_and_retry)
+    return not path.exists()
 
 
 def venv_python(venv: Path) -> Path:
@@ -125,7 +164,7 @@ def scan_text(files: list[Path]) -> dict[str, list[str]]:
     """Secrets apparents, tirets cadratins et emoji dans les fichiers texte suivis."""
     found = {"secrets": [], "em_dash": [], "emoji": [], "env": []}
     for path in files:
-        if path.name == ".env":
+        if is_env_file(path.name):
             found["env"].append(str(path))
         if path.suffix.lower() not in TEXT_SUFFIXES and path.name != ".env.example":
             continue
@@ -175,7 +214,11 @@ def main(argv: list[str] | None = None) -> int:
 
     repo = args.repo
     if repo is None:
-        code, out, _ = run(["git", "remote", "get-url", "origin"], PROJECT_ROOT)
+        try:
+            code, out, _ = run(["git", "remote", "get-url", "origin"], PROJECT_ROOT)
+        except FileNotFoundError:
+            print("git est introuvable : l'installer avant la vérification.")
+            return EXIT_SETUP
         repo = out.strip() if code == 0 else None
     if not repo:
         print("Dépôt introuvable : passer --repo.")
@@ -186,8 +229,9 @@ def main(argv: list[str] | None = None) -> int:
     report = Report()
     print(f"Clone propre de la branche {args.branch} dans {clone}")
     try:
-        code, out, seconds = run(["git", "clone", "--depth", "1", "--branch", args.branch, repo, str(clone)], workdir)
-        if not report.add("clone depuis GitHub", code == 0, out.strip().splitlines()[-1] if code else "", seconds):
+        code, out, seconds = run(["git", "clone", "--depth", "1", "--branch", args.branch, "--", repo, str(clone)],
+                                 workdir, timeout=CLONE_TIMEOUT)
+        if not report.add("clone depuis GitHub", code == 0, last_line(out) if code else "", seconds):
             return EXIT_SETUP
         code, out, _ = run(["git", "log", "--oneline", "-1"], clone)
         print(f"Commit vérifié : {out.strip()}")
@@ -210,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
         code, out, seconds = run([str(python), "-m", "pytest", "-q", "-W", "error", "-p", "no:cacheprovider"], clone)
         count = passed_count(out)
         report.add("tests (pytest -q -W error)", code == 0,
-                   f"{count} tests réussis" if code == 0 else out.strip().splitlines()[-1][:300], seconds)
+                   f"{count} tests réussis" if code == 0 else last_line(out), seconds)
 
         code, out, seconds = run([str(python), "scripts/run_scenarios.py"], clone)
         report.add("scripts/run_scenarios.py (hors ligne)", code == 0, "" if code == 0 else out.strip()[-300:], seconds)
@@ -219,7 +263,7 @@ def main(argv: list[str] | None = None) -> int:
         code, out, seconds = run([str(python), "scripts/run_sensitivity.py", "--out-dir", str(regenerated)], clone)
         committed = clone / "outputs" / "reports" / "sensitivity.md"
         same = (code == 0 and committed.exists() and (regenerated / "sensitivity.md").exists()
-                and committed.read_bytes() == (regenerated / "sensitivity.md").read_bytes())
+                and same_text(committed, regenerated / "sensitivity.md"))
         report.add("rapport de sensibilité identique au rapport versionné", same,
                    "" if same else (out.strip()[-300:] if code else "contenu différent"), seconds)
 
@@ -229,11 +273,14 @@ def main(argv: list[str] | None = None) -> int:
                    smoke_line.removeprefix("interface : ") if code == 0 else out.strip()[-300:], seconds)
     except subprocess.TimeoutExpired as error:
         report.add("délai dépassé", False, str(error.cmd)[:200])
+    except FileNotFoundError as error:  # git absent ou --python invalide
+        report.add("outil introuvable", False, str(error)[:200])
+        return EXIT_SETUP
     finally:
         if args.keep:
             print(f"Dossier gardé : {workdir}")
-        else:
-            shutil.rmtree(workdir, ignore_errors=True)
+        elif not remove_tree(workdir):
+            print(f"Dossier temporaire non supprimé, à effacer à la main : {workdir}")
 
     failed = [check.name for check in report.checks if not check.ok]
     print()
