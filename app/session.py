@@ -229,6 +229,11 @@ def ask(text: Optional[str] = None) -> None:
         _append_analysis(guard.get("action"), persona)
 
 
+_CAPS_WORDS = frozenset({"EST", "EN", "LE", "LA", "LES", "DE", "DU", "DES", "ET", "OU", "UN", "UNE", "MON", "MA",
+                         "MES", "CE", "CET", "CETTE", "IL", "ELLE", "QUE", "QUI", "POUR", "PAR", "SUR", "AU", "AUX",
+                         "PAS", "NE", "SE", "SI", "PLUS", "TRES", "TROP", "AVEC"})
+
+
 def _agent_kind(text: str, parsed: Dict[str, Any], analysed: bool) -> Optional[str]:
     """Type de question pour l'agent, seulement pour ce que les règles du chat n'ont pas su traiter.
 
@@ -242,9 +247,10 @@ def _agent_kind(text: str, parsed: Dict[str, Any], analysed: bool) -> Optional[s
         or (status == "answer" and answer_kind == "definition" and parsed.get("term_id") is None)
         # Lue comme une idée sans actif ("c'est grave une perte de 26 % ?") ; un actif inconnu nommé
         # ("le risque de GME") garde la demande de précision, qui dit qu'il n'est pas dans l'univers.
-        # Message tout en majuscules : ses mots ("EST", "EN") ne sont pas des titres inconnus.
+        # Message tout en majuscules : ses mots courants ("EST", "EN") ne sont pas des titres inconnus ; un vrai
+        # titre inconnu ("GME") garde la demande de précision.
         or (status == "clarify" and parsed.get("reason") == "unknown_asset"
-            and (not parsed.get("unknown_tokens") or text.isupper()))
+            and not [t for t in parsed.get("unknown_tokens") or () if not (text.isupper() and t in _CAPS_WORDS)])
     )
     if not eligible:
         return None

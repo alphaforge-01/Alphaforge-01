@@ -105,7 +105,7 @@ _REFUSAL_PATTERNS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         r"\bvu\s+ma\s+situation\b",
         r"\bmeilleur\s+(placement|actif|titre)\b",
         # "faut-il vendre ?", "que faudrait-il acheter ?", "quel titre choisir ?" (constaté à l'audit de l'agent).
-        r"\b(faut-il|faudrait-il)\s+(acheter|vendre|investir|garder|choisir)\b",
+        r"\b(faut[- ]il|faudrait[- ]il)\s+(acheter|vendre|investir|garder|choisir|ajouter|alleger|prendre)\b",
         r"\bquel(le)?s?\s+(titre|actif|action|placement|fonds)s?\s+(choisir|prendre|acheter)\b",
         r"\b(que|quoi)\s+(vendre|choisir)\b",
     )),

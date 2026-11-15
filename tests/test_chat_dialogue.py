@@ -196,3 +196,9 @@ def test_an_all_caps_why_question_still_reaches_the_agent(app):
     app.button(key="idea_preset_TSLA_25").click().run()
     _send(app, "POURQUOI C'EST EN TENSION ?")
     assert app.session_state["chat_history"][-1]["type"] == "agent_answer"
+
+
+def test_an_all_caps_question_naming_an_unknown_asset_keeps_its_clarification(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, "POURQUOI LE RISQUE DE GME EST EN CONFLIT ?")
+    assert app.session_state["chat_history"][-1]["type"] == "clarify"

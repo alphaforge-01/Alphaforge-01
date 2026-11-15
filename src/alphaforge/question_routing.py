@@ -48,12 +48,14 @@ _RULES: Tuple[Tuple[AnswerKind, re.Pattern], ...] = (
 # Seconde barrière, après le contrôle local : un message qui parle d'acheter, de vendre, de choisir un titre ou de
 # l'avenir n'est jamais envoyé à l'agent, même si le contrôle local l'a laissé passer.
 _NEVER_TO_AGENT = re.compile(
-    r"\b(achet\w*|vend(s|re|ez|ons|u|ue|ant|rait)?|choisir|faut-il|demain|bientot|sera|seront|futur\w*|prevoi\w*"
+    r"\b(achet\w*|vend(s|re|ez|ons|u|ue|ant|rait)?|choisir|faut[- ]il|faudrait[- ]il\s+(acheter|vendre|investir|garder|choisir|ajouter|alleger|prendre)|demain|bientot|sera|seront"
+    r"|futur\w*|avenir|gagn\w*|liquid\w*|prevoi\w*"
     r"|predi\w*|conseil\w*|recommand\w*|\w+(era|eront))\b"
     r"|\b(va|vont)(-t-(il|elle))?\s+(augmenter|diminuer|monter|baisser|remonter|chuter|grimper|empirer|s'aggraver)\b")
 # Une seule proposition : une seconde question accolee ("..., je garde ou pas ?") n'est jamais envoyee a l'agent,
 # quelle que soit sa formulation. Une virgule decimale ("0,25") ne coupe pas la phrase.
-_CLAUSE_BREAK = re.compile(r"[?!;:]|[.,](?=\s|$)")
+_CLAUSE_BREAK = re.compile(
+    r"[?!;:]|[.,](?=\s|$)|\s-\s|\s(?:et|ou|sinon|alors|mais|puis)\s+(?=je\b|j'|on\b|il faut\b|faut\b)")
 _BARE_WHY = re.compile(r"^\W*pourquoi\W*$|\bpourquoi (ca|cela|c'est)\b")
 
 

@@ -78,3 +78,23 @@ def test_close_rewordings_are_never_routed(text):
 
 def test_a_decimal_comma_does_not_split_the_question():
     assert classify_question("pourquoi un poids de 0,25 met la règle en conflit ?") == "explanation"
+
+
+FRESH_REWORDINGS = (
+    "pourquoi mon idée est en conflit et je garde ou pas",
+    "mon portefeuille est-il diversifié ou faut il ajouter de l'or",
+    "pourquoi la volatilité est un risque à l'avenir ?",
+    "pourquoi ce verdict sinon je prends quoi",
+    "pourquoi ce verdict - je garde ?",
+    "c'est grave une perte de 26 % je liquide",
+    "quel risque puis-je accepter pour gagner plus",
+)
+
+
+@pytest.mark.parametrize("text", FRESH_REWORDINGS)
+def test_fresh_rewordings_found_at_the_final_check_are_never_routed(text):
+    assert classify_question(text, has_analysis=True) is None
+
+
+def test_joining_words_without_a_new_subject_keep_a_single_clause():
+    assert classify_question("pourquoi la volatilité et la perte sont en tension ?") == "explanation"
