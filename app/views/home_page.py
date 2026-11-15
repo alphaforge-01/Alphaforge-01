@@ -7,35 +7,33 @@ import data_source
 import navigation
 import session
 import ui_texts as texts
-from components import profile_panel
-from formatting import escape_dollars
+from components import profile_panel, style
 
 HOME_LEVEL_KEY = "home_level"
 
 
 def render_level_preview() -> None:
-    """Curseur Novice / Pro et le même passage aux deux niveaux, tiré d'une trace réelle."""
+    """Curseur Novice / Pro ; au survol d'un niveau, une bulle montre un passage réel à ce niveau."""
     st.subheader(texts.HOME_LEVEL_TITLE, anchor=False)
-    st.session_state[HOME_LEVEL_KEY] = st.session_state.level or "novice"
+    st.caption(texts.HOME_LEVEL_HOVER_HINT)
+    preview = session.safe_reference(
+        lambda: data_source.get_level_preview(st.session_state.profile_id or ""), None)
+    active = st.session_state.level if st.session_state.level in texts.LEVEL_LABELS else "novice"
+    if preview:
+        style.level_bubbles([{
+            "label": texts.LEVEL_LABELS[level],
+            "title": texts.HOME_PREVIEW_TITLE.format(level=texts.LEVEL_LABELS[level]),
+            "description": texts.HOME_LEVEL_DESCRIPTIONS[level],
+            "example": preview.get(level) or texts.NOT_AVAILABLE,
+            "source": texts.HOME_PREVIEW_SOURCE.format(
+                persona=preview["persona"].capitalize(), model=preview.get("model_id") or texts.NOT_AVAILABLE,
+                source=preview[f"{level}_source"]),
+            "active": level == active,
+        } for level in texts.LEVEL_LABELS])
+    st.session_state[HOME_LEVEL_KEY] = active
     st.select_slider(texts.SIDEBAR_LEVEL, options=list(texts.LEVEL_LABELS), format_func=texts.LEVEL_LABELS.get,
                      key=HOME_LEVEL_KEY, on_change=session.sync_level, args=(HOME_LEVEL_KEY,),
                      help=texts.EXPLANATION_LEVEL_HELP, label_visibility="collapsed")
-    preview = session.safe_reference(
-        lambda: data_source.get_level_preview(st.session_state.profile_id or ""), None)
-    if not preview:
-        return
-    chosen = st.session_state.level or "novice"
-    for column, level in zip(st.columns(2), texts.LEVEL_LABELS):
-        with column, st.container(border=True):
-            head, badge = st.columns([3, 2], vertical_alignment="center")
-            head.markdown(f"**{texts.LEVEL_LABELS[level]}**")
-            if level == chosen:
-                with badge:
-                    st.badge(texts.HOME_LEVEL_CHOSEN, color="blue")
-            st.markdown(escape_dollars(preview.get(level) or texts.NOT_AVAILABLE))
-    st.caption(texts.HOME_PREVIEW_SOURCE.format(
-        persona=preview["persona"].capitalize(), model=preview.get("model_id") or texts.NOT_AVAILABLE,
-        novice=preview["novice_source"], pro=preview["pro_source"]))
 
 
 def render() -> None:
