@@ -457,12 +457,14 @@ def explain(
     if effective_mode == "bedrock" and config.has_guardrail:
         try:
             bedrock_client = client or BedrockClient(config)
+            checked_text = _model_text(output)
             guardrail = bedrock_client.check_output_grounding(
-                json.dumps(brief, ensure_ascii=False), "Explique le resultat de l'analyse.", markdown)
+                json.dumps(brief, ensure_ascii=False), "Explique le resultat de l'analyse.", checked_text)
             guard_status = "ok" if guardrail["action"] != "not_run" else "skipped"
             guard_details = {
                 "action": guardrail["action"], "grounding_score": guardrail["grounding_score"],
                 "relevance_score": guardrail["relevance_score"], "mode": guardrail["mode"],
+                "checked_chars": len(checked_text),
             }
             flags = getattr(bedrock_client, "last_grounding_flags", None)
             if isinstance(flags, dict) and flags.get("below_threshold"):
@@ -523,6 +525,17 @@ def persist_trace(
         return {"saved": False, "location": None, "reason": redact_text(str(error))}
     except Exception as error:  # la trace est accessoire : jamais de plantage pour elle
         return {"saved": False, "location": None, "reason": type(error).__name__}
+
+
+def _model_text(output: dict[str, Any]) -> str:
+    """Les phrases ecrites par le modele, renvois non remplaces : l'objet que le garde-fou doit verifier.
+
+    Le texte rendu complet (tableaux, preuves) depasse la limite de 5000 caracteres du controle d'ancrage,
+    et ses chiffres viennent du code, pas du modele : seules les phrases du modele sont a verifier.
+    """
+    parts = [output["summary"], *(factor["text"] for factor in output["factors"]),
+             output["counterfactual"], output["variants"], output["limits_context"]]
+    return "\n".join(part for part in parts if part)
 
 
 def check_request(

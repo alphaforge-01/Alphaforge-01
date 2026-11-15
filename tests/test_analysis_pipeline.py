@@ -254,7 +254,9 @@ def test_explain_bedrock_valid_llm_text_is_kept_and_grounding_reflected():
     assert step6["details"]["grounding_score"] == 0.82 and step6["details"]["relevance_score"] == 0.9
     assert explanation["guardrail"]["grounding_score"] == 0.82
     kind, source, query, answer = client.calls[0]
-    assert answer == explanation["rendered_markdown"] and "brief_id" in source
+    from alphaforge.analysis_pipeline import _model_text
+    # le garde-fou recoit les phrases du modele (limite de 5000 caracteres), pas le texte rendu complet
+    assert answer == _model_text(explanation["output"]) and "brief_id" in source
 
 
 def test_explain_bedrock_runner_error_falls_back_with_reason():

@@ -16,7 +16,7 @@ from .contracts import ExplainerOutput, ExplanationBrief
 from .prompt_loader import load_prompt
 from .tool_specs import ExplainerFailure
 
-PROMPT_NAME = "explainer_v2"
+PROMPT_NAME = "explainer_v3"
 PROMPT_VERSION = PROMPT_NAME
 # Pas de temperature : les modeles Claude recents la refusent (ValidationException, constate sur le compte).
 INFERENCE_CONFIG = {"maxTokens": 1500}

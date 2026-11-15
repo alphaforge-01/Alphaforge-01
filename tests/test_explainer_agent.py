@@ -133,11 +133,11 @@ def test_first_attempt_success():
     client = ScriptedClient([reply(json.dumps(good_slots()), extra_blocks=[{"reasoningContent": {"x": 1}}])])
     output = explain_with_llm(client, MODEL, BRIEF, accept)
     assert output["origin"] == "llm" and output["attempt"] == 1
-    assert output["model_id"] == MODEL and output["prompt_version"] == "explainer_v2"
+    assert output["model_id"] == MODEL and output["prompt_version"] == "explainer_v3"
     assert len(client.calls) == 1
     call = client.calls[0]
     assert call["tool_config"] is None and "toolConfig" not in call["kwargs"]
-    assert call["system"] == load_prompt("explainer_v2") and call["system"]
+    assert call["system"] == load_prompt("explainer_v3") and call["system"]
     assert call["inference_config"] == INFERENCE_CONFIG
     user_text = call["messages"][0]["content"][0]["text"]
     assert call["messages"][0]["role"] == "user"
@@ -228,7 +228,7 @@ def test_describe_rejections_is_bounded_and_masks_secrets():
 
 
 def test_prompt_v2_states_the_validator_rules():
-    prompt = load_prompt("explainer_v2")
+    prompt = load_prompt("explainer_v3")
     for needle in ("REGLE 1", "REGLE 2", "REGLE 3", "REGLE 4", "REGLE 5", "max_chars_per_slot", "[LM1]", "il faut"):
         assert needle in prompt
     assert chr(0x2014) not in prompt   # regle 1 : aucun tiret cadratin dans le prompt
@@ -268,3 +268,48 @@ def test_trace_records_the_slot_of_each_rejection_without_any_model_text():
     details = explanation["trace"][0]["details"]
     assert details["rejection_slots"] == ["summary:forbidden_term"]
     assert "MARQUEUR-SECRET" not in json.dumps(explanation["trace"])
+
+
+def test_prompt_v3_forbids_naming_variants_by_identifier():
+    prompt = load_prompt("explainer_v3")
+    assert "REGLE 6" in prompt and "V1" in prompt and "UNE seule phrase" in prompt
+
+
+def test_guardrail_checks_only_the_model_sentences_not_the_long_rendered_text():
+    from dataclasses import replace
+    from alphaforge.analysis_pipeline import explain, run_analysis
+    from alphaforge.bedrock_client import BedrockConfig
+    from alphaforge.fixture_collaborators import fixture_deps
+
+    fixtures = Path(__file__).parent / "fixtures"
+    load = lambda name: json.loads((fixtures / name).read_text(encoding="utf-8"))
+    deps = replace(fixture_deps(), render_markdown=lambda output, brief: "tableau " * 1500)   # 12000 caracteres
+    config = BedrockConfig(mode="bedrock", analyst_model_id="m", explainer_model_id="m",
+                           guardrail_id="g-test", guardrail_version="1")
+    result = run_analysis(load("profile_robert.json"), load("portfolio_robert.json"), load("idea_tsla_25.json"),
+                          deps=deps, config=BedrockConfig())
+    received = {}
+
+    class Guard:
+        last_grounding_flags = {}
+
+        def __init__(self):
+            self.config = config
+
+        def check_output_grounding(self, source, query, answer):
+            received["answer"] = answer
+            return {"check": "output_grounding", "action": "none", "denied_topics": [],
+                    "grounding_score": 0.9, "relevance_score": 0.9, "mode": "detect"}
+
+    def runner(client, model_id, brief, validate):
+        output = deps.render_template(brief)
+        output.update({"origin": "llm", "attempt": 1, "model_id": model_id, "prompt_version": "explainer_v3",
+                       "summary": "PHRASE-DU-MODELE [G1]."})
+        return output
+
+    explanation = explain(result, "novice", mode="bedrock", config=config, client=Guard(), deps=deps,
+                          explainer_runner=runner)
+    assert "PHRASE-DU-MODELE" in received["answer"] and "tableau" not in received["answer"]
+    assert len(received["answer"]) < 5000
+    assert explanation["output"]["origin"] == "llm"                     # verifie, donc conserve
+    assert explanation["trace"][2]["details"]["checked_chars"] == len(received["answer"])
