@@ -309,3 +309,37 @@ def test_tracabilite_des_ecarts():
 def test_faits_d_actif_sans_date_de_recuperation():
     """`recovery_date` n'a pas de preuve dédiée : il n'est pas exposé dans les données."""
     assert "recovery_date" not in tools.get_asset_facts("SPY")["data"]
+
+
+# ---------- minimum de rendements pour la volatilité annualisée (P2-12) ----------
+
+
+def _calendar_date_with_returns(n_returns):
+    """Date d'arrêt qui laisse exactement `n_returns` rendements sur le calendrier commun."""
+    from alphaforge.calendar_alignment import aligned_cad_prices
+
+    return aligned_cad_prices().index[n_returns].date().isoformat()
+
+
+def test_analyze_portfolio_missing_info_below_volatility_minimum():
+    from alphaforge.metrics import MIN_OBSERVATIONS_FOR_VOLATILITY
+
+    result = tools.analyze_portfolio(ROBERT, as_of=_calendar_date_with_returns(MIN_OBSERVATIONS_FOR_VOLATILITY - 1))
+    assert result["status"] == "missing_info"
+    assert "volatilité annualisée" in result["error_message"]
+    assert result["evidence"] == []
+
+
+def test_analyze_portfolio_ok_at_volatility_minimum():
+    from alphaforge.metrics import MIN_OBSERVATIONS_FOR_VOLATILITY
+
+    result = tools.analyze_portfolio(ROBERT, as_of=_calendar_date_with_returns(MIN_OBSERVATIONS_FOR_VOLATILITY))
+    assert result["status"] == "ok"
+    volatility = next(e for e in result["evidence"] if e["evidence_key"] == "volatility_ann:portfolio_before")
+    assert volatility["n_observations"] == MIN_OBSERVATIONS_FOR_VOLATILITY
+
+
+def test_two_returns_no_longer_give_an_annualized_volatility():
+    """Avant P2-12, deux rendements donnaient une volatilité annualisée affichée et jugée par R2."""
+    result = tools.analyze_portfolio(ROBERT, as_of=_calendar_date_with_returns(2))
+    assert result["status"] == "missing_info"

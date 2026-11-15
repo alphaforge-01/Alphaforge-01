@@ -42,6 +42,10 @@ TRADING_DAYS_PER_YEAR = 252
 MIN_OBSERVATIONS = 2
 # En dessous d'un an de rendements, le rendement annualisé n'est pas affiché
 MIN_OBSERVATIONS_FOR_ANNUAL_RETURN = TRADING_DAYS_PER_YEAR
+# En dessous d'environ trois mois de bourse, une volatilité annualisée n'a pas de sens : un
+# écart-type estimé sur quelques points, multiplié par la racine de 252, donne un chiffre
+# trompeur. Même minimum que les corrélations (`diversification.MIN_OBSERVATIONS`).
+MIN_OBSERVATIONS_FOR_VOLATILITY = 60
 # Tolérance pour considérer qu'un niveau est retrouvé malgré les arrondis
 RECOVERY_TOLERANCE = 1e-12
 
@@ -154,8 +158,17 @@ def annualized_return(
 
 
 def annualized_volatility(returns: pd.Series, periods_per_year: int = TRADING_DAYS_PER_YEAR) -> float:
-    """Volatilité annualisée (écart-type échantillon x racine du nombre de périodes)."""
+    """Volatilité annualisée (écart-type échantillon x racine du nombre de périodes).
+
+    Lève `InsufficientDataError` sous `MIN_OBSERVATIONS_FOR_VOLATILITY` rendements : les
+    outils rendent alors un statut « information manquante » au lieu d'un chiffre trompeur.
+    """
     returns = _validate_returns(returns)
+    if len(returns) < MIN_OBSERVATIONS_FOR_VOLATILITY:
+        raise InsufficientDataError(
+            f"Au moins {MIN_OBSERVATIONS_FOR_VOLATILITY} rendements sont nécessaires pour une "
+            f"volatilité annualisée (reçu : {len(returns)})"
+        )
     return float(returns.std(ddof=1) * math.sqrt(periods_per_year))
 
 

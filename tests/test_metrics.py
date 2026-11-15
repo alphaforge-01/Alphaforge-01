@@ -10,6 +10,7 @@ import pytest
 from alphaforge.calendar_alignment import daily_cad_returns, returns_base_date
 from alphaforge.metrics import (
     MIN_OBSERVATIONS_FOR_ANNUAL_RETURN,
+    MIN_OBSERVATIONS_FOR_VOLATILITY,
     InsufficientDataError,
     annualized_return,
     annualized_volatility,
@@ -36,6 +37,11 @@ def _from_levels(levels, dates):
 
 # Chemin 100 -> 120 -> 90 -> 130, avec un week-end entre le creux et la récupération.
 LEVEL_DATES = ["2024-01-03", "2024-01-04", "2024-01-05", "2024-01-08"]
+
+
+def _pad(values, length=MIN_OBSERVATIONS_FOR_VOLATILITY, fill=0.0):
+    """Complète une série courte par des rendements nuls jusqu'au minimum de la volatilité."""
+    return list(values) + [fill] * max(0, length - len(values))
 
 
 # ---------- rendement total et annualisé ----------
@@ -76,21 +82,24 @@ def test_annualized_return_two_day_case_is_none():
 # ---------- volatilité ----------
 
 def test_volatility_constant_returns_is_zero():
-    assert annualized_volatility(_series([0.01] * 10)) == pytest.approx(0.0, abs=1e-12)
+    assert annualized_volatility(_series([0.01] * MIN_OBSERVATIONS_FOR_VOLATILITY)) == pytest.approx(0.0, abs=1e-12)
 
 
 def test_volatility_alternating_matches_hand_computation():
     a = 0.01
-    # moyenne 0, variance échantillon = 4 a^2 / 3
-    expected = a * math.sqrt(4 / 3) * math.sqrt(252)
-    assert annualized_volatility(_series([a, -a, a, -a])) == pytest.approx(expected, rel=1e-12)
+    n = MIN_OBSERVATIONS_FOR_VOLATILITY  # pair
+    # moyenne 0, variance échantillon = n a^2 / (n - 1)
+    expected = a * math.sqrt(n / (n - 1)) * math.sqrt(252)
+    assert annualized_volatility(_series([a, -a] * (n // 2))) == pytest.approx(expected, rel=1e-12)
 
 
 def test_volatility_uses_sample_std_ddof_1():
-    returns = _series([0.02, 0.0])
-    # ddof=1 : std = 0.02 / sqrt(2) ; ddof=0 donnerait 0.01
-    expected = 0.02 / math.sqrt(2) * math.sqrt(252)
+    n = MIN_OBSERVATIONS_FOR_VOLATILITY  # pair
+    returns = _series([0.02, 0.0] * (n // 2))
+    # écarts de 0,01 à la moyenne : ddof=1 donne 0,01 x racine(n / (n - 1)) ; ddof=0 donnerait 0,01
+    expected = 0.01 * math.sqrt(n / (n - 1)) * math.sqrt(252)
     assert annualized_volatility(returns) == pytest.approx(expected, rel=1e-12)
+    assert annualized_volatility(returns) != pytest.approx(0.01 * math.sqrt(252), rel=1e-6)
 
 
 # ---------- indice de richesse ----------
@@ -299,11 +308,14 @@ def test_insufficient_data_is_a_value_error():
 # ---------- résumé et tableau ----------
 
 def test_compute_return_metrics_fields_with_base_date():
-    returns = _from_levels([100, 120, 90, 130], LEVEL_DATES)
+    head = _from_levels([100, 120, 90, 130], LEVEL_DATES)
+    # Rendements nuls ensuite (niveau 130 constant) pour atteindre le minimum de la volatilité
+    tail_index = pd.bdate_range("2024-01-09", periods=MIN_OBSERVATIONS_FOR_VOLATILITY - len(head))
+    returns = pd.concat([head, pd.Series(0.0, index=tail_index)])
     result = compute_return_metrics(returns, base_date="2024-01-03")
     assert result.period_start == "2024-01-03"
-    assert result.period_end == "2024-01-08"
-    assert result.n_observations == 3
+    assert result.period_end == tail_index[-1].date().isoformat()
+    assert result.n_observations == MIN_OBSERVATIONS_FOR_VOLATILITY
     assert result.total_return == pytest.approx(0.30, abs=1e-12)
     assert result.return_ann is None, "moins de 252 rendements"
     assert result.volatility_ann == pytest.approx(annualized_volatility(returns), rel=1e-12)
@@ -322,14 +334,14 @@ def test_compute_return_metrics_annual_return_with_one_year():
 
 
 def test_compute_return_metrics_period_start_is_base_date():
-    returns = _series([0.01, -0.02, 0.03], start="2024-01-03")
+    returns = _series(_pad([0.01, -0.02, 0.03]), start="2024-01-03")
     result = compute_return_metrics(returns, base_date="2024-01-02")
     assert result.period_start == "2024-01-02"
     assert result.period_end == returns.index[-1].date().isoformat()
 
 
 def test_return_metrics_to_dict_has_all_fields():
-    result = compute_return_metrics(_series([0.01, -0.02, 0.03], start="2024-01-03"), "2024-01-02")
+    result = compute_return_metrics(_series(_pad([0.01, -0.02, 0.03]), start="2024-01-03"), "2024-01-02")
     assert set(result.to_dict()) == {
         "period_start", "period_end", "n_observations", "total_return", "return_ann",
         "volatility_ann", "max_drawdown", "max_drawdown_start", "max_drawdown_end",
@@ -339,8 +351,8 @@ def test_return_metrics_to_dict_has_all_fields():
 
 def test_metrics_table_one_row_per_column():
     frame = pd.DataFrame(
-        {"AAA": [0.01, -0.02, 0.03], "BBB": [0.0, 0.01, -0.01]},
-        index=pd.bdate_range("2024-01-03", periods=3),
+        {"AAA": _pad([0.01, -0.02, 0.03]), "BBB": _pad([0.0, 0.01, -0.01])},
+        index=pd.bdate_range("2024-01-03", periods=MIN_OBSERVATIONS_FOR_VOLATILITY),
     )
     table = metrics_table(frame, base_date="2024-01-02")
     assert list(table.index) == ["AAA", "BBB"]
@@ -350,9 +362,9 @@ def test_metrics_table_one_row_per_column():
 
 
 def test_metrics_table_keeps_native_python_types():
-    index = pd.bdate_range("2024-01-03", periods=3)
+    index = pd.bdate_range("2024-01-03", periods=MIN_OBSERVATIONS_FOR_VOLATILITY)
     frame = pd.DataFrame(
-        {"REC": [-0.5, 1.0, 0.1], "UNREC": [-0.5, 0.2, 0.1]},  # REC retrouve son sommet
+        {"REC": _pad([-0.5, 1.0, 0.1]), "UNREC": _pad([-0.5, 0.2, 0.1])},  # REC retrouve son sommet
         index=index,
     )
     table = metrics_table(frame, base_date="2024-01-02")
@@ -395,3 +407,40 @@ def test_metrics_table_on_all_tickers_has_no_missing_value_except_recovery():
     unrecovered = table[~table["recovered"].astype(bool)]
     assert unrecovered["recovery_days"].isna().all()
     assert unrecovered["recovery_date"].isna().all()
+
+
+# ---------- minimum de rendements pour la volatilité annualisée (P2-12) ----------
+
+
+def test_volatility_minimum_is_sixty_returns():
+    assert MIN_OBSERVATIONS_FOR_VOLATILITY == 60
+
+
+def test_volatility_refused_below_minimum():
+    short = _series([0.01, -0.01] * ((MIN_OBSERVATIONS_FOR_VOLATILITY - 2) // 2) + [0.01])
+    assert len(short) == MIN_OBSERVATIONS_FOR_VOLATILITY - 1
+    with pytest.raises(InsufficientDataError, match="volatilité annualisée"):
+        annualized_volatility(short)
+
+
+def test_volatility_accepted_at_minimum():
+    exact = _series([0.01, -0.01] * (MIN_OBSERVATIONS_FOR_VOLATILITY // 2))
+    assert annualized_volatility(exact) > 0
+
+
+def test_compute_return_metrics_refused_below_minimum():
+    """Les métriques complètes portent une volatilité : elles sont refusées sous le minimum."""
+    with pytest.raises(InsufficientDataError):
+        compute_return_metrics(_series([0.01, -0.02, 0.03], start="2024-01-03"), "2024-01-02")
+
+
+def test_drawdown_still_available_on_short_series():
+    """La perte maximale reste calculable sur une série courte (aucune annualisation)."""
+    info = max_drawdown(_series([0.1, -0.5, 0.2], start="2024-01-03"), "2024-01-02")
+    assert info.max_drawdown == pytest.approx(0.5, abs=1e-12)
+
+
+def test_weekly_minimum_applies_to_number_of_returns():
+    """Le minimum porte sur le nombre de rendements, quelle que soit la fréquence."""
+    weekly = pd.Series([0.01, -0.01] * 30, index=pd.date_range("2024-01-05", periods=60, freq="W-FRI"))
+    assert annualized_volatility(weekly, periods_per_year=52) > 0

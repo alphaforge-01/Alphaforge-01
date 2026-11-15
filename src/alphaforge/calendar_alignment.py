@@ -55,6 +55,7 @@ from alphaforge.fx_conversion import (
     fx_filled_dates,
     usdcad_on_calendar,
 )
+from alphaforge.metrics import MIN_OBSERVATIONS_FOR_ANNUAL_RETURN, MIN_OBSERVATIONS_FOR_VOLATILITY
 
 PRICE_COLUMN = "adj_close"
 
@@ -182,6 +183,10 @@ def alignment_summary(as_of: AsOf = None) -> dict:
         "calendar_end": calendar[-1].date().isoformat(),
         "n_days": len(calendar),
         "n_return_days": len(calendar) - 1,
+        "min_returns_for_volatility": MIN_OBSERVATIONS_FOR_VOLATILITY,
+        "min_returns_for_annual_return": MIN_OBSERVATIONS_FOR_ANNUAL_RETURN,
+        "volatility_available": len(calendar) - 1 >= MIN_OBSERVATIONS_FOR_VOLATILITY,
+        "annual_return_available": len(calendar) - 1 >= MIN_OBSERVATIONS_FOR_ANNUAL_RETURN,
         "n_tsx_only_days_dropped": len(tsx_calendar.difference(us_calendar)),
         "n_us_only_days_dropped": len(us_calendar.difference(tsx_calendar)),
         "n_fx_days_carried_forward": len(fx_filled_dates(fx, calendar)),

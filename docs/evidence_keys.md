@@ -17,9 +17,11 @@ Référence pour l'interface (flux D, règle d'affichage 1 de `docs/ui_spec.md`)
 
 Champs renseignés : `period_start`, `period_end`, `n_observations`, `currency = "CAD"`, `source_ids = ["prices_daily.csv", "fx_usdcad_daily.csv"]`.
 
+Minimum de rendements : sous 60 rendements (`metrics.MIN_OBSERVATIONS_FOR_VOLATILITY`, environ trois mois de bourse), aucune volatilité annualisée n'est calculée ; l'outil rend alors le statut `missing_info` et **aucune** des preuves de ce tableau. « Toujours » ci-dessous s'entend donc à partir de 60 rendements.
+
 | Métrique | Unité | Exemple de `display_value` | Sujets | Présence |
 | --- | --- | --- | --- | --- |
-| `volatility_ann` | pct | `17,6 %` | avant, après, ticker | Toujours (1re preuve de l'outil) |
+| `volatility_ann` | pct | `17,6 %` | avant, après, ticker | Si au moins 60 rendements (1re preuve de l'outil) ; sinon l'outil rend `missing_info` |
 | `max_drawdown` | pct | `26,04 %` | avant, après, ticker | Toujours (2e preuve de l'outil) |
 | `max_drawdown_cad` | cad | `26 040 $` | avant, après | Seulement si `capital_cad` est fourni |
 | `max_drawdown_start` | text | `2021-12-29` | avant, après, ticker | Toujours (date du sommet) |

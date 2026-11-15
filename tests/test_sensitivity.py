@@ -439,3 +439,21 @@ def test_stable_rules_by_persona(personas):
     stable = sens.stable_rules_by_persona(sens.run_grid(personas))
     assert set(stable) == {"amira", "mateo", "robert"}
     assert "R1" in stable["robert"]
+
+
+def test_variant_below_volatility_minimum_raises(robert_after):
+    """Une variante trop courte (hebdomadaire sur un an : 52 rendements) est refusée explicitement."""
+    from alphaforge.metrics import InsufficientDataError
+
+    short = sens.Variant("weekly_1y", "frequence", "Hebdomadaire sur 1 an", "Test.", window_years=1,
+                         frequency="weekly")
+    with pytest.raises(InsufficientDataError):
+        sens.variant_snapshot(robert_after, "portfolio_after", short)
+
+
+def test_report_variants_all_have_enough_returns(personas):
+    """Toutes les variantes et tous les blocs du rapport dépassent le minimum de la volatilité."""
+    from alphaforge.metrics import MIN_OBSERVATIONS_FOR_VOLATILITY
+
+    rows = sens.run_grid({"robert": personas["robert"]}, ideas=[sens.DEFAULT_IDEAS[0]])
+    assert min(o["n_observations"] for o in rows[0]["outcomes"].values()) >= MIN_OBSERVATIONS_FOR_VOLATILITY
