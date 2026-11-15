@@ -20,6 +20,7 @@ glossaire) et pro (termes techniques, marge, seuils). Les chiffres sont les mêm
 """
 from __future__ import annotations
 
+import re
 from typing import Any, List, Mapping, Optional, Sequence
 
 from alphaforge.contracts import ExplainerOutput, ExplanationBrief, check_keys
@@ -263,26 +264,55 @@ def _counterfactual(brief: Mapping[str, Any], level: str, max_chars: int) -> str
     return _fit([" ".join(parts_long), " ".join(parts_short)], max_chars)
 
 
+# Périmètre que le pipeline ajoute au libellé d'une preuve : inutile dans une phrase qui parle déjà de la variante.
+_SCOPE_SUFFIX = re.compile(r" \((?:variante simulée|simulation explorée|portefeuille (?:avant|après) l'ajout)\)$")
+# Nombre de mesures citées par variante dans la version courte du texte.
+_SHORT_MEASURES = 2
+
+
+def _measure_label(entry: Optional[Mapping[str, Any]]) -> str:
+    """Libellé d'une mesure pour une phrase : sans périmètre, sans majuscule initiale, sans chiffre."""
+    label = _SCOPE_SUFFIX.sub("", str((entry or {}).get("label_fr") or "")).strip()
+    if not label or any(ch.isdigit() for ch in label):   # un chiffre hors renvoi ferait rejeter le texte
+        return "mesure"
+    return label[0].lower() + label[1:]
+
+
+def _labelled_measures(ids: Sequence[str], evidence: Mapping[str, Mapping[str, Any]]) -> str:
+    """ "volatilité annualisée [E66], perte maximale historique [E67] et part défensive [E76]".
+
+    Un nombre sans libellé ne dit rien à l'utilisateur : chaque valeur est précédée de ce qu'elle mesure.
+    """
+    parts = [f"{_measure_label(evidence.get(i))} [{i}]" for i in ids]
+    if len(parts) <= 1:
+        return "".join(parts)
+    return ", ".join(parts[:-1]) + " et " + parts[-1]
+
+
 def _variants(brief: Mapping[str, Any], level: str, max_chars: int) -> str:
     variants = list(brief.get("variants") or [])
     if not variants:
         return _fit(["Aucune variante simulée n'est disponible pour cette idée."], max_chars)
 
     idx = 0 if level == "novice" else 1
-    long_parts: List[str] = []
+    evidence = {e.get("evidence_id"): e for e in brief.get("evidence") or []}
+    full_parts: List[str] = []
+    brief_parts: List[str] = []
     short_parts: List[str] = []
     for position, variant in enumerate(variants):
         ordinal = _ORDINALS[position] if position < len(_ORDINALS) else "autre"
         phrase = _REASON_PHRASES.get(variant.get("reason_code"), ("une modification",) * 2)[idx]
         verdict = VERDICT_FR.get(variant.get("overall_status"), "information manquante")
-        evidence = _join_refs(variant.get("evidence_ids") or [])
-        measures = f" Mesures : {evidence}." if evidence else ""
+        ids = list(variant.get("evidence_ids") or [])
         if level == "novice":
-            long_parts.append(f"La {ordinal} variante {phrase} : verdict d'ensemble {verdict}.{measures}")
+            head = f"La {ordinal} variante {phrase} : verdict d'ensemble {verdict}."
         else:
-            long_parts.append(f"Variante {ordinal} ({phrase}) : pire statut {verdict}.{measures}")
+            head = f"{ordinal.capitalize()} variante ({phrase}) : pire statut {verdict}."
+        for parts, kept in ((full_parts, ids), (brief_parts, ids[:_SHORT_MEASURES])):
+            measures = _labelled_measures(kept, evidence)
+            parts.append(f"{head} Mesures de cette variante : {measures}." if measures else head)
         short_parts.append(f"La {ordinal} variante : {verdict}.")
-    return _fit([" ".join(long_parts), " ".join(short_parts)], max_chars)
+    return _fit([" ".join(full_parts), " ".join(brief_parts), " ".join(short_parts)], max_chars)
 
 
 def _limits_context(level: str, max_chars: int) -> str:

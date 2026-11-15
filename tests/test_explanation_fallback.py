@@ -211,10 +211,38 @@ def test_variants_slot_uses_reason_and_status_without_digits():
     for level in ("novice", "pro"):
         out = render_template(make_brief(level, variants=variants))
         text = out["variants"]
-        assert "première" in text and "deuxième" in text
+        assert "première" in text.lower() and "deuxième" in text.lower()
         assert VERDICT_FR["tension"] in text and VERDICT_FR["compliant"] in text
         assert "[E1]" in text
         assert not re.search(r"\d", strip_refs(text))
+
+
+def test_variant_measures_are_labelled_not_bare_numbers():
+    """Chaque valeur d'une variante est précédée de ce qu'elle mesure, sans le périmètre du libellé."""
+    evidence = [
+        {"evidence_id": "E7", "label_fr": "Volatilité annualisée (variante simulée)"},
+        {"evidence_id": "E8", "label_fr": "Perte maximale historique (variante simulée)"},
+        {"evidence_id": "E9", "label_fr": "Rendement sur 5 ans (variante simulée)"},   # chiffre : libellé neutre
+    ]
+    variants = [{"variant_id": "V1", "reason_code": "reduce_weight", "overall_status": "compliant",
+                 "evidence_ids": ["E7", "E8", "E9"]}]
+    for level in ("novice", "pro"):
+        brief = make_brief(level, variants=variants)
+        brief["evidence"] = brief["evidence"] + evidence
+        text = render_template(brief)["variants"]
+        assert "volatilité annualisée [E7]" in text and "perte maximale historique [E8]" in text
+        assert "mesure [E9]" in text and "variante simulée)" not in text
+        assert not re.search(r"\d", strip_refs(text))
+
+
+def test_variant_text_shortens_before_dropping_measures():
+    evidence = [{"evidence_id": f"E{n}", "label_fr": "Volatilité annualisée (variante simulée)"} for n in range(70, 76)]
+    variants = [{"variant_id": "V1", "reason_code": "reduce_weight", "overall_status": "compliant",
+                 "evidence_ids": [e["evidence_id"] for e in evidence]}]
+    brief = make_brief("novice", variants=variants, max_chars_per_slot=200)
+    brief["evidence"] = brief["evidence"] + evidence
+    text = render_template(brief)["variants"]
+    assert len(text) <= 200 and "[E70]" in text and "[E71]" in text and "[E75]" not in text
 
 
 def test_no_variants_message():
