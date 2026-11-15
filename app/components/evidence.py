@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Mapping, Optional
 import streamlit as st
 
 import ui_texts as texts
+from components.style import CARD_KEY
 from formatting import format_date
 
 
@@ -40,7 +41,7 @@ def display(entry: Optional[Dict[str, Any]]) -> str:
     return str(entry["display_value"])
 
 
-def _source_line(source_id: str, ctx: ProofContext) -> str:
+def source_line(source_id: str, ctx: ProofContext) -> str:
     row = ctx.sources.get(source_id)
     if not row:
         return f"`{source_id}`"
@@ -74,7 +75,7 @@ def render_proof(entry: Dict[str, Any], ctx: ProofContext) -> None:
         lines.append(f"- {texts.PROOF_QUALIFIER} : {qualifier}")
     sources = entry.get("source_ids") or []
     lines.append(f"- {texts.PROOF_SOURCES} : "
-                 + (", ".join(_source_line(s, ctx) for s in sources) if sources else texts.PROOF_NONE))
+                 + (", ".join(source_line(s, ctx) for s in sources) if sources else texts.PROOF_NONE))
     st.markdown("\n".join(lines))
     if entry.get("transformation"):
         st.caption(f"{texts.PROOF_TRANSFORMATION} : {entry['transformation']}")
@@ -93,14 +94,18 @@ def render_value(entry: Optional[Dict[str, Any]], ctx: ProofContext, key: str) -
     if entry is None:
         st.markdown(texts.NOT_AVAILABLE)
         return
-    with st.popover(display(entry), help=texts.PROOF_HELP, key=key):
+    # Bouton sans bordure : le chiffre se lit comme un chiffre, souligné au survol.
+    with st.popover(display(entry), help=texts.PROOF_HELP, key=key, type="tertiary"):
         render_proof(entry, ctx)
 
 
 def render_card(entry: Optional[Dict[str, Any]], ctx: ProofContext, key: str,
                 label: Optional[str] = None, caption: Optional[str] = None) -> None:
-    """Carte de métrique : libellé du registre, chiffre cliquable, note facultative."""
-    with st.container(border=True):
+    """Carte de métrique : libellé du registre, chiffre cliquable, note facultative.
+
+    Les cartes ont une hauteur minimale commune (components/style.py) : une rangée reste alignée.
+    """
+    with st.container(border=True, key=f"{CARD_KEY}{key}"):
         st.caption(label or (entry or {}).get("label_fr") or texts.NOT_AVAILABLE)
         render_value(entry, ctx, key)
         if caption:

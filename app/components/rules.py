@@ -64,7 +64,7 @@ def _margin_text(check: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def _counterfactual_text(check: Dict[str, Any]) -> Optional[str]:
+def counterfactual_text(check: Dict[str, Any]) -> Optional[str]:
     counterfactual = check.get("counterfactual")
     if not counterfactual or check["status"] not in ("tension", "conflict"):
         return None
@@ -85,28 +85,54 @@ def render_checks(checks: List[Dict[str, Any]], evidence: Mapping[str, Dict[str,
     for check in sort_checks(checks):
         rule = {**(rules_by_id.get(check["rule_id"]) or {}), "unit": check.get("unit")}
         with st.container(border=True):
-            head, measure, detail = st.columns([3, 2, 5], vertical_alignment="center")
+            head, measure, detail = st.columns([4, 2, 5], vertical_alignment="center")
             with head:
                 status_badge(check["status"])
                 st.markdown(f"**{check['label_fr']}**")
             with measure:
-                st.caption(texts.RULE_MEASURE)
                 entry = _value_entry(check, rule, evidence, index, subject)
                 if entry is None and check.get("rule_type") in _CLASS_RULES and check.get("value") == 0:
                     st.markdown(texts.RULE_NO_POSITION)
                 else:
                     render_value(entry, ctx, key=f"{key_prefix}_{check['check_id']}")
             with detail:
+                if check["status"] == "missing_info":
+                    st.markdown(texts.RULE_MISSING.format(reason=check.get("missing_reason") or ""))
+                if show_counterfactual:
+                    counterfactual = counterfactual_text(check)
+                    if counterfactual:
+                        st.markdown(f"**{counterfactual}**")
                 lines = [texts.RULE_THRESHOLDS.format(
                     warn=threshold_text(rule, check.get("warn_threshold")),
                     limit=threshold_text(rule, check.get("limit_threshold")))]
                 margin = _margin_text(check)
                 if margin:
                     lines.append(margin)
-                if check["status"] == "missing_info":
-                    lines.append(texts.RULE_MISSING.format(reason=check.get("missing_reason") or ""))
-                if show_counterfactual:
-                    counterfactual = _counterfactual_text(check)
-                    if counterfactual:
-                        lines.append(f"**{counterfactual}**")
-                st.markdown("  \n".join(lines))
+                # Seuils : paramètres du profil, hypothèses de l'équipe (info-bulle).
+                st.caption(" ".join(lines), help=texts.RULE_THRESHOLDS_HELP)
+
+
+def render_key_points(checks: List[Dict[str, Any]], evidence: Mapping[str, Dict[str, Any]], subject: str,
+                      rules_by_id: Mapping[str, Dict[str, Any]], ctx: ProofContext, key_prefix: str,
+                      limit: int = 3) -> None:
+    """Deux ou trois points clés : règles les plus graves, chiffre cliquable, contrefactuel ou marge."""
+    index = index_by_key(evidence)
+    for check in sort_checks(checks)[:limit]:
+        rule = {**(rules_by_id.get(check["rule_id"]) or {}), "unit": check.get("unit")}
+        status_col, label_col, value_col = st.columns([2, 5, 2], vertical_alignment="center")
+        with status_col:
+            status_badge(check["status"])
+        with label_col:
+            st.markdown(check["label_fr"])
+            # Le contrefactuel est déjà dans le verdict : ici, la marge, sans répétition.
+            note = _margin_text(check)
+            if check["status"] == "missing_info":
+                note = texts.RULE_MISSING.format(reason=check.get("missing_reason") or "")
+            if note:
+                st.caption(note)
+        with value_col:
+            entry = _value_entry(check, rule, evidence, index, subject)
+            if entry is None and check.get("rule_type") in _CLASS_RULES and check.get("value") == 0:
+                st.markdown(texts.RULE_NO_POSITION)
+            else:
+                render_value(entry, ctx, key=f"{key_prefix}_{check['check_id']}")

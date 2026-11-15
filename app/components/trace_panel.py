@@ -145,7 +145,7 @@ def render_step(step: Mapping[str, Any], brief: Optional[Mapping[str, Any]]) -> 
         duration.caption(texts.TRACE_DURATION_VALUE.format(ms=step.get("duration_ms", 0)))
         lines = _step_lines(step)
         if lines:
-            st.markdown("  \n".join(lines))
+            st.caption("  \n".join(lines))
         if step.get("name") == "analysis":
             _render_tool_calls(step.get("details") or {})
         # Le dossier affiché est celui que l'explicateur a reçu à l'étape 4 (niveau courant).

@@ -8,6 +8,7 @@ import streamlit as st
 import ui_texts as texts
 from components.evidence import ProofContext, index_by_key, lookup, render_card, render_value
 from components.rules import render_checks
+from components.style import zone
 from formatting import format_date
 
 SUBJECT = "portfolio_before"
@@ -53,9 +54,10 @@ def render_metric_cards(index: Mapping[str, Dict[str, Any]], snapshot: Mapping[s
         "largest_correlated_group_weight": ", ".join(snapshot.get("correlated_group_members") or []) or None,
     }
     metrics = list(texts.XRAY_METRICS)
-    for start in range(0, len(metrics), 4):
-        row = metrics[start:start + 4]
-        for column, metric in zip(st.columns(4), row):
+    per_row = 3  # neuf mesures : trois rangées alignées
+    for start in range(0, len(metrics), per_row):
+        row = metrics[start:start + per_row]
+        for column, metric in zip(st.columns(per_row), row):
             with column:
                 render_card(lookup(index, metric, subject), ctx, key=f"{key_prefix}_{metric}",
                             label=texts.METRIC_LABELS.get(metric), caption=captions.get(metric))
@@ -105,18 +107,21 @@ def render_composition(index: Mapping[str, Dict[str, Any]], snapshot: Mapping[st
 
 def render_xray(xray: Mapping[str, Any], rules_by_id: Mapping[str, Dict[str, Any]], ctx: ProofContext,
                 names: Mapping[str, str]) -> None:
+    """Faits (cartes), hypothèses (règles), puis détails repliés : composition et méthode."""
     index = index_by_key(xray["evidence"])
-    st.caption(texts.XRAY_INTRO)
-    period = period_caption(index, SUBJECT)
-    if period:
-        st.caption(period)
-    render_metric_cards(index, xray["snapshot"], SUBJECT, ctx, key_prefix="xray")
-    correlation = correlation_caption(index, SUBJECT)
-    if correlation:
-        st.caption(correlation)
-    st.subheader(texts.XRAY_RULES)
-    render_checks(xray["governance"]["checks"], xray["evidence"], SUBJECT, rules_by_id, ctx,
-                  key_prefix="xray_rule", show_counterfactual=False)
-    with st.expander(f"{texts.XRAY_POSITIONS}, {texts.XRAY_CLASSES.lower()}, {texts.XRAY_SECTORS.lower()}"):
+    with zone("facts", "xray"):
+        period = period_caption(index, SUBJECT)
+        if period:
+            st.caption(period)
+        render_metric_cards(index, xray["snapshot"], SUBJECT, ctx, key_prefix="xray")
+    with zone("assumptions", "xray"):
+        st.markdown(f"**{texts.XRAY_RULES}**")
+        render_checks(xray["governance"]["checks"], xray["evidence"], SUBJECT, rules_by_id, ctx,
+                      key_prefix="xray_rule", show_counterfactual=False)
+    with st.expander(texts.XRAY_COMPOSITION):
         render_composition(index, xray["snapshot"], SUBJECT, ctx, names, key_prefix="xray_mix")
-    st.caption(texts.XRAY_HYPOTHESIS)
+    with st.expander(texts.XRAY_METHOD):
+        st.markdown(texts.XRAY_HYPOTHESIS)
+        correlation = correlation_caption(index, SUBJECT)
+        if correlation:
+            st.caption(correlation)

@@ -21,11 +21,11 @@ L'interface ne calcule rien. Elle lit des objets du contrat (`AnalysisResult`, `
 | US-07 | "Conforme à X % ou moins", ou "aucun poids testé n'est conforme". Marge pour les règles conformes | `RuleCheck.counterfactual`, `RuleCheck.margin` | D4a |
 | US-08 | Au plus deux variantes dans un encadré "Simulation" : motif, idée, statut global, statuts par règle. Mention "simulation, pas une recommandation" | `variants` | D4b |
 | US-09 | Changer de profil garde l'idée. Si la source des fonds est un titre que le nouveau profil ne détient pas, elle repasse à "au prorata" avec un message | état de session | D4b |
-| US-10 | Bascule novice/pro. Seconde bascule instantanée. Badge "texte de repli" si le gabarit est utilisé | `explain(result, level)`, `output.origin`, `rendered_markdown` | D5 |
+| US-10 | Curseur Novice / Pro (barre latérale et accueil, avec aperçu réel des deux niveaux). Seconde bascule instantanée. Badge "texte de repli" si le gabarit est utilisé | `explain(result, level)`, `output.origin`, `rendered_markdown` | D5 |
 | US-11 | Bouton "Vérifier" sur chaque chiffre : libellé, valeur, outil, sources, période, devise, transformation, nombre d'observations, limites. Sous l'explication, la liste des preuves citées, chacune vérifiable | `EvidenceEntry`, `validation.checked_references`, `limits`, `data/raw/sources_metadata.csv` | D5 |
-| US-12 | Avertissement en haut de chaque onglet. Limites au texte fixe du niveau. Faits, hypothèses et simulations dans des zones distinctes | `limits[].text_novice`, `limits[].text_pro` | D1, D5 |
+| US-12 | Avertissement en haut de chaque page et dans la barre latérale. Limites au texte fixe du niveau. Faits, hypothèses et simulations dans des zones distinctes | `limits[].text_novice`, `limits[].text_pro` | D1, D5 |
 | US-13 | Six étapes, chacune étiquetée "agent", "code" ou "garde-fou". Étape 1 : outils appelés, paramètres, numéros de preuve. Bouton "Ce que l'explicateur a vu". Jamais de raisonnement interne | `AnalysisResult.trace` (1 à 3), `ExplanationResult.trace` (4 à 6), dossier d'explication | D6 |
-| US-14 | Onglet de test du garde-fou : requêtes prédéfinies, permises et refusées, présentées en conversation. Sujet refusé affiché. Score d'ancrage à l'étape 6 | `check_request(text)`, `GuardrailResult` | D7 |
+| US-14 | Page de test du garde-fou : requêtes prédéfinies, permises et refusées, présentées en conversation. Sujet refusé affiché. Score d'ancrage à l'étape 6 | `check_request(text)`, `GuardrailResult` | D7 |
 | US-15 | Mode affiché en permanence. Une erreur de chargement ou de Bedrock affiche un message, la page ne plante pas | `mode`, exceptions de `data_source` | D1, D4a |
 | US-19 (P2) | Deux colonnes, même idée, deux profils | deux `AnalysisResult` | D10 (P2) |
 
@@ -44,21 +44,31 @@ L'interface ne calcule rien. Elle lit des objets du contrat (`AnalysisResult`, `
 
 | Fichier | Rôle |
 | --- | --- |
-| `streamlit_app.py` | Point d'entrée : barre latérale (avant les onglets), onglets, état de session, chargement avec mémoire des échecs, protection de chaque section |
-| `data_source.py` | Point de contact avec `src/` et les fixtures. Fonctions : `get_personas`, `check_profile_answers`, `build_custom_persona`, `get_universe`, `get_sources`, `get_reference_limits`, `get_threshold_notice`, `get_guardrail_prompts`, `get_bedrock_status`, `get_xray`, `get_analysis`, `get_explanation`, `get_asset_facts`, `rule_metric`, `check_request` |
-| `ui_texts.py` | Libellés, messages, statuts, motifs de variantes, avertissement, idées de démonstration |
-| `formatting.py` | Mise en forme des paramètres et des marges (règle 2). Utilise les fonctions de format de `src/alphaforge/explanation_rendering.py`, sans aucun calcul |
-| `components/banners.py` | Avertissement, bandeau de données d'essai |
-| `components/profile_panel.py` | Cartes des personas, formulaire de profil construit |
+| `streamlit_app.py` | Point d'entrée : thème et CSS, navigation (`st.navigation`), barre latérale (mode, niveau Novice / Pro, profil actif, avertissement), en-tête compact (mode, profil, idée, avertissement), bandeau de données d'essai, exécution de la page choisie |
+| `navigation.py` | Déclaration des pages, liens entre pages, message "il manque ..." avec lien, bouton "Étape suivante" |
+| `session.py` | État de session, rappels (profil, idée, conversation, mode, niveau), chargement avec mémoire des échecs (`cached_load`), protection des sections (`guarded`), contexte du profil actif |
+| `data_source.py` | Point de contact avec `src/` et les fixtures. Fonctions : `get_personas`, `check_profile_answers`, `build_custom_persona`, `get_universe`, `get_sources`, `get_reference_limits`, `get_threshold_notice`, `get_guardrail_prompts`, `get_bedrock_status`, `get_xray`, `get_analysis`, `get_explanation`, `get_asset_facts`, `rule_metric`, `check_request`, `parse_request`, `get_level_preview` |
+| `ui_texts.py` | Tous les textes : libellés courts, messages, statuts, zones, questions de clarification, avertissement, idées de démonstration |
+| `formatting.py` | Mise en forme des paramètres et des marges (règle 2), extraction de la section "Résumé" d'une explication rendue. Aucun calcul |
+| `views/home_page.py` | Accueil : cartes des personas (un clic choisit le profil et ouvre la simulation), lien vers le profil construit, curseur Novice / Pro et aperçu réel des deux niveaux |
+| `views/simulation_page.py` | Radiographie repliable, réglages manuels, conversation avec l'agent et champ de saisie |
+| `views/custom_profile_page.py` | Formulaire du profil construit, inchangé |
+| `views/guardrail_page.py`, `views/sources_page.py` | Test du garde-fou, sources et méthode |
+| `components/style.py` | Seul module qui injecte du CSS : en-tête, pastilles de statut, verdict, étiquettes de zones, cartes alignées |
+| `components/banners.py` | En-tête, avertissement, bandeau de données d'essai, titre de page |
+| `components/conversation.py` | Fil : demandes, réglages manuels, refus, questions de clarification, réponse courte puis détail |
+| `components/profile_panel.py` | Cartes des personas, formulaire de profil construit (réponses gardées entre les pages) |
 | `components/evidence.py` | Recherche d'une preuve par clé, chiffre cliquable, carte de métrique, contenu de la preuve |
-| `components/rules.py` | Statut par règle : mesure, seuils, marge, contrefactuel |
-| `components/xray.py` | Radiographie |
-| `components/idea_panel.py` | Sélecteurs et idées en un clic |
-| `components/result_panel.py` | Avant/après dans une zone "Simulation", faits sur l'actif, règles dans une zone "Hypothèses de l'équipe", contrefactuel, variantes |
-| `components/explanation_panel.py` | Bascule de niveau, texte rendu, preuves citées, limites |
+| `components/rules.py` | Statut par règle : mesure, seuils, marge, contrefactuel ; points clés d'une réponse |
+| `components/xray.py` | Radiographie : zone faits (cartes), zone hypothèses (règles), composition et méthode repliées |
+| `components/idea_panel.py` | Idées en un clic et sélecteurs, validés par "Simuler" |
+| `components/result_panel.py` | Verdict (statut global, règles en conflit ou en tension, contrefactuel), détail en onglets : avant/après (simulation), règles (hypothèses), faits sur l'actif, variantes |
+| `components/explanation_panel.py` | Badge d'origine (agent ou gabarit), texte complet, preuves citées |
 | `components/trace_panel.py` | Trace à six étapes, dossier transmis |
 | `components/guardrail_panel.py` | Test du garde-fou |
 | `components/sources_panel.py` | Sources et méthode |
+
+Côté `src/alphaforge/`, `request_parsing.py` traduit une demande en langage naturel en idée, par des règles déterministes testées (`tests/test_request_parsing.py`) : aucun appel à un modèle.
 
 `streamlit_app.py` ajoute `src/` au chemin d'import à partir de `Path(__file__).resolve().parents[1]`, comme `tests/test_contracts.py`.
 
@@ -78,15 +88,20 @@ En mode `fixture`, les profils et les portefeuilles viennent aussi des fixtures 
 
 La radiographie avant toute idée (`get_xray`) n'utilise que du code déterministe : l'outil `analyze_portfolio` du flux A, passé par la `ToolBox` du flux C pour enregistrer les preuves, puis `evaluate` du flux B. Aucun agent n'est appelé, le résultat est le même en `offline` et en `bedrock`. De même, les faits sur l'actif de l'idée (`get_asset_facts`, outil du flux A) ne dépendent pas du profil : ils montrent que la même idée donne les mêmes chiffres de l'actif pour tous les profils (US-09).
 
-L'analyse d'une idée est gardée en cache par profil : revenir à un profil déjà vu est instantané. En modes `offline` et `fixture`, l'idée gardée est réanalysée automatiquement au changement de profil (scène 2). En mode `bedrock`, les agents ne sont lancés que par un clic : sur une idée, ou sur "Analyser cette idée pour ce profil" après un changement de profil ou de mode (quotas partagés). Changer de niveau relance seulement l'explicateur.
+L'analyse d'une idée est gardée en cache par profil : revenir à un profil déjà vu est instantané. En modes `offline` et `fixture`, l'idée gardée est réanalysée automatiquement au changement de profil. En mode `bedrock`, aucun agent n'est lancé sans demande explicite (quotas partagés) : un message dans le chat, "Simuler" ou une idée en un clic demandent à la fois l'analyse et l'explication ; un changement de profil ou de mode affiche "Analyser cette idée pour ce profil" ; un changement de niveau, ou l'ouverture de la page après ce changement, affiche "Rédiger l'explication (niveau X)" tant que l'explication de ce niveau n'est ni en cache ni en échec. Ces demandes sont remises à faux au changement de profil ou de mode, et après usage. Un curseur ne lance jamais rien. En `offline`, l'explication par gabarit est produite sans clic.
 
 Le mode choisi dans la barre latérale est transmis au pipeline par la configuration (`BedrockConfig` avec `mode` surchargé) : choisir Bedrock fonctionne même si l'application a été lancée sans `ALPHAFORGE_MODE=bedrock`.
 
 ### Mise en page
 
-- Onglets : "Analyse", "Test du garde-fou", "Sources et méthode".
-- Onglet "Analyse", dans l'ordre de la démo : Profil, Radiographie, Idée, Résultat, Explication, Trace.
-- Barre latérale, rendue avant les onglets pour rester utilisable si une section échoue : mode, état de Bedrock, profil actif, avertissement.
+- Navigation multipage (`st.navigation`, Streamlit 1.67) dans la barre latérale. "Parcours" : Accueil, Simulation, Créer un profil fictif. "Vérifier" : Test du garde-fou, Sources et méthode. Icônes Material, aucun emoji.
+- En-tête compact sur chaque page : marque, mode, profil et idée actifs, avertissement court toujours visible ; bandeau de données d'essai dessous si `is_fixture` ou mode `fixture`.
+- Barre latérale, rendue avant la page pour rester utilisable si une section échoue : navigation, mode, niveau Novice / Pro, résumé du profil actif, avertissement.
+- Accueil : une phrase d'accroche, curseur Novice / Pro avec le même passage aux deux niveaux (au-dessus des cartes : le niveau réglé n'est plus écrasé par le choix du profil), cartes des trois personas (un clic choisit le profil et ouvre la simulation), lien vers le profil construit. L'aperçu est la section "Résumé" de textes réels de l'agent explicateur (`outputs/reports/demo_traces/<persona>_explanation_<niveau>.json`, Robert si le profil actif n'a pas de trace), avec sa source.
+- Simulation : radiographie derrière un interrupteur, réglages manuels dans un encadré repliable, puis le fil de conversation et le champ de saisie.
+- Demande écrite : garde-fou Bedrock (`check_request`), puis contrôle local des sujets interdits (actif même hors ligne), puis traduction déterministe (`parse_request`). Refus : sujet affiché et origine du refus. Demande ambiguë ou incomplète (actif hors univers, deux actifs, pas de poids, poids non entier ou hors de 1 % à 100 %, titre vendu sans actif cible, titre de financement non détenu) : une question, jamais une supposition ; s'il ne manque que le poids, quatre poids proposés en un clic ; un poids décimal propose son arrondi ; avec deux actifs, un bouton par actif qui garde la source des fonds. Sinon, l'idée passe par `get_analysis` puis `get_explanation`, comme en mode manuel.
+- Réglage manuel : un curseur ne lance rien ; "Simuler" ou une idée en un clic s'inscrit dans le fil ("Paramètres modifiés : ...") et met à jour la même idée que le chat.
+- Réponse : idée simulée et état du garde-fou, verdict (pastille, phrase, règles en conflit ou en tension avec leur contrefactuel), trois points clés avec chiffres cliquables, badge d'origine et section "Résumé" de l'explication, avertissement. "Voir le détail" ouvre quatre onglets : faits, hypothèses et simulation (zones distinctes) ; explication complète et preuves citées ; sources et limites ; trace et "Ce que l'explicateur a vu". Seule la réponse la plus récente est détaillée, les précédentes restent compactes.
 - Chaque section est protégée : une erreur affiche un message à sa place, l'exception est écrite dans la console du serveur, le reste de la page continue.
 
 ### État de session
@@ -96,11 +111,12 @@ Le mode choisi dans la barre latérale est transmis au pipeline par la configura
 | `mode` | "offline", "bedrock" ou "fixture" |
 | `profile_id` | "robert", "amira", "mateo" ou "custom" |
 | `custom_persona` | persona (profil et portefeuille) construit, ou absent ; retiré au changement de mode |
+| `chat_history` | fil de la conversation : demandes, réglages manuels, notes (profil, mode), refus, questions, réponses. Chaque réponse garde sa clé d'analyse complète (mode, profil, portefeuille, idée) et le nom de son profil : une réponse ancienne montre toujours son propre verdict |
 | `idea` | dernière `InvestmentIdea` soumise, conservée au changement de profil. Si sa source des fonds n'est pas détenue par le nouveau profil, l'idée est financée au prorata pour ce profil, avec un message |
 | `level` | "novice" ou "pro", prérempli par le profil et repris de lui après un changement de mode |
 | `xray_cache`, `analysis_cache`, `explanation_cache` | résultats par `(mode, profil, portefeuille)`, `(mode, profil, portefeuille, idée)` et `(mode, run_id, niveau)` |
 | `xray_failures`, `analysis_failures`, `explanation_failures` | échecs mémorisés aux mêmes clés, avec un bouton "Réessayer" pour les erreurs (quotas Bedrock partagés) |
-| `analysis_request`, `level_reset`, `asset_cache`, `asset_failures`, `guardrail_pending` | demande explicite d'analyse en mode bedrock (quotas partagés), reprise du niveau au changement de mode, faits sur l'actif mémorisés, requête du garde-fou en attente |
+| `analysis_request`, `explanation_request`, `level_chosen`, `level_reset`, `asset_cache`, `asset_failures`, `guardrail_pending` | demandes explicites d'analyse et d'explication en mode bedrock (quotas partagés), niveau réglé par l'utilisateur (le choix d'un profil ne l'écrase plus), reprise du niveau au changement de mode, faits sur l'actif mémorisés, requête du garde-fou en attente |
 | `guardrail_history` | requêtes testées dans l'onglet du garde-fou et leurs verdicts |
 
 Les personas sont relus à chaque exécution (fichiers JSON locaux, coût négligeable).
@@ -158,12 +174,12 @@ Après le gel, seulement des corrections de bogues dans des branches `fix/...`, 
 ## 6. Vérification
 
 - Pas de tests d'interface versionnés (décision du plan). Avant chaque PR : lancement réel, puis la liste de contrôle de `docs/demo_script.md`.
-- Contrôle rapide hors navigateur avec `streamlit.testing.v1.AppTest` (non versionné) : la page s'exécute sans exception pour chaque persona.
+- Contrôle rapide hors navigateur avec `streamlit.testing.v1.AppTest` (non versionné) : chaque page s'exécute sans exception pour chaque persona, avec une demande permise, une demande refusée, une demande ambiguë et un réglage manuel. Limite connue : après un `st.switch_page` dans le script, AppTest réexécute la page d'origine ; un navigateur reste sur la nouvelle page.
 - Recherche dans le diff : aucun tiret cadratin, aucun emoji, aucun secret.
 
 ## 7. Questions ouvertes
 
-1. Onglets ou page unique pour la vidéo ? Par défaut : onglets.
+1. Onglets ou page unique pour la vidéo ? Réglé : navigation multipage, conversation sur la page Simulation.
 2. Avertissement du bandeau : texte court du flux D. Les avertissements complets du flux B (`fixed_texts.json`) apparaissent en tête de chaque explication.
 3. Mode `bedrock` : vérifié seulement sans configuration (repli affiché). L'essai avec de vrais identifiants reste à faire sur le poste de démo.
 

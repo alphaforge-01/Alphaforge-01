@@ -55,3 +55,17 @@ def format_date(iso_date: str) -> str:
     except ValueError:
         return str(iso_date)
     return f"{day.day} {MONTHS_FR[day.month - 1]} {day.year}"
+
+
+def summary_section(markdown: str) -> str:
+    """Section "Résumé" d'une explication rendue, sans son titre. Lecture du texte, aucun calcul."""
+    lines = markdown.splitlines()
+    for start, line in enumerate(lines):
+        if line.startswith("## ") and line[3:].strip().lower() in ("résumé", "resume"):
+            body = []
+            for following in lines[start + 1:]:
+                if following.startswith("## "):
+                    break
+                body.append(following)
+            return "\n".join(body).strip()
+    return ""

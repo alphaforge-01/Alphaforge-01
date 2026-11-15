@@ -13,6 +13,7 @@ import streamlit as st
 
 import data_source
 import ui_texts as texts
+from components.persistence import KEEP_PREFIX
 from components.rules import threshold_text
 from formatting import format_cad, format_horizon
 
@@ -41,26 +42,31 @@ def _render_card(profile_id: str, persona: Dict[str, Any], is_selected: bool,
                  on_select: Callable[[str], None]) -> None:
     profile = persona["profile"]
     with st.container(border=True):
-        st.subheader(profile["display_name"])
-        st.badge(texts.FICTIONAL_BADGE, color="gray")
+        name_col, badge_col = st.columns([3, 1], vertical_alignment="center")
+        name_col.subheader(profile["display_name"], anchor=False)
+        with badge_col:
+            st.badge(texts.FICTIONAL_BADGE, color="gray")
         identity = _identity_line(persona)
         if identity:
             st.caption(identity)
         if persona.get("summary_fr"):
-            st.write(persona["summary_fr"])
+            st.markdown(persona["summary_fr"])
         st.markdown(
             f"**{texts.PERSONA_RISK}** : {texts.RISK_LABELS[profile['risk_tolerance']]}  \n"
             f"**{texts.PERSONA_HORIZON}** : "
             f"{format_horizon(profile['horizon_years_min'], profile['horizon_years_max'])}  \n"
-            f"**{texts.PERSONA_OBJECTIVE}** : {profile['objective']}  \n"
-            f"**{texts.PERSONA_EXPERIENCE}** : {texts.EXPERIENCE_LABELS[profile['experience']]}  \n"
-            f"**{texts.PERSONA_CAPITAL}** : {format_cad(profile['capital_cad'])}"
+            f"**{texts.PERSONA_OBJECTIVE}** : {profile['objective']}"
+        )
+        st.caption(
+            f"{texts.PERSONA_EXPERIENCE} : {texts.EXPERIENCE_LABELS[profile['experience']]}, "
+            f"{texts.PERSONA_CAPITAL.lower()} : {format_cad(profile['capital_cad'])}"
         )
         st.button(
             texts.SELECTED_PROFILE if is_selected else texts.CHOOSE_PROFILE,
             key=f"choose_profile_{profile_id}",
             type="primary" if is_selected else "secondary",
             width="stretch",
+            icon=":material/check:" if is_selected else None,
             on_click=on_select,
             args=(profile_id,),
         )
@@ -79,31 +85,59 @@ def render_persona_cards(personas: Dict[str, Any], selected_id: Optional[str],
                 st.error(texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__))
 
 
+# Réponses du formulaire : clé du widget -> valeur par défaut. Streamlit efface l'état
+# d'un widget absent de la page affichée ; une copie le garde entre les pages.
+FORM_DEFAULTS: Dict[str, Any] = {
+    "custom_objective": texts.OBJECTIVE_OPTIONS[2],
+    "custom_horizon": (5, 10),
+    "custom_risk": "moderate",
+    "custom_capital": 100_000,
+    "custom_experience": "intermediate",
+    "custom_esg": "none",
+    "custom_crypto": False,
+    "custom_own_cap": False,
+    "custom_cap": 20,
+    "custom_portfolio": None,
+}
+_KEEP_PREFIX = KEEP_PREFIX
+
+
+def _restore_form() -> None:
+    """Avant les widgets : reprend les réponses gardées (ou les valeurs par défaut)."""
+    for key, default in FORM_DEFAULTS.items():
+        if key not in st.session_state:
+            value = st.session_state.get(_KEEP_PREFIX + key, default)
+            if value is not None:
+                st.session_state[key] = value
+
+
+def _keep_form() -> None:
+    """Après les widgets : copie les réponses hors de l'état des widgets."""
+    for key in FORM_DEFAULTS:
+        if key in st.session_state:
+            st.session_state[_KEEP_PREFIX + key] = st.session_state[key]
+
+
 def _collect_answers() -> Dict[str, Any]:
     """Réponses du formulaire, au format attendu par profiles.check_answers."""
     left, right = st.columns(2)
     with left:
-        objective = st.selectbox(texts.CUSTOM_OBJECTIVE, texts.OBJECTIVE_OPTIONS,
-                                 index=2, key="custom_objective")
-        horizon = st.slider(texts.CUSTOM_HORIZON, min_value=1, max_value=30,
-                            value=(5, 10), key="custom_horizon")
+        objective = st.selectbox(texts.CUSTOM_OBJECTIVE, texts.OBJECTIVE_OPTIONS, key="custom_objective")
+        horizon = st.slider(texts.CUSTOM_HORIZON, min_value=1, max_value=30, key="custom_horizon")
         risk = st.select_slider(texts.CUSTOM_RISK, options=list(texts.RISK_LABELS),
-                                value="moderate", format_func=texts.RISK_LABELS.get,
-                                key="custom_risk")
+                                format_func=texts.RISK_LABELS.get, key="custom_risk")
         capital = st.number_input(texts.CUSTOM_CAPITAL, min_value=1_000, max_value=10_000_000,
-                                  value=100_000, step=1_000, help=texts.CUSTOM_CAPITAL_HELP,
-                                  key="custom_capital")
+                                  step=1_000, help=texts.CUSTOM_CAPITAL_HELP, key="custom_capital")
     with right:
-        experience = st.radio(texts.CUSTOM_EXPERIENCE, list(texts.EXPERIENCE_LABELS), index=1,
+        experience = st.radio(texts.CUSTOM_EXPERIENCE, list(texts.EXPERIENCE_LABELS),
                               format_func=texts.EXPERIENCE_LABELS.get, horizontal=True,
                               key="custom_experience")
-        esg = st.radio(texts.CUSTOM_ESG, list(texts.ESG_LABELS), index=0,
+        esg = st.radio(texts.CUSTOM_ESG, list(texts.ESG_LABELS),
                        format_func=texts.ESG_LABELS.get, horizontal=True, key="custom_esg")
-        crypto = st.checkbox(texts.CUSTOM_CRYPTO, value=False, key="custom_crypto")
-        own_cap = st.checkbox(texts.CUSTOM_OWN_CAP, value=False, help=texts.CUSTOM_OWN_CAP_HELP,
-                              key="custom_own_cap")
-        cap_pct = (st.slider(texts.CUSTOM_CAP, min_value=1, max_value=100, value=20,
-                             key="custom_cap") if own_cap else None)
+        crypto = st.checkbox(texts.CUSTOM_CRYPTO, key="custom_crypto")
+        own_cap = st.checkbox(texts.CUSTOM_OWN_CAP, help=texts.CUSTOM_OWN_CAP_HELP, key="custom_own_cap")
+        cap_pct = (st.slider(texts.CUSTOM_CAP, min_value=1, max_value=100, key="custom_cap")
+                   if own_cap else None)
 
     answers: Dict[str, Any] = {
         "objective": objective,
@@ -141,7 +175,6 @@ def render_rules_table(rules: List[Dict[str, Any]]) -> None:
         for rule in rules
     ]
     st.dataframe(rows, hide_index=True, width="stretch")
-    st.caption(texts.CUSTOM_RULES_NOTICE)
 
 
 def render_custom_profile_form(personas: Dict[str, Any], active_persona: Optional[Dict[str, Any]],
@@ -154,6 +187,7 @@ def render_custom_profile_form(personas: Dict[str, Any], active_persona: Optiona
     """
     is_active = active_persona is not None
     st.caption(texts.CUSTOM_REMINDER)
+    _restore_form()
     answers = _collect_answers()
     ids = ordered_ids(personas)
     labels = [personas[pid]["portfolio"]["label_fr"] for pid in ids]
@@ -164,9 +198,12 @@ def render_custom_profile_form(personas: Dict[str, Any], active_persona: Optiona
             return f"{label} ({personas[pid]['profile']['display_name']})"
         return label
 
+    if st.session_state.get("custom_portfolio") not in ids:
+        st.session_state["custom_portfolio"] = ids[0]
     portfolio_id = st.selectbox(
         texts.CUSTOM_PORTFOLIO, ids, key="custom_portfolio", format_func=portfolio_option,
     )
+    _keep_form()
     try:
         issues = data_source.check_profile_answers(answers)
     except data_source.DataUnavailable as exc:
@@ -187,7 +224,7 @@ def render_custom_profile_form(personas: Dict[str, Any], active_persona: Optiona
     except Exception as exc:  # la démo ne doit jamais afficher une trace Python
         st.error(texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__))
         return
-    st.subheader(texts.CUSTOM_RULES_TITLE)
+    st.markdown(f"**{texts.CUSTOM_RULES_TITLE}**")
     render_rules_table(persona["profile"]["rules"])
     if is_active and persona != active_persona:
         st.caption(texts.CUSTOM_DRAFT_CHANGED)

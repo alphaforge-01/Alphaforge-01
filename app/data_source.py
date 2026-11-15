@@ -23,6 +23,7 @@ from types import ModuleType
 from typing import Any, Dict, List, Optional
 
 import ui_texts as texts
+from formatting import summary_section
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures"
@@ -304,3 +305,38 @@ def check_request(mode: str, text: str) -> Dict[str, Any]:
     """GuardrailResult d'une requête prédéfinie (sujets refusés du garde-fou Bedrock)."""
     pipeline = _src_module("analysis_pipeline", texts.MSG_PIPELINE_NOT_READY)
     return pipeline.check_request(text, mode=_pipeline_mode(mode), config=_pipeline_config(mode))
+
+
+# --- Demandes en langage naturel et aperçu des niveaux -----------------------------
+
+DEMO_TRACES_DIR = PROJECT_ROOT / "outputs" / "reports" / "demo_traces"
+# Profils qui ont une trace réelle de l'explicateur ; les autres montrent celle de Robert.
+PREVIEW_PERSONAS = ("robert", "amira")
+
+
+def parse_request(text: str, universe: List[Dict[str, Any]], held_tickers: List[str]) -> Dict[str, Any]:
+    """Demande en langage naturel -> idée, question de clarification ou refus (règles déterministes)."""
+    request_parsing = _src_module("request_parsing", texts.MSG_PIPELINE_NOT_READY)
+    return dataclasses.asdict(request_parsing.parse_request(text, universe, held_tickers=held_tickers))
+
+
+@functools.lru_cache(maxsize=4)
+def get_level_preview(profile_id: str) -> Dict[str, Any]:
+    """Même passage d'explication aux niveaux novice et pro, tiré des traces réelles de démonstration.
+
+    Textes produits par l'agent explicateur sur Bedrock (outputs/reports/demo_traces/),
+    jamais inventés par l'interface.
+    """
+    persona = profile_id if profile_id in PREVIEW_PERSONAS else PREVIEW_PERSONAS[0]
+    preview: Dict[str, Any] = {"persona": persona}
+    for level in ("novice", "pro"):
+        path = DEMO_TRACES_DIR / f"{persona}_explanation_{level}.json"
+        try:
+            explanation = _read_json(path)["explanation"]
+        except (OSError, KeyError, ValueError) as exc:
+            raise DataUnavailable(texts.MSG_PREVIEW_MISSING) from exc
+        preview[level] = summary_section(explanation.get("rendered_markdown", ""))
+        preview[f"{level}_source"] = str(path.relative_to(PROJECT_ROOT))
+        preview["model_id"] = explanation.get("model_id")
+        preview["origin"] = explanation.get("origin")
+    return preview

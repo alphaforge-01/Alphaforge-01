@@ -46,7 +46,7 @@ def _contradicts_expected(prompt: Mapping[str, Any], result: Mapping[str, Any]) 
 def _render_prompt_list(title: str, prompts: List[Dict[str, Any]]) -> None:
     st.markdown(f"**{title}**")
     for prompt in prompts:
-        text_col, button_col = st.columns([5, 1], vertical_alignment="center")
+        text_col, button_col = st.columns([4, 1], vertical_alignment="center")
         text_col.markdown(prompt["text"])
         button_col.button(texts.GUARDRAIL_TEST, key=f"guard_{prompt['id']}", on_click=_queue, args=(prompt,))
 
@@ -55,7 +55,8 @@ def render_guardrail_panel(mode: str, prompts: List[Dict[str, Any]],
                            run_check: Callable[[str], Dict[str, Any]]) -> None:
     """`run_check(text)` interroge le garde-fou dans le mode courant et rend un GuardrailResult."""
     st.session_state.setdefault(HISTORY_KEY, [])
-    st.caption(texts.GUARDRAIL_INTRO)
+    with st.expander(texts.GUARDRAIL_DETAILS):
+        st.markdown(texts.GUARDRAIL_DETAILS_TEXT)
     if mode != "bedrock":
         st.info(texts.GUARDRAIL_OFFLINE)
 
@@ -68,9 +69,9 @@ def render_guardrail_panel(mode: str, prompts: List[Dict[str, Any]],
     allowed = [p for p in prompts if p.get("expected") == "allowed"]
     denied = [p for p in prompts if p.get("expected") != "allowed"]
     left, right = st.columns(2)
-    with left:
+    with left, st.container(border=True):
         _render_prompt_list(texts.GUARDRAIL_ALLOWED, allowed)
-    with right:
+    with right, st.container(border=True):
         _render_prompt_list(texts.GUARDRAIL_DENIED, denied)
 
     history = st.session_state[HISTORY_KEY]
