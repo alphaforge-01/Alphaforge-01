@@ -137,3 +137,76 @@ def test_emoji_range_includes_star_symbols(tmp_path):
     star = _write(tmp_path / "a.md", "note " + chr(0x2B50) + "\n")
     arrow = _write(tmp_path / "b.md", "a " + chr(0x2192) + " b\n")
     assert ccc.scan_text([star, arrow])["emoji"] == [star.as_posix()]
+
+
+# ---------- environnement réutilisé (Smart App Control) ----------
+
+import json
+import subprocess
+
+
+def _run_embedded(script, args, cwd):
+    proc = subprocess.run([sys.executable, "-c", script, *args], cwd=cwd, capture_output=True, text=True,
+                          encoding="utf-8", env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"})
+    return proc.returncode, proc.stdout + proc.stderr
+
+
+def _mini_repo(tmp_path, requirements, code):
+    _write(tmp_path / "requirements.txt", requirements)
+    _write(tmp_path / "src" / "pkg" / "mod.py", code)
+    return tmp_path
+
+
+def test_import_audit_flags_undeclared_installed_package(tmp_path):
+    """matplotlib est installé dans le .venv mais absent des dépendances déclarées : signalé."""
+    pytest.importorskip("matplotlib")
+    repo = _mini_repo(tmp_path, "pandas>=2.2\n", "import pandas\nimport matplotlib.pyplot\n")
+    code, out = _run_embedded(ccc.IMPORT_AUDIT, [json.dumps({})], repo)
+    assert code == 1
+    assert "matplotlib" in out and "absent de requirements.txt" in out
+
+
+def test_import_audit_accepts_transitive_dependency(tmp_path):
+    """numpy n'est pas déclaré ici, mais pandas en dépend : couvert."""
+    repo = _mini_repo(tmp_path, "pandas>=2.2\n", "import numpy\nimport pandas\nimport json\n")
+    code, out = _run_embedded(ccc.IMPORT_AUDIT, [json.dumps({})], repo)
+    assert code == 0, out
+
+
+def test_import_audit_flags_missing_package_and_allows_documented_optional(tmp_path):
+    repo = _mini_repo(tmp_path, "pandas>=2.2\n", "import pandas\n")
+    _write(tmp_path / "scripts" / "build_dataset.py", "import yfinance\n")
+    code, out = _run_embedded(ccc.IMPORT_AUDIT, [json.dumps({"yfinance": "scripts/build_dataset.py"})], repo)
+    assert code == 0, out
+    _write(tmp_path / "src" / "pkg" / "other.py", "import yfinance\n")
+    code, out = _run_embedded(ccc.IMPORT_AUDIT, [json.dumps({"yfinance": "scripts/build_dataset.py"})], repo)
+    assert code == 1 and "yfinance" in out
+
+
+def test_dependency_probe_fails_on_missing_module(tmp_path):
+    code, out = _run_embedded(ccc.DEPENDENCY_PROBE, ["pandas", "module_qui_n_existe_pas"], tmp_path)
+    assert code == 1
+    assert "module_qui_n_existe_pas : ModuleNotFoundError" in out
+
+
+def test_dependency_probe_passes_in_project_environment(tmp_path):
+    code, out = _run_embedded(ccc.DEPENDENCY_PROBE, list(ccc.REQUIRED_IMPORTS), tmp_path)
+    assert code == 0, out
+
+
+def test_required_imports_include_pyarrow():
+    """PyArrow est la DLL bloquée par Smart App Control : elle doit être vérifiée explicitement."""
+    assert "pyarrow" in ccc.REQUIRED_IMPORTS and "pandas" in ccc.REQUIRED_IMPORTS
+
+
+@pytest.mark.parametrize("output,expected", [
+    ("Requirement already satisfied: pandas\n", True),
+    ("Would install matplotlib-3.10.0\n", False),
+])
+def test_nothing_to_install(output, expected):
+    assert ccc.nothing_to_install(output) is expected
+
+
+def test_alphaforge_is_not_installed_in_environment(tmp_path):
+    code, out = _run_embedded(ccc.ALPHAFORGE_NOT_INSTALLED, [], tmp_path)
+    assert code == 0, out
