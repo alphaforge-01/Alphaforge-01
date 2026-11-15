@@ -18,7 +18,8 @@ from .tool_specs import ExplainerFailure
 
 PROMPT_NAME = "explainer_v1"
 PROMPT_VERSION = PROMPT_NAME
-INFERENCE_CONFIG = {"maxTokens": 1500, "temperature": 0}
+# Pas de temperature : les modeles Claude recents la refusent (ValidationException, constate sur le compte).
+INFERENCE_CONFIG = {"maxTokens": 1500}
 _STRING_SLOTS = ("summary", "counterfactual", "variants", "limits_context")
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
 

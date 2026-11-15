@@ -55,7 +55,7 @@ _REDACTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?<![A-Za-z0-9/+])(?=[A-Za-z0-9/+]*[A-Z])(?=[A-Za-z0-9/+]*[a-z])(?=[A-Za-z0-9/+]*\d)[A-Za-z0-9/+]{40}(?![A-Za-z0-9/+=])"),
      "[SECRET_PRESUME_MASQUE]"),
     (re.compile(r"(?<![A-Za-z0-9/+=_-])[A-Za-z0-9/+_-]{120,}={0,2}(?![A-Za-z0-9/+=_-])"), "[JETON_PRESUME_MASQUE]"),
-    (re.compile(r"arn:aws[a-z\-]*:[a-z0-9\-]*:[a-z0-9\-]*:\d{12}:[^\s\"',]+"), "[ARN_MASQUE]"),
+    (re.compile(r"arn:aws[a-z\-]*:[a-z0-9\-]*:[a-z0-9\-]*:\d{0,12}:[^\s\"',]+"), "[ARN_MASQUE]"),
     (re.compile(r"(?i)(aws_secret_access_key|aws_session_token|aws_bearer_token_bedrock)\s*[=:]\s*\S+"),
      r"\1=[MASQUE]"),
     (re.compile(r"(?i)bearer\s+[A-Za-z0-9._~+/=\-]{20,}"), "Bearer [MASQUE]"),
@@ -239,7 +239,15 @@ class BedrockClient:
                     self.retry_count += 1
                     self._sleep(self._delay(attempt))
                     continue
-                raise BedrockError(f"Erreur Bedrock sur {operation} ({code}).", code=code) from None
+                # La raison fournie par AWS (par exemple "temperature : parametre non pris en charge") est
+                # indispensable pour diagnostiquer une requete refusee. Elle est masquee puis tronquee.
+                detail = redact_text(str(error.response.get("Error", {}).get("Message", "")))
+                for configured in (self.config.guardrail_id, self.config.trace_bucket):
+                    if configured and len(configured) >= 4:
+                        detail = detail.replace(configured, "[ID_MASQUE]")
+                detail = detail[:300].strip()
+                suffix = f" : {detail}" if detail else "."
+                raise BedrockError(f"Erreur Bedrock sur {operation} ({code}){suffix}", code=code) from None
             except BotoCoreError as error:
                 raise BedrockError(f"Erreur reseau ou configuration sur {operation} : {type(error).__name__}.") from None
         raise BedrockError(f"Appel {operation} sans resultat.")  # pragma: no cover

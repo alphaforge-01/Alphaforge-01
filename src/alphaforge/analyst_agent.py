@@ -26,7 +26,8 @@ from .tool_specs import (
 PROMPT_NAME = "analyst_v1"
 MAX_TURNS = 6
 MAX_UNSUPPORTED = 5
-INFERENCE_CONFIG = {"maxTokens": 1024, "temperature": 0}
+# Pas de temperature : les modeles Claude recents la refusent (ValidationException, constate sur le compte).
+INFERENCE_CONFIG = {"maxTokens": 1024}
 
 
 def build_user_message(idea: InvestmentIdea, profile: InvestorProfile) -> str:

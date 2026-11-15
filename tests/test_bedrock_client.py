@@ -311,3 +311,41 @@ def test_apply_guardrail_without_configuration_raises():
     with pytest.raises(BedrockError):
         client.apply_guardrail("INPUT", [])
     assert client.runtime.calls == []
+
+
+# ---- la raison fournie par AWS aide au diagnostic, masquee et tronquee ----
+
+def test_validation_error_carries_the_masked_aws_reason():
+    reason = f"inferenceConfig.temperature: parametre non pris en charge ({FAKE_ARN})"
+    client, _ = make_client([client_error("ValidationException", reason)])
+    with pytest.raises(BedrockError) as info:
+        client.converse("m", [])
+    text = str(info.value)
+    assert "ValidationException" in text and "temperature" in text
+    assert FAKE_ACCOUNT not in text and "arn:aws" not in text
+
+
+def test_aws_reason_is_truncated():
+    client, _ = make_client([client_error("ValidationException", "x" * 5000)])
+    with pytest.raises(BedrockError) as info:
+        client.converse("m", [])
+    assert len(str(info.value)) < 450
+
+
+def test_agents_never_send_a_temperature():
+    from alphaforge.analyst_agent import INFERENCE_CONFIG as analyst_config
+    from alphaforge.explainer_agent import INFERENCE_CONFIG as explainer_config
+    assert "temperature" not in analyst_config and "temperature" not in explainer_config
+
+
+def test_aws_reason_masks_s3_arn_without_account_and_configured_ids():
+    guardrail_id, bucket = "g" + "r4" * 4, "alphaforge-traces-" + "ab12cd34"
+    reason = f"Guardrail {guardrail_id} not found, bucket arn:aws:s3:::{bucket} unreachable"
+    config = BedrockConfig(mode="bedrock", analyst_model_id="m", guardrail_id=guardrail_id, trace_bucket=bucket)
+    client = BedrockClient(config, runtime_client=FakeRuntime([client_error("ResourceNotFoundException", reason)]),
+                           sleep=lambda s: None)
+    with pytest.raises(BedrockError) as info:
+        client.converse("m", [])
+    text = str(info.value)
+    assert guardrail_id not in text and bucket not in text and "arn:aws" not in text
+    assert "ResourceNotFoundException" in text

@@ -312,7 +312,7 @@ def try_converse(runtime_client: Any, model_id: str, *, tool_choice: str = "auto
             )}],
         }],
         "toolConfig": build_dummy_tool_config(tool_choice),
-        "inferenceConfig": {"maxTokens": 200, "temperature": 0},
+        "inferenceConfig": {"maxTokens": 200},
     }
     response = call_with_backoff(lambda: runtime_client.converse(**request), sleep=sleep)
     blocks = response.get("output", {}).get("message", {}).get("content", [])
