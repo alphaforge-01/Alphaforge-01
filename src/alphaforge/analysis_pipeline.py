@@ -14,14 +14,18 @@ Regles tenues par ce module :
 """
 from __future__ import annotations
 
+import copy
 import json
+import re
 import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from .bedrock_client import BedrockClient, BedrockConfig, BedrockError, redact_text
+from .bedrock_client import (
+    GROUNDING_ANSWER_MAX_CHARS, BedrockClient, BedrockConfig, BedrockError, redact_text,
+)
 from .contracts import (
     AnalysisResult, AnalystSubmission, ExplanationResult, GovernanceResult, GuardrailResult,
     InvestmentIdea, InvestorProfile, Level, Portfolio, PortfolioSnapshot, TraceStep, Variant,
@@ -37,6 +41,10 @@ from .tool_specs import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 VALID_MODES = ("offline", "bedrock")
+# Sous ce score d'ancrage, le texte du modele est remplace par le gabarit : un ancrage aussi bas a signale, a
+# l'essai reel, une erreur de sens que le validateur ne peut pas voir (mesure rattachee a la mauvaise chose).
+# Entre ce plancher et le seuil du garde-fou, le texte reste affiche avec la mention "ancrage faible".
+GROUNDING_FLOOR = 0.3
 _SEVERITY = {"conflict": 0, "tension": 1, "missing_info": 2, "compliant": 3}
 
 
@@ -320,6 +328,7 @@ def run_analysis(
     }))
 
     evidence = toolbox.evidence()
+    _scope_evidence_labels(evidence)
     limit_ids = sorted({lid for entry in evidence.values() for lid in entry.get("limit_ids", [])})
     submission = AnalystSubmission(
         understood_idea=idea,
@@ -428,14 +437,30 @@ def explain(
     started = time.perf_counter()
     validation = deps.validate(output, brief)
     status = "ok"
+    repaired_slots: list[str] = []
+    if not validation["is_valid"] and output["origin"] == "llm":
+        # Reparation par emplacement : seuls les emplacements rejetes viennent du code, le reste reste au modele.
+        candidate, slots = _repair_slots(output, deps.render_template(brief), validation["rejections"])
+        if candidate is not None:
+            recheck = deps.validate(candidate, brief)
+            if recheck["is_valid"]:
+                trace[0]["details"]["rejection_slots"] = [f"{r['slot']}:{r['code']}" for r in validation["rejections"]]
+                trace[0]["details"]["rejection_excerpts"] = _excerpts(validation["rejections"])
+                output, validation, repaired_slots = candidate, recheck, slots
+    if repaired_slots:
+        trace[0]["details"]["repaired_slots"] = repaired_slots
     if not validation["is_valid"]:
         rejected = [r["code"] for r in validation["rejections"]]
+        rejected_slots = [f"{r['slot']}:{r['code']}" for r in validation["rejections"]]
+        trace[0]["details"]["rejection_excerpts"] = _excerpts(validation["rejections"])
         output = deps.render_template(brief)
         validation = deps.validate(output, brief)
         status = "fallback"
         trace[0]["status"] = "fallback"
         trace[0]["details"]["fallback_reason"] = "rejet_du_validateur"
         trace[0]["details"]["rejection_codes"] = rejected
+        # Emplacement et code de chaque rejet (les courts extraits sont dans rejection_excerpts) : diagnostic.
+        trace[0]["details"]["rejection_slots"] = rejected_slots
     trace.append(_step(5, "validation", "code", status, started, {
         "is_valid": validation["is_valid"], "checked_references": len(validation["checked_references"]),
         "rejection_codes": [r["code"] for r in validation["rejections"]],
@@ -454,12 +479,14 @@ def explain(
     if effective_mode == "bedrock" and config.has_guardrail:
         try:
             bedrock_client = client or BedrockClient(config)
+            checked_text = _model_text(output, brief)
             guardrail = bedrock_client.check_output_grounding(
-                json.dumps(brief, ensure_ascii=False), "Explique le resultat de l'analyse.", markdown)
+                json.dumps(brief, ensure_ascii=False), "Explique le resultat de l'analyse.", checked_text)
             guard_status = "ok" if guardrail["action"] != "not_run" else "skipped"
             guard_details = {
                 "action": guardrail["action"], "grounding_score": guardrail["grounding_score"],
                 "relevance_score": guardrail["relevance_score"], "mode": guardrail["mode"],
+                "checked_chars": len(checked_text),
             }
             flags = getattr(bedrock_client, "last_grounding_flags", None)
             if isinstance(flags, dict) and flags.get("below_threshold"):
@@ -467,17 +494,27 @@ def explain(
         except Exception as error:  # le controle d'ancrage est accessoire : jamais de plantage
             guard_status = "error"
             guard_details = {"error": type(error).__name__}
-    below_threshold = bool(guard_details.get("grounding_below_threshold"))
-    verified = guardrail["action"] == "none" and not below_threshold
+    if guard_details.get("grounding_below_threshold"):
+        # Plan de sprint : l'ancrage est en mode detection, son score est affiche sans bloquer. Le francais est
+        # juge severement par le controle, et la fidelite est deja garantie par le validateur (renvois existants,
+        # aucun nombre invente). Un ancrage faible est donc signale dans la trace, sans ecarter le texte.
+        guard_details["grounding_weak"] = True
+    score = guardrail["grounding_score"]
+    below_floor = guardrail["action"] == "none" and score is not None and score < GROUNDING_FLOOR
+    # Un controle sans score d'ancrage n'a rien verifie : le texte du modele est alors traite comme non verifiable.
+    verified = guardrail["action"] == "none" and score is not None and score >= GROUNDING_FLOOR
     if output["origin"] == "llm" and not verified:
-        # Le texte du modele n'est affiche que si le garde-fou l'a verifie et laisse passer : refus, ancrage
-        # sous le seuil, erreur ou controle impossible (taille) donnent le gabarit construit par le code.
-        unavailable = guardrail["action"] == "not_run"
+        # Le texte du modele n'est affiche que si le garde-fou l'a verifie et ne l'a pas refuse : un sujet interdit
+        # (intervention), une erreur ou un controle impossible (taille) donnent le gabarit construit par le code.
+        unavailable = guardrail["action"] == "not_run" or (guardrail["action"] == "none" and score is None)
         output = deps.render_template(brief)
         validation = deps.validate(output, brief)
         markdown = deps.render_markdown(output, brief)
         trace[0]["status"] = "fallback"
-        trace[0]["details"]["fallback_reason"] = "garde_fou_indisponible" if unavailable else "garde_fou_sortie"
+        trace[0]["details"]["fallback_reason"] = (
+            "garde_fou_indisponible" if unavailable else "ancrage_insuffisant" if below_floor else "garde_fou_sortie")
+        if below_floor:
+            guard_details["grounding_floor"] = GROUNDING_FLOOR
         guard_details["replaced_by_template"] = True
         if guardrail["denied_topics"]:
             guard_details["denied_topics"] = guardrail["denied_topics"]
@@ -520,6 +557,105 @@ def persist_trace(
         return {"saved": False, "location": None, "reason": redact_text(str(error))}
     except Exception as error:  # la trace est accessoire : jamais de plantage pour elle
         return {"saved": False, "location": None, "reason": type(error).__name__}
+
+
+# Codes de rejet qu'on peut reparer en remplacant l'emplacement fautif par la version ecrite par le code.
+_REPAIRABLE_CODES = frozenset({
+    "number_outside_registry", "too_long", "forbidden_term", "unknown_reference", "missing_rule_citation"})
+_TEXT_SLOTS = ("summary", "counterfactual", "variants", "limits_context")
+MAX_REPAIRED_SLOTS = 3
+
+
+def _repair_slots(
+    output: dict[str, Any], template: dict[str, Any], rejections: list[dict[str, Any]],
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Remplace les seuls emplacements rejetes par ceux du gabarit, et garde le reste du texte du modele.
+
+    Rend (None, []) si un rejet n'est pas reparable (structure, emplacement manquant, trop d'emplacements) :
+    le pipeline utilise alors le gabarit complet. Un seul mauvais chiffre ne doit pas faire jeter toute l'explication.
+    """
+    slots: list[str] = []
+    for rejection in rejections:
+        slot = rejection.get("slot", "")
+        if rejection.get("code") not in _REPAIRABLE_CODES:
+            return None, []
+        if slot not in _TEXT_SLOTS and not re.fullmatch(r"factors\[\d+\]", slot):
+            return None, []
+        if slot not in slots:
+            slots.append(slot)
+    if not slots or len(slots) > MAX_REPAIRED_SLOTS:
+        return None, []
+    repaired = copy.deepcopy(output)
+    for slot in slots:
+        if slot in _TEXT_SLOTS:
+            repaired[slot] = template[slot]
+            continue
+        index = int(slot[len("factors["):-1])
+        factors = repaired.get("factors") or []
+        if index >= len(factors):
+            return None, []
+        replacement = next(
+            (f for f in template.get("factors", []) if f.get("check_id") == factors[index].get("check_id")), None)
+        if replacement is None:
+            return None, []
+        factors[index] = copy.deepcopy(replacement)
+    return repaired, slots
+
+
+_SCOPE_SUFFIX = (
+    ("portfolio_before", " (portefeuille avant l'ajout)"),
+    ("portfolio_after", " (portefeuille après l'ajout)"),
+    ("variant:", " (variante simulée)"),
+    ("explored:", " (simulation explorée)"),
+)
+
+
+def _scope_evidence_labels(evidence: dict[str, Any]) -> None:
+    """Ajoute son perimetre au libelle de chaque preuve.
+
+    Plusieurs preuves portent le meme libelle ("Perte maximale historique") et ne se distinguent que par leur
+    sujet interne : avant, apres, variante. Le libelle seul ne le disait pas, et le modele pouvait prendre la
+    mauvaise ligne ou attribuer la mesure a la mauvaise chose. Le perimetre aide aussi l'utilisateur qui
+    ouvre une preuve.
+    """
+    for entry in evidence.values():
+        subject = str(entry.get("subject", ""))
+        for prefix, suffix in _SCOPE_SUFFIX:
+            if subject.startswith(prefix):
+                label = str(entry.get("label_fr", ""))
+                if suffix not in label:
+                    entry["label_fr"] = label + suffix
+                break
+
+
+def _excerpts(rejections: list[dict[str, Any]], limit: int = 8) -> list[str]:
+    """Courts extraits des rejets (40 caracteres, masques) : montrent ce qui a ete rejete, pour le diagnostic."""
+    return [
+        f"{r.get('slot')}:{r.get('code')}:{redact_text(str(r.get('excerpt', '')))[:40]}" for r in rejections[:limit]
+    ]
+
+
+def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None) -> str:
+    """Les phrases ecrites par le modele : l'objet que le garde-fou doit verifier.
+
+    Le texte rendu complet (tableaux, preuves) depasse la limite de 5000 caracteres du controle d'ancrage,
+    et ses chiffres viennent du code, pas du modele : seules les phrases du modele sont a verifier.
+    Si le dossier est fourni, les renvois ([E3], [G1]...) sont remplaces par les memes valeurs que celles que
+    voit l'utilisateur : sans cela, le garde-fou lit des reperes opaques et ne peut pas les rattacher au dossier
+    (scores d'ancrage mesures de 0,16 a 0,47). Repli sur le texte brut si le remplacement est impossible ou trop long.
+    """
+    parts = [output["summary"], *(factor["text"] for factor in output["factors"]),
+             output["counterfactual"], output["variants"], output["limits_context"]]
+    raw = "\n".join(part for part in parts if part)
+    if brief is None:
+        return raw
+    try:
+        from .explanation_rendering import _Registry   # meme remplacement que le rendu affiche
+        registry = _Registry(brief)
+        resolved = "\n".join(registry.substitute(part) for part in parts if part).replace("**", "")
+    except Exception:  # le remplacement est une amelioration : jamais une cause d'echec
+        return raw
+    return resolved if len(resolved) <= GROUNDING_ANSWER_MAX_CHARS else raw
 
 
 def check_request(

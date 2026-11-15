@@ -16,10 +16,10 @@ from .contracts import ExplainerOutput, ExplanationBrief
 from .prompt_loader import load_prompt
 from .tool_specs import ExplainerFailure
 
-PROMPT_NAME = "explainer_v1"
+PROMPT_NAME = "explainer_v4"
 PROMPT_VERSION = PROMPT_NAME
 # Pas de temperature : les modeles Claude recents la refusent (ValidationException, constate sur le compte).
-INFERENCE_CONFIG = {"maxTokens": 1500}
+INFERENCE_CONFIG = {"maxTokens": 2500}
 _STRING_SLOTS = ("summary", "counterfactual", "variants", "limits_context")
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
 
@@ -31,9 +31,11 @@ def parse_output(text: str, brief: ExplanationBrief, *, model_id: str, attempt: 
     if start < 0 or end <= start:
         return None, "Aucun objet JSON trouve dans la reponse."
     try:
-        raw = json.loads(cleaned[start:end + 1])
-    except ValueError:
-        return None, "JSON invalide."
+        # strict=False : un retour a la ligne dans un texte est une erreur frequente des modeles, sans gravite
+        raw = json.loads(cleaned[start:end + 1], strict=False)
+    except ValueError as error:
+        detail = f" ({getattr(error, 'msg', 'erreur')}, ligne {getattr(error, 'lineno', '?')}, colonne {getattr(error, 'colno', '?')})"
+        return None, "JSON invalide" + detail + "."
     for slot in _STRING_SLOTS:
         if not isinstance(raw.get(slot), str):
             return None, f"Emplacement manquant ou invalide : {slot}."
@@ -48,6 +50,27 @@ def parse_output(text: str, brief: ExplanationBrief, *, model_id: str, attempt: 
         counterfactual=raw["counterfactual"], variants=raw["variants"], limits_context=raw["limits_context"],
         origin="llm", model_id=redact_text(model_id), prompt_version=PROMPT_VERSION, attempt=attempt,
     ), None
+
+
+_GUIDANCE = {
+    "unknown_reference": "n'utilise que des renvois [E#], [G#], [T#] presents dans le dossier ; aucun autre crochet",
+    "number_outside_registry": "aucun chiffre ni nombre en lettres : remplace-le par le renvoi de sa preuve",
+    "too_long": "raccourcis cet emplacement (une ou deux phrases courtes)",
+    "forbidden_term": "remplace ce mot par une formulation neutre qui decrit seulement ce qui est observe",
+    "missing_rule_citation": "cite par son renvoi [G#] chaque regle en tension ou en conflit",
+    "slot_missing": "remplis tous les emplacements demandes",
+}
+
+
+def describe_rejections(rejections: list[dict[str, Any]], limit: int = 12) -> str:
+    """Retour de correction pour le modele : emplacement, code et extrait de chaque rejet, puis une consigne par code."""
+    lines = [
+        f"- {r.get('slot', '?')} : {r.get('code', '?')} ({redact_text(str(r.get('excerpt', '')))[:60]})"
+        for r in rejections[:limit]
+    ]
+    codes = list(dict.fromkeys(r.get("code") for r in rejections if r.get("code")))
+    advice = [f"{code} : {_GUIDANCE[code]}" for code in codes if code in _GUIDANCE]
+    return "Rejets du validateur :\n" + "\n".join(lines) + ("\nConsignes : " + " ; ".join(advice) if advice else "")
 
 
 def explain_with_llm(
@@ -71,7 +94,11 @@ def explain_with_llm(
     for attempt in (1, 2):
         response = client.converse(model_id, messages, system=system, inference_config=INFERENCE_CONFIG)
         text = extract_text(response)
-        output, problem = parse_output(text, brief, model_id=model_id, attempt=attempt)
+        if response.get("stopReason") == "max_tokens":
+            # Reponse tronquee : le JSON serait incomplet. Message exact pour la nouvelle tentative.
+            output, problem = None, "Reponse tronquee (max_tokens) : raccourcis chaque emplacement."
+        else:
+            output, problem = parse_output(text, brief, model_id=model_id, attempt=attempt)
         if output is not None:
             try:
                 verdict = validate(output, brief)
@@ -79,9 +106,7 @@ def explain_with_llm(
                 raise ExplainerFailure(f"Validateur en erreur ({type(error).__name__}).") from error
             if verdict["is_valid"] or attempt == 2:
                 return output
-            codes = ", ".join(
-                f"{r['code']} ({redact_text(str(r.get('excerpt', '')))[:40]})" for r in verdict["rejections"][:6])
-            problem = f"Rejet du validateur : {codes}."
+            problem = describe_rejections(verdict["rejections"])
         last_problem = problem or last_problem
         if attempt == 1:
             try:

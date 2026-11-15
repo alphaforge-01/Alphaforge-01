@@ -95,7 +95,8 @@ def test_parse_text_around_object():
 ])
 def test_parse_error_messages(text, message):
     output, problem = parse(text)
-    assert output is None and problem == message
+    # le message JSON invalide porte maintenant la cause et la position : on verifie son debut
+    assert output is None and (problem == message or (message == "JSON invalide." and problem.startswith("JSON invalide (")))
 
 
 def test_parse_array_without_braces_is_not_found():
@@ -133,11 +134,11 @@ def test_first_attempt_success():
     client = ScriptedClient([reply(json.dumps(good_slots()), extra_blocks=[{"reasoningContent": {"x": 1}}])])
     output = explain_with_llm(client, MODEL, BRIEF, accept)
     assert output["origin"] == "llm" and output["attempt"] == 1
-    assert output["model_id"] == MODEL and output["prompt_version"] == "explainer_v1"
+    assert output["model_id"] == MODEL and output["prompt_version"] == "explainer_v4"
     assert len(client.calls) == 1
     call = client.calls[0]
     assert call["tool_config"] is None and "toolConfig" not in call["kwargs"]
-    assert call["system"] == load_prompt("explainer_v1") and call["system"]
+    assert call["system"] == load_prompt("explainer_v4") and call["system"]
     assert call["inference_config"] == INFERENCE_CONFIG
     user_text = call["messages"][0]["content"][0]["text"]
     assert call["messages"][0]["role"] == "user"
@@ -204,3 +205,120 @@ def test_client_bedrock_error_propagates():
 
 def test_explainer_failure_is_an_agent_failure():
     assert issubclass(ExplainerFailure, AgentFailure)
+
+
+# ---- retour de correction precis et prompt version 2 ----
+
+def test_describe_rejections_lists_slot_code_excerpt_and_advice():
+    from alphaforge.explainer_agent import describe_rejections
+    text = describe_rejections([
+        {"code": "forbidden_term", "slot": "summary", "excerpt": "...solide..."},
+        {"code": "too_long", "slot": "variants", "excerpt": "500 caracteres pour 400 permis"},
+        {"code": "forbidden_term", "slot": "factors[0]", "excerpt": "...gardez..."},
+    ])
+    assert "summary : forbidden_term" in text and "variants : too_long" in text and "factors[0]" in text
+    assert text.count("Consignes") == 1 and "neutre" in text and "raccourcis" in text
+
+
+def test_describe_rejections_is_bounded_and_masks_secrets():
+    from alphaforge.explainer_agent import describe_rejections
+    many = [{"code": "unknown_reference", "slot": "summary", "excerpt": f"[X{i}]"} for i in range(40)]
+    assert describe_rejections(many).count("unknown_reference (") == 12
+    leaked = describe_rejections([{"code": "forbidden_term", "slot": "s", "excerpt": "AKIA" + "Q" * 16}])
+    assert "AKIA" + "Q" * 16 not in leaked
+
+
+def test_prompt_v2_states_the_validator_rules():
+    prompt = load_prompt("explainer_v4")
+    for needle in ("REGLE 1", "REGLE 2", "REGLE 3", "REGLE 4", "REGLE 5", "max_chars_per_slot", "[LM1]", "il faut"):
+        assert needle in prompt
+    assert chr(0x2014) not in prompt   # regle 1 : aucun tiret cadratin dans le prompt
+
+
+def test_trace_records_the_slot_of_each_rejection_without_any_model_text():
+    from dataclasses import replace
+    from alphaforge.analysis_pipeline import explain, run_analysis
+    from alphaforge.bedrock_client import BedrockConfig
+    from alphaforge.fixture_collaborators import fixture_deps
+
+    deps = fixture_deps()
+    config = BedrockConfig(mode="bedrock", analyst_model_id="m", explainer_model_id="m",
+                           guardrail_id="g-test", guardrail_version="1")
+    profile = json.loads((Path(__file__).parent / "fixtures" / "profile_robert.json").read_text(encoding="utf-8"))
+    portfolio = json.loads((Path(__file__).parent / "fixtures" / "portfolio_robert.json").read_text(encoding="utf-8"))
+    idea = json.loads((Path(__file__).parent / "fixtures" / "idea_tsla_25.json").read_text(encoding="utf-8"))
+    result = run_analysis(profile, portfolio, idea, deps=deps, config=BedrockConfig())
+
+    def runner(client, model_id, brief, validate):
+        output = deps.render_template(brief)
+        output.update({"origin": "llm", "attempt": 2, "summary": "Il faut vendre MARQUEUR-SECRET maintenant."})
+        return output
+
+    client_config = config
+
+    class Client:
+        config = client_config
+        last_grounding_flags = {}
+
+    bad = replace(deps, validate=lambda output, brief: (
+        {"is_valid": False, "checked_references": [],
+         "rejections": [{"code": "forbidden_term", "slot": "summary", "excerpt": "MARQUEUR-SECRET"}]}
+        if output["origin"] == "llm" else {"is_valid": True, "rejections": [], "checked_references": []}))
+    explanation = explain(result, "novice", mode="bedrock", config=config, client=Client(), deps=bad,
+                          explainer_runner=runner)
+    details = explanation["trace"][0]["details"]
+    assert details["rejection_slots"] == ["summary:forbidden_term"]
+    # seul le court extrait du validateur est conserve pour le diagnostic, jamais la phrase complete du modele
+    assert "Il faut vendre MARQUEUR-SECRET maintenant." not in json.dumps(explanation["trace"])
+    assert details["rejection_excerpts"] == ["summary:forbidden_term:MARQUEUR-SECRET"]
+
+
+def test_prompt_v4_forbids_naming_variants_by_identifier():
+    prompt = load_prompt("explainer_v4")
+    assert "REGLE 6" in prompt and "V1" in prompt and "UNE seule phrase" in prompt
+
+
+def test_guardrail_checks_only_the_model_sentences_not_the_long_rendered_text():
+    from dataclasses import replace
+    from alphaforge.analysis_pipeline import explain, run_analysis
+    from alphaforge.bedrock_client import BedrockConfig
+    from alphaforge.fixture_collaborators import fixture_deps
+
+    fixtures = Path(__file__).parent / "fixtures"
+    load = lambda name: json.loads((fixtures / name).read_text(encoding="utf-8"))
+    deps = replace(fixture_deps(), render_markdown=lambda output, brief: "tableau " * 1500)   # 12000 caracteres
+    config = BedrockConfig(mode="bedrock", analyst_model_id="m", explainer_model_id="m",
+                           guardrail_id="g-test", guardrail_version="1")
+    result = run_analysis(load("profile_robert.json"), load("portfolio_robert.json"), load("idea_tsla_25.json"),
+                          deps=deps, config=BedrockConfig())
+    received = {}
+
+    class Guard:
+        last_grounding_flags = {}
+
+        def __init__(self):
+            self.config = config
+
+        def check_output_grounding(self, source, query, answer):
+            received["answer"] = answer
+            return {"check": "output_grounding", "action": "none", "denied_topics": [],
+                    "grounding_score": 0.9, "relevance_score": 0.9, "mode": "detect"}
+
+    def runner(client, model_id, brief, validate):
+        output = deps.render_template(brief)
+        output.update({"origin": "llm", "attempt": 1, "model_id": model_id, "prompt_version": "explainer_v4",
+                       "summary": "PHRASE-DU-MODELE [G1]."})
+        return output
+
+    explanation = explain(result, "novice", mode="bedrock", config=config, client=Guard(), deps=deps,
+                          explainer_runner=runner)
+    assert "PHRASE-DU-MODELE" in received["answer"] and "tableau" not in received["answer"]
+    assert len(received["answer"]) < 5000
+    assert explanation["output"]["origin"] == "llm"                     # verifie, donc conserve
+    assert explanation["trace"][2]["details"]["checked_chars"] == len(received["answer"])
+
+
+def test_prompt_v4_states_the_scope_of_measures_and_forbids_additions():
+    prompt = load_prompt("explainer_v4")
+    assert "REGLE 7" in prompt and "PORTEFEUILLE ENTIER" in prompt and "de la position" in prompt
+    assert "REGLE 8" in prompt and "rien d'ajoute" in prompt

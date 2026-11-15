@@ -147,7 +147,8 @@ def test_guardrail_intervention_discards_cached_entry():
     result = run_analysis(PROFILE, PORTFOLIO, IDEA, deps=deps, config=BedrockConfig())
     cache = ExplanationCache()
     brief = deps.build_brief(result, "novice")
-    key = ExplanationCache.make_key(brief["brief_id"], "novice", "model-test", "explainer_v1")
+    from alphaforge.explainer_agent import PROMPT_VERSION
+    key = ExplanationCache.make_key(brief["brief_id"], "novice", "model-test", PROMPT_VERSION)
     cache.put(key, llm_output(deps, result))
     explanation = explain(result, "novice", mode="bedrock", config=BEDROCK, client=InterveningClient(),
                           deps=deps, explainer_runner=lambda *a: pytest.fail("cache attendu"), cache=cache)
