@@ -14,8 +14,9 @@ from alphaforge.trace_store import TraceStoreError
 FIXTURES = Path(__file__).parent / "fixtures"
 FAKE_KEY = "AKIA" + "X" * 16
 CONFIG = BedrockConfig(mode="bedrock", analyst_model_id="model-test", explainer_model_id="model-test",
-                       trace_bucket="bucket-test")
-CONFIG_NO_BUCKET = BedrockConfig(mode="bedrock", analyst_model_id="model-test", explainer_model_id="model-test")
+                       trace_bucket="bucket-test", guardrail_id="g-test", guardrail_version="1")
+CONFIG_NO_BUCKET = BedrockConfig(mode="bedrock", analyst_model_id="model-test", explainer_model_id="model-test",
+                                guardrail_id="g-test", guardrail_version="1")
 
 
 def load(name):
@@ -23,10 +24,18 @@ def load(name):
 
 
 class FakeClient:
-    """Client Bedrock factice : sans garde-fou configure, aucune methode n'est appelee."""
+    """Client Bedrock factice dont le garde-fou verifie le texte et le laisse passer."""
 
-    def __init__(self, config=CONFIG):
+    def __init__(self, config=CONFIG, action="none"):
         self.config = config
+        self.last_grounding_flags = {}
+        self.action = action
+        self.grounding_calls = 0
+
+    def check_output_grounding(self, source, query, answer):
+        self.grounding_calls += 1
+        return {"check": "output_grounding", "action": self.action, "denied_topics": [],
+                "grounding_score": 0.9, "relevance_score": 0.9, "mode": "detect"}
 
 
 class FakeStore:

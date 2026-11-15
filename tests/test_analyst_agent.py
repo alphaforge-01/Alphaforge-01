@@ -249,7 +249,7 @@ def test_unknown_tool_returns_error_without_exception():
     assert outcome.turns == 2
     (block,) = result_blocks(client.calls[1]["messages"][2])
     assert block["toolUseId"] == "x" and block["status"] == "error"
-    assert toolbox.calls[0]["status"] == "error" and toolbox.calls[0]["tool_name"] == "place_order"
+    assert toolbox.calls[0]["status"] == "error" and toolbox.calls[0]["tool_name"] == "outil_inconnu"
 
 
 # ---- parse_submission ----
