@@ -12,12 +12,27 @@ Codes de rejet (fixés par `contracts.py`) :
   en lettres ("trois", "un quart", "le double"). Les nombres en lettres sont toujours
   rejetés, car aucun registre ne permet de les vérifier ;
 - `forbidden_term` : recommandation, ordre d'achat ou de vente, prévision, promesse,
-  jugement flatteur ("rassurant", "solide") ;
+  jugement flatteur ("rassurant", "solide"), et aussi tout contenu actif ou navigable :
+  URL, lien ou image Markdown, balise HTML (voir `_UNSAFE_MARKUP`). Aucun code de rejet
+  n'est ajouté : le contrat `ValidationResult` reste inchangé ;
 - `missing_rule_citation` : contrôle en tension, en conflit ou en information
   manquante dont le renvoi `[G..]` n'apparaît nulle part ;
 - `slot_missing` : champ obligatoire absent ou vide, facteur manquant ou dans un
   autre ordre que `ranked_factors` ;
 - `too_long` : texte plus long que `max_chars_per_slot`.
+
+Protection contre les liens, images et balises (indépendante de celle de `explainer_agent.py`) :
+- rejetés : `http://`, `https://`, `www.`, schémas `javascript:`, `data:`, `file:`, `ftp:`,
+  `mailto:`, `vbscript:` ; `![` et `](` (image, lien) ; définition de lien `[x]: ...` en début de ligne ;
+  balises HTML (`<a ...>`, `</p>`, `<!-- -->`, `<?`) et balises dangereuses même non fermées
+  (`<script`, `<img`, `<iframe`...) ;
+- permis : renvois `[E1]` `[G1]` `[T1]` (y compris `([E1])` et `[E1]` suivi d'un espace),
+  texte ordinaire, et `<` ou `>` sans forme de balise (`5 < 6`, `<5 %`, `a < b`, `x<y`) ;
+- le texte est normalisé (NFKC, sans caractères de largeur nulle) avant l'analyse, pour qu'une
+  adresse écrite en caractères pleine largeur ou coupée par un caractère invisible ne
+  contourne pas la règle ;
+- limite connue : `a<b et c>d` (sans espace, avec un `>` plus loin) ressemble à une balise et
+  est rejeté. Le rejet entraîne une nouvelle tentative, puis le gabarit.
 
 Limites connues :
 - Le validateur ne juge pas le sens des phrases sans chiffre ni renvoi.
@@ -32,6 +47,7 @@ Limites connues :
 from __future__ import annotations
 
 import re
+import unicodedata
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
@@ -80,6 +96,19 @@ _FORBIDDEN_PATTERNS = (
 )
 _FORBIDDEN = tuple(re.compile(r"(?<![\w])(?:" + p + r")(?![\w])", re.IGNORECASE) for p in _FORBIDDEN_PATTERNS)
 
+# Contenu actif ou navigable dans un texte d'explication (rendu en Markdown par l'interface).
+_UNSAFE_MARKUP = (
+    # adresses : schémas web, schémas exécutables ou locaux, www.
+    re.compile(r"(?<![\w])(?:https?|ftp|file|mailto|javascript|vbscript|data)\s*:|(?<![\w.])www\.", re.IGNORECASE),
+    # image ou lien Markdown : `![alt]`, `[texte](cible)`
+    re.compile(r"!\[|\]\("),
+    # définition de lien : `[étiquette]: cible` (sauf `[E1]: texte` ordinaire)
+    re.compile(r"(?m)^\s*\[(?![EGT]\d+\])[^\]]+\]:|^\s*\[[EGT]\d+\]:\s*[/#<.]"),
+    # balises HTML : fermante, commentaire, doctype, instruction, ouvrante fermée, ou balise dangereuse
+    re.compile(r"<[/!?]|<[A-Za-z][^<>]*>|<(?:script|iframe|img|svg|object|embed|style|link|meta|form|input|"
+               r"body|html|a|video|audio|source|base|math|template|frame|frameset)\b", re.IGNORECASE),
+)
+_ZERO_WIDTH = dict.fromkeys([0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF, 0x00AD])
 _FOLD_FROM = "éèêëàâäîïôöùûüç’"
 _FOLD_TO = "eeeeaaaiioouuuc'"
 _FOLD = str.maketrans(_FOLD_FROM, _FOLD_TO)
@@ -160,6 +189,14 @@ def _reject(rejections: List[Rejection], code: str, slot: str, excerpt: str) -> 
         rejections.append(item)
 
 
+def _check_unsafe_markup(slot: str, text: str, rejections: List[Rejection]) -> None:
+    """Rejette URL, lien, image Markdown et HTML (code `forbidden_term`, contrat inchangé)."""
+    normalized = unicodedata.normalize("NFKC", text).translate(_ZERO_WIDTH)
+    for pattern in _UNSAFE_MARKUP:
+        for match in pattern.finditer(normalized):
+            _reject(rejections, "forbidden_term", slot, _excerpt(normalized, match.start(), match.end()))
+
+
 def _check_text(slot: str, text: str, known: Set[str],
                 numbers: Set[str], dates: Set[str], allow_registry_numbers: bool,
                 max_chars: int, rejections: List[Rejection], checked: List[str],
@@ -167,6 +204,8 @@ def _check_text(slot: str, text: str, known: Set[str],
     if len(text) > max_chars:
         _reject(rejections, "too_long", slot, f"{len(text)} caractères pour {max_chars} permis : "
                 + _excerpt(text, 0, 0)[:40])
+
+    _check_unsafe_markup(slot, text, rejections)
 
     # Renvois : valides, inconnus, mal formés.
     spans = []
