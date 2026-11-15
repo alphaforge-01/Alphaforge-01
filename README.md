@@ -65,7 +65,12 @@ aws sts get-caller-identity                                  # vérifier le comp
 .venv/Scripts/python scripts/setup_guardrail.py              # simulation, aucun appel AWS
 .venv/Scripts/python scripts/setup_guardrail.py --apply      # création du garde-fou (responsable du flux C)
 .venv/Scripts/python scripts/setup_guardrail.py --test       # requêtes permises et refusées
+.venv/Scripts/python scripts/setup_trace_bucket.py --check   # compartiment S3 privé des traces (--apply pour le créer)
+.venv/Scripts/python scripts/try_bedrock_run.py              # plan et configuration, sans appel
+.venv/Scripts/python scripts/try_bedrock_run.py --run --personas robert   # essai réel de bout en bout
 ```
+
+En mode `bedrock`, un texte rédigé par le modèle n'est affiché que si le garde-fou l'a vérifié ; sinon l'interface affiche l'explication du gabarit construite par le code, et la trace dit pourquoi.
 
 ## Reproduire les résultats
 
@@ -152,6 +157,7 @@ tests/            Tests automatisés (aucun appel AWS)
 
 ## Documentation
 
+- [docs/technical_documentation.md](docs/technical_documentation.md) : **documentation technique** (méthodes, données, explicabilité avec un exemple relié à la trace, validations, limites).
 - [docs/use_case_decision.md](docs/use_case_decision.md) : cas d'usage retenu et architecture.
 - [docs/user_stories.md](docs/user_stories.md) : user stories du MVP et critères d'acceptation.
 - [docs/evidence_keys.md](docs/evidence_keys.md) : preuves produites (clés, unités, sources, limites).
