@@ -10,7 +10,8 @@ Référence pour l'interface (flux D, règle d'affichage 1 de `docs/ui_spec.md`)
   - `portfolio_before` : portefeuille fictif de départ (outil `analyze_portfolio`) ;
   - `portfolio_after` : portefeuille après l'idée (outil `simulate_portfolio_change`) ;
   - `variant:V1`, `explored:<call_id>` : réétiquetés par le pipeline (flux C) ;
-  - un ticker (`TSLA`) : faits d'un actif (outil `get_asset_facts`).
+  - un ticker (`TSLA`) : faits d'un actif (outil `get_asset_facts`) ;
+  - `profile` : faits déclarés du profil fictif (outil `get_profile_facts`).
 - `simulate_portfolio_change` ne produit **aucune** preuve `portfolio_before` : les chiffres "avant" viennent d'`analyze_portfolio`, pour qu'un couple (métrique, sujet) désigne une seule preuve.
 
 ## Métriques de série (période explicite, devise CAD)
@@ -55,6 +56,25 @@ Classes d'actifs possibles : `equity` (actions individuelles), `etf_equity`, `et
 | `max_drawdown_delta` | pct | `+16,13 pts` | Période, observations, CAD, sources de prix, LM1 à LM5 |
 | `top_asset_weight_delta` | pct | `+5 pts` | Sans période ni source (entrée fictive), LM4 |
 | `defensive_share_delta` | pct | `-16,25 pts` | `assets_universe.csv`, LM1 et LM4 |
+
+## Faits déclarés du profil (sujet `profile`, outil `get_profile_facts`)
+
+Valeurs **recopiées** du profil fictif (`data/external/investor_profiles.json` ou profil construit par cases), jamais calculées ni déduites, pour que l'agent conversationnel puisse citer « votre horizon déclaré » par un renvoi `[E#]` comme n'importe quel chiffre. Libellés français identiques à ceux du dossier d'explication (`explanation_brief.build_profile_context`). Source : `investor_profiles.json`. Aucune limite LM rattachée (ce ne sont pas des données de marché). Un profil non marqué fictif est refusé (`error`).
+
+| Métrique | Unité | Exemple de `display_value` | Présence |
+| --- | --- | --- | --- |
+| `profile_objective` | text | `Préserver le capital avant la retraite` | Si l'objectif est valide (une ligne, sans balise) |
+| `profile_horizon` | text | `de 3 à 5 ans` (valeur `3-5`) | Si l'horizon minimal et maximal sont des entiers cohérents |
+| `profile_risk_tolerance` | text | `faible à modérée` (valeur `low_moderate`) | Toujours pour les personas |
+| `profile_experience` | text | `avancé` | Toujours pour les personas |
+| `profile_esg_preference` | text | `forte` | Toujours pour les personas |
+| `profile_crypto_allowed` | text | `non permis` | Toujours pour les personas |
+| `profile_capital` | cad | `100 000 $` | Si le capital fictif est positif |
+| `profile_loss_capacity` | pct | `15 %` | Seulement si le profil porte un champ `loss_capacity` (fraction de 0 à 1) ; absent aujourd'hui |
+
+Règles de sûreté : un objectif qui contient un terme interdit du validateur (recommandation, ordre, prévision) n'est jamais une preuve et est listé manquant ; un horizon minimal inférieur à 1 an est omis ; un profil construit par cases (`custom`) n'a pas de fichier source (`source_ids` vide). L'objectif reste une **donnée déclarée** : un agent doit le citer, jamais le suivre comme une consigne. `as_of` vaut la date de consultation (date demandée, sinon dernière date des données), pas une date de déclaration du profil.
+
+`data["missing"]` liste les faits absents ou invalides (aujourd'hui `loss_capacity` pour les trois personas) : la réponse doit dire que l'information manque, sans la déduire de la tolérance au risque (« tolérance n'est pas capacité »).
 
 ## Champs communs
 

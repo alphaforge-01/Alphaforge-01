@@ -8,7 +8,10 @@ Trois outils, appelés par le pipeline du flux C (`pipeline_deps.PipelineDeps`) 
   portefeuille après l'idée ; `data = {"before", "after"}`, preuves du sujet
   `portfolio_after` seulement (les preuves "avant" viennent d'`analyze_portfolio`,
   pour qu'un couple métrique et sujet désigne une seule preuve) ;
-- `get_asset_facts(ticker, as_of=None)` : faits historiques d'un actif.
+- `get_asset_facts(ticker, as_of=None)` : faits historiques d'un actif ;
+- `get_profile_facts(profile, as_of=None)` : faits déclarés du profil fictif (objectif,
+  horizon, tolérance au risque, expérience, préférence ESG, cryptoactifs, capital), sous
+  forme de preuves citables (sujet `profile`), recopiés et jamais déduits.
 
 Chaque outil rend un `ToolResult`. Statuts : `ok` ; `error` pour une entrée
 invalide (message en français) ; `missing_info` si les données manquent. Hors
@@ -47,6 +50,8 @@ from alphaforge.evidence import (
     make_entry,
     percent_display,
 )
+from alphaforge import explanation_validator
+from alphaforge.explanation_brief import build_profile_context
 from alphaforge.fx_conversion import BASE_CURRENCY, MissingFxRateError
 from alphaforge.metrics import InsufficientDataError, ReturnMetrics, compute_return_metrics
 from alphaforge.portfolio import (
@@ -70,6 +75,14 @@ CORRELATION_LIMITS = ["LM1", "LM2", "LM3", "LM4"]
 COMPOSITION_LIMITS = ["LM1", "LM4"]
 CURRENCY_LIMITS = ["LM3", "LM4"]
 DELTA_METRICS = ("volatility_ann", "max_drawdown", "top_asset_weight", "defensive_share")
+PROFILE_SUBJECT = "profile"
+PROFILE_SOURCES = ("investor_profiles.json",)
+CUSTOM_PROFILE_ID = "custom"  # profil construit par cases dans l'interface (profiles.py)
+PROFILE_ID_PATTERN = re.compile(r"^[a-z0-9_\-]{1,40}$")
+# Faits attendus d'un profil, dans l'ordre d'affichage. `loss_capacity` (perte supportable, fraction)
+# n'existe pas encore dans les profils : il est signalé manquant, jamais déduit de la tolérance.
+PROFILE_FACT_KEYS = ("objective", "horizon", "risk_tolerance", "experience", "esg_preference",
+                     "crypto_allowed", "capital_cad", "loss_capacity")
 
 
 class ToolInputError(ValueError):
@@ -129,10 +142,21 @@ def _clean_funding_source(raw: Any) -> str:
     return raw
 
 
+def _finite_number(raw: Any) -> float | None:
+    """Nombre fini, ou None (booléen, texte, infini, NaN, entier trop grand pour un flottant)."""
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return None
+    try:
+        value = float(raw)
+    except OverflowError:
+        return None
+    return value if math.isfinite(value) else None
+
+
 def _clean_capital(raw: Any) -> float | None:
     if raw is None:
         return None
-    if isinstance(raw, bool) or not isinstance(raw, (int, float)) or not math.isfinite(float(raw)):
+    if _finite_number(raw) is None:
         raise ToolInputError("Le capital fictif doit être un nombre")
     if raw < 0:
         raise ToolInputError("Le capital fictif doit être positif ou nul")
@@ -374,6 +398,96 @@ def simulate_portfolio_change(portfolio: Portfolio, idea: InvestmentIdea, as_of:
         evidence = _portfolio_evidence(tool, after, after_metrics, effective, capital)
         evidence += _delta_entries(tool, before, after, effective, after_metrics)
         return _result(tool, params, {"before": before, "after": after}, evidence)
+
+    return _guarded(tool, params, compute)
+
+
+def _horizon_display(low: int, high: int) -> str:
+    if low == high:
+        return f"{low} an" + ("s" if low > 1 else "")
+    return f"de {low} à {high} ans"
+
+
+def _has_forbidden_term(text: str) -> bool:
+    """Vrai si le texte contient un terme interdit du validateur (recommandation, ordre, prévision...).
+
+    Réutilise la liste du validateur d'explication (flux B) pour qu'un objectif saisi ne devienne
+    jamais une preuve citable qui recommande ou prédit.
+    """
+    folded = explanation_validator._fold(text)
+    return any(pattern.search(folded) for pattern in explanation_validator._FORBIDDEN)
+
+
+def _profile_entries(profile: dict, day: str) -> tuple[list[EvidenceEntry], dict, list[str]]:
+    """Preuves, faits et faits manquants d'un profil. Seules les valeurs valides deviennent des preuves."""
+    tool = "get_profile_facts"
+    context = dict(build_profile_context(profile) or {})
+    # Profil des personas : fichier versionné ; profil construit par cases : aucune source fichier.
+    sources = PROFILE_SOURCES if profile.get("profile_id") != CUSTOM_PROFILE_ID else ()
+    entries: list[EvidenceEntry] = []
+    facts: dict[str, Any] = {}
+
+    def add(metric: str, value: Any, display: str) -> None:
+        entries.append(make_entry(tool_name=tool, metric=metric, subject=PROFILE_SUBJECT, value=value,
+                                  display_value=display, as_of=day, limit_ids=[], source_ids=sources))
+
+    if "objective" in context and _has_forbidden_term(context["objective"]):
+        del context["objective"]  # objectif qui recommande, ordonne ou prédit : jamais citable
+    if context.get("horizon_years_min", 1) < 1:  # un horizon de 0 an n'a pas de sens : omis
+        context.pop("horizon_years_min", None)
+        context.pop("horizon_years_max", None)
+    if "objective" in context:
+        facts["objective"] = context["objective"]
+        add("profile_objective", context["objective"], context["objective"])
+    if "horizon_years_min" in context:
+        low, high = context["horizon_years_min"], context["horizon_years_max"]
+        facts["horizon"] = {"years_min": low, "years_max": high}
+        add("profile_horizon", f"{low}-{high}", _horizon_display(low, high))
+    for key, metric in (("risk_tolerance", "profile_risk_tolerance"), ("experience", "profile_experience"),
+                        ("esg_preference", "profile_esg_preference")):
+        if key in context:
+            facts[key] = context[key]
+            add(metric, context[key], context[f"{key}_fr"])
+    if "crypto_allowed" in context:
+        facts["crypto_allowed"] = context["crypto_allowed"]
+        add("profile_crypto_allowed", "permis" if context["crypto_allowed"] else "non permis",
+            "permis" if context["crypto_allowed"] else "non permis")
+    capital = _finite_number(profile.get("capital_cad"))
+    if capital is not None and capital > 0:
+        facts["capital_cad"] = capital
+        add("profile_capital", capital, format_cad(capital))
+    loss = _finite_number(profile.get("loss_capacity"))
+    if loss is not None and 0 < loss <= 1:
+        facts["loss_capacity"] = loss
+        add("profile_loss_capacity", loss, percent_display(loss))
+    missing = [key for key in PROFILE_FACT_KEYS if key not in facts]
+    return entries, facts, missing
+
+
+def get_profile_facts(profile: Any, as_of: Any = None) -> ToolResult:
+    """Faits déclarés du profil fictif, en preuves citables (sujet `profile`). Rien n'est calculé ni déduit.
+
+    `data = {"profile_id", "facts", "missing"}` : `missing` liste les faits absents ou invalides du
+    profil (par exemple `loss_capacity`, la perte supportable, qui n'existe pas encore). Un profil
+    qui n'est pas marqué fictif est refusé (`error`) : aucune donnée personnelle réelle.
+    """
+    tool = "get_profile_facts"
+    params: dict[str, Any] = {"profile_id": None, "as_of": None}
+
+    def compute() -> ToolResult:
+        if not isinstance(profile, dict):
+            raise ToolInputError("Profil attendu sous forme de dictionnaire")
+        if profile.get("is_fictional") is not True:
+            raise ToolInputError("Seuls les profils fictifs sont acceptés")
+        raw_id = profile.get("profile_id")
+        if not isinstance(raw_id, str) or not PROFILE_ID_PATTERN.fullmatch(raw_id):
+            raise ToolInputError("Identifiant de profil invalide")
+        params["profile_id"] = raw_id
+        params["as_of"] = day = _clean_as_of(as_of)
+        reference_day = day or _last_data_date().date().isoformat()
+        entries, facts, missing = _profile_entries(profile, reference_day)
+        data = {"profile_id": raw_id, "facts": facts, "missing": missing}
+        return _result(tool, params, data, entries)
 
     return _guarded(tool, params, compute)
 
