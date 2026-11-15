@@ -96,6 +96,18 @@
             "label_fr": "Concentration en actions individuelles",
             "origin": "persona",
             "is_assumption": true
+          },
+          {
+            "rule_id": "R8",
+            "rule_type": "max_correlated_group_weight",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": 0.35,
+            "limit_threshold": 0.5,
+            "unit": "pct",
+            "label_fr": "Plafond par groupe corrélé",
+            "origin": "persona",
+            "is_assumption": true
           }
         ]
       },

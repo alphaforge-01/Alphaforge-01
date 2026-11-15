@@ -38,6 +38,9 @@ Champs renseignés : `period_start`, `period_end`, `n_observations`, `currency =
 | `weight_by_asset_class.<classe>` | pct | `25 %` | `assets_universe.csv` | LM1, LM4 |
 | `weight_by_sector.<secteur>` | pct | `15 %` | `assets_universe.csv` | LM1, LM4 |
 | `currency_exposure.CAD`, `currency_exposure.USD` | pct | `41,25 %` | `assets_universe.csv` | LM3, LM4 |
+| `largest_correlated_group_weight` | pct | `30 %` (libellé avec les titres du groupe) | `prices_daily.csv`, `fx_usdcad_daily.csv` | LM1 à LM4 |
+
+Exceptions de la ligne `largest_correlated_group_weight` : contrairement aux autres lignes de cette section, elle porte une période, un nombre d'observations et la devise CAD (la corrélation vient des rendements). Elle n'a pas d'écart `_delta` et n'existe pas quand moins de 60 rendements communs sont disponibles.
 | `weights.<ticker>` | pct | `11,25 %` | aucune (entrée fictive) | LM4 |
 
 Classes d'actifs possibles : `equity` (actions individuelles), `etf_equity`, `etf_bond`, `etf_commodity`, `crypto`. Une classe absente du portefeuille n'a pas de preuve (son poids est 0).

@@ -6,13 +6,17 @@ produits par le flux B (`build_profile_from_answers`), jamais par l'interface.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Callable, Dict, List, Optional
 
 import streamlit as st
 
 import data_source
 import ui_texts as texts
-from formatting import format_cad, format_horizon, format_pct
+from components.rules import threshold_text
+from formatting import format_cad, format_horizon
+
+LOGGER = logging.getLogger("alphaforge.ui")
 
 # Ordre d'affichage : Robert d'abord, c'est la scène 1 de la démo.
 PERSONA_ORDER = ("robert", "amira", "mateo")
@@ -68,7 +72,11 @@ def render_persona_cards(personas: Dict[str, Any], selected_id: Optional[str],
     ids = ordered_ids(personas)
     for column, profile_id in zip(st.columns(len(ids)), ids):
         with column:
-            _render_card(profile_id, personas[profile_id], profile_id == selected_id, on_select)
+            try:
+                _render_card(profile_id, personas[profile_id], profile_id == selected_id, on_select)
+            except Exception as exc:  # une carte invalide ne doit pas masquer les autres
+                LOGGER.exception("Carte du persona %s impossible à afficher", profile_id)
+                st.error(texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__))
 
 
 def _collect_answers() -> Dict[str, Any]:
@@ -121,25 +129,13 @@ def _render_issues(issues: List[Dict[str, Any]]) -> None:
                 show[severity](issue["message_fr"])
 
 
-def _threshold_text(rule: Dict[str, Any], threshold: Optional[float]) -> str:
-    """Seuil d'une règle (paramètre, pas un résultat de calcul)."""
-    if threshold is None:
-        return texts.RULE_NONE
-    if rule["unit"] == "bool":
-        return texts.RULE_EXCLUDED
-    if rule["direction"] == "min" and threshold <= 0:
-        return texts.RULE_NONE  # un plancher à 0 ne peut jamais être franchi
-    template = texts.RULE_BELOW if rule["direction"] == "min" else texts.RULE_ABOVE
-    return template.format(value=format_pct(threshold))
-
-
 def render_rules_table(rules: List[Dict[str, Any]]) -> None:
     """Règles du profil et leurs seuils, chacun étiqueté comme hypothèse de l'équipe."""
     rows = [
         {
             texts.RULE_COLUMN: rule["label_fr"],
-            texts.RULE_TENSION: _threshold_text(rule, rule["warn_threshold"]),
-            texts.RULE_CONFLICT: _threshold_text(rule, rule["limit_threshold"]),
+            texts.RULE_TENSION: threshold_text(rule, rule["warn_threshold"]),
+            texts.RULE_CONFLICT: threshold_text(rule, rule["limit_threshold"]),
             texts.RULE_THRESHOLD_STATUS: texts.RULE_ASSUMPTION if rule["is_assumption"] else "",
         }
         for rule in rules
@@ -148,13 +144,15 @@ def render_rules_table(rules: List[Dict[str, Any]]) -> None:
     st.caption(texts.CUSTOM_RULES_NOTICE)
 
 
-def render_custom_profile_form(personas: Dict[str, Any], is_active: bool,
+def render_custom_profile_form(personas: Dict[str, Any], active_persona: Optional[Dict[str, Any]],
                                on_use: Callable[[Dict[str, Any]], None]) -> None:
     """Formulaire du profil construit. `on_use(persona)` est appelé au clic sur le bouton.
 
     Le contrôle du profil (flux B) est relancé à chaque changement : les
     contradictions s'affichent tout de suite, avant même de valider.
+    `active_persona` est le profil construit actuellement utilisé, ou None.
     """
+    is_active = active_persona is not None
     st.caption(texts.CUSTOM_REMINDER)
     answers = _collect_answers()
     ids = ordered_ids(personas)
@@ -191,6 +189,8 @@ def render_custom_profile_form(personas: Dict[str, Any], is_active: bool,
         return
     st.subheader(texts.CUSTOM_RULES_TITLE)
     render_rules_table(persona["profile"]["rules"])
+    if is_active and persona != active_persona:
+        st.caption(texts.CUSTOM_DRAFT_CHANGED)
     st.button(
         texts.CUSTOM_UPDATE if is_active else texts.CUSTOM_USE,
         key="custom_use",

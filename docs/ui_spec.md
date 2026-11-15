@@ -1,6 +1,6 @@
 # Spec du flux D : interface Streamlit
 
-Statut : brouillon à valider. Propriétaire : Ibrahima (flux D). Branche : `feat/streamlit-ui`.
+Statut : interface complète branchée sur le pipeline, revue statique et scènes jouées en offline. Propriétaire : Ibrahima (flux D).
 
 Sources : `docs/sprint_plan.md` (sections 1, 3, 4 et 5), `docs/user_stories.md`, `src/alphaforge/contracts.py`, `src/alphaforge/profiles.py` (flux B, en cours).
 
@@ -31,8 +31,8 @@ L'interface ne calcule rien. Elle lit des objets du contrat (`AnalysisResult`, `
 
 ## 2. Règles d'affichage
 
-1. **Chiffre calculé** (métrique, poids après simulation, montant) : toujours le `display_value` d'une entrée du registre, trouvée par `evidence_key` (`<metric>:<subject>`). Sans entrée : "non disponible". Jamais une valeur brute mise en forme par l'interface.
-2. **Paramètre** (seuil d'une règle, poids choisi par l'utilisateur, capital fictif) : mis en forme par `app/formatting.py`, au format français ("25 %", "100 000 $"). Ce ne sont pas des résultats de calcul.
+1. **Chiffre calculé** (métrique, poids, montant, écart avant/après) : toujours le `display_value` d'une entrée du registre, trouvée par `evidence_key` (`<metric>:<subject>`). Le chiffre est lui-même le bouton qui ouvre sa preuve. Sans entrée : "non disponible". L'interface ne calcule jamais rien.
+2. **Paramètre** (seuil d'une règle, poids choisi par l'utilisateur, capital fictif, dates) : mis en forme par `app/formatting.py`, au format français ("25 %", "100 000 $", "12 nov. 2021"). Seule valeur calculée sans texte prêt dans le contrat : la marge d'une règle, calculée par la gouvernance (flux B) et mise en forme en points avec la fonction de l'explication (`format_points`), pour un format identique partout. Les métadonnées de la trace (durées des étapes, scores d'ancrage et de pertinence du garde-fou) sont affichées telles que le pipeline les rend : ce ne sont pas des chiffres financiers.
 3. **Statuts** : couleur et texte, jamais la couleur seule. Conforme (vert), Tension (orange), Conflit (rouge), Information manquante (gris). Aucun emoji.
 4. **Textes** : tous dans `app/ui_texts.py`, en français. Le code reste en anglais.
 5. **Zones** : faits (cartes de métriques), hypothèses (encadré "Hypothèses de l'équipe"), simulations (encadré "Simulation").
@@ -44,16 +44,17 @@ L'interface ne calcule rien. Elle lit des objets du contrat (`AnalysisResult`, `
 
 | Fichier | Rôle |
 | --- | --- |
-| `streamlit_app.py` | Point d'entrée : configuration de la page, onglets, initialisation de l'état de session |
-| `data_source.py` | Seul point de contact avec `src/` et les fixtures. Fonctions : `get_personas`, `get_universe`, `get_analysis`, `get_explanation`, `check_request` |
-| `ui_texts.py` | Libellés, messages, statuts, motifs de variantes, avertissement |
-| `formatting.py` | Mise en forme des paramètres seulement (règle 2) |
-| `components/banners.py` | Avertissement, bandeau de données d'essai, mode |
+| `streamlit_app.py` | Point d'entrée : barre latérale (avant les onglets), onglets, état de session, chargement avec mémoire des échecs, protection de chaque section |
+| `data_source.py` | Point de contact avec `src/` et les fixtures. Fonctions : `get_personas`, `check_profile_answers`, `build_custom_persona`, `get_universe`, `get_sources`, `get_reference_limits`, `get_threshold_notice`, `get_guardrail_prompts`, `get_bedrock_status`, `get_xray`, `get_analysis`, `get_explanation`, `get_asset_facts`, `rule_metric`, `check_request` |
+| `ui_texts.py` | Libellés, messages, statuts, motifs de variantes, avertissement, idées de démonstration |
+| `formatting.py` | Mise en forme des paramètres et des marges (règle 2). Utilise les fonctions de format de `src/alphaforge/explanation_rendering.py`, sans aucun calcul |
+| `components/banners.py` | Avertissement, bandeau de données d'essai |
 | `components/profile_panel.py` | Cartes des personas, formulaire de profil construit |
-| `components/evidence.py` | Recherche d'une preuve par clé, carte de métrique avec bouton "Vérifier" |
+| `components/evidence.py` | Recherche d'une preuve par clé, chiffre cliquable, carte de métrique, contenu de la preuve |
+| `components/rules.py` | Statut par règle : mesure, seuils, marge, contrefactuel |
 | `components/xray.py` | Radiographie |
 | `components/idea_panel.py` | Sélecteurs et idées en un clic |
-| `components/result_panel.py` | Avant/après, règles, contrefactuel, variantes |
+| `components/result_panel.py` | Avant/après dans une zone "Simulation", faits sur l'actif, règles dans une zone "Hypothèses de l'équipe", contrefactuel, variantes |
 | `components/explanation_panel.py` | Bascule de niveau, texte rendu, preuves citées, limites |
 | `components/trace_panel.py` | Trace à six étapes, dossier transmis |
 | `components/guardrail_panel.py` | Test du garde-fou |
@@ -67,72 +68,83 @@ Lancement, depuis la racine du projet : `streamlit run app/streamlit_app.py`.
 
 | Mode | Source | Usage |
 | --- | --- | --- |
-| `fixture` | `tests/fixtures/analysis_result_<profil>_tsla.json` et `explainer_output_*.json` | Jusqu'à J2. Seule l'idée "25 % dans TSLA" est disponible |
-| `offline` | `run_analysis(..., mode="offline")` et `explain(..., mode="offline")` | Dès que C3 est fusionné. Filet de la démo |
-| `bedrock` | mêmes fonctions, `mode="bedrock"` | Dès J4 |
+| `offline` (défaut) | Données réelles : `run_analysis(..., mode="offline")` et `explain(..., mode="offline")` | Démo sans réseau, filet de la démo |
+| `bedrock` | Mêmes fonctions, `mode="bedrock"`. Configuration lue dans l'environnement ; si elle est incomplète, le pipeline revient au hors ligne et l'interface l'affiche | Démo complète |
+| `fixture` | `tests/fixtures/analysis_result_<profil>_tsla.json`. Seule l'idée "25 % dans TSLA" est disponible | Secours si les données réelles manquent |
 
-La valeur initiale du mode vient de `ALPHAFORGE_MODE` (`fixture` si absente ou inconnue). Le mode se change dans la barre latérale, où il reste affiché.
+La valeur initiale du mode vient de `ALPHAFORGE_MODE` (`offline` si absente ou inconnue). Le mode se change dans la barre latérale, où il reste affiché. En mode `bedrock`, la barre latérale indique si les modèles, le garde-fou et le compartiment des traces sont configurés (oui ou non, aucun identifiant).
 
 En mode `fixture`, les profils et les portefeuilles viennent aussi des fixtures d'analyse, pour rester cohérents avec les chiffres affichés. En modes `offline` et `bedrock`, ils viennent de `load_personas()`.
+
+La radiographie avant toute idée (`get_xray`) n'utilise que du code déterministe : l'outil `analyze_portfolio` du flux A, passé par la `ToolBox` du flux C pour enregistrer les preuves, puis `evaluate` du flux B. Aucun agent n'est appelé, le résultat est le même en `offline` et en `bedrock`. De même, les faits sur l'actif de l'idée (`get_asset_facts`, outil du flux A) ne dépendent pas du profil : ils montrent que la même idée donne les mêmes chiffres de l'actif pour tous les profils (US-09).
+
+L'analyse d'une idée est gardée en cache par profil : revenir à un profil déjà vu est instantané. En modes `offline` et `fixture`, l'idée gardée est réanalysée automatiquement au changement de profil (scène 2). En mode `bedrock`, les agents ne sont lancés que par un clic : sur une idée, ou sur "Analyser cette idée pour ce profil" après un changement de profil ou de mode (quotas partagés). Changer de niveau relance seulement l'explicateur.
+
+Le mode choisi dans la barre latérale est transmis au pipeline par la configuration (`BedrockConfig` avec `mode` surchargé) : choisir Bedrock fonctionne même si l'application a été lancée sans `ALPHAFORGE_MODE=bedrock`.
 
 ### Mise en page
 
 - Onglets : "Analyse", "Test du garde-fou", "Sources et méthode".
-- Onglet "Analyse", dans l'ordre de la démo : Profil, Radiographie, Idée, Résultat, Explication, Trace (section repliable).
-- Barre latérale : avertissement, profil actif, mode.
+- Onglet "Analyse", dans l'ordre de la démo : Profil, Radiographie, Idée, Résultat, Explication, Trace.
+- Barre latérale, rendue avant les onglets pour rester utilisable si une section échoue : mode, état de Bedrock, profil actif, avertissement.
+- Chaque section est protégée : une erreur affiche un message à sa place, l'exception est écrite dans la console du serveur, le reste de la page continue.
 
 ### État de session
 
 | Clé | Contenu |
 | --- | --- |
+| `mode` | "offline", "bedrock" ou "fixture" |
 | `profile_id` | "robert", "amira", "mateo" ou "custom" |
-| `custom_persona` | persona (profil et portefeuille) construit, ou absent; retiré au changement de mode |
-| `idea` | `InvestmentIdea` en cours, conservée au changement de profil |
-| `analysis` | dictionnaire `(mode, profil, portefeuille, idée) -> AnalysisResult`; les échecs sont mémorisés à part (`analysis_failures`) avec un bouton Réessayer |
-| `explanations` | dictionnaire `(run_id, level) -> ExplanationResult` |
-| `level` | "novice" ou "pro" |
+| `custom_persona` | persona (profil et portefeuille) construit, ou absent ; retiré au changement de mode |
+| `idea` | dernière `InvestmentIdea` soumise, conservée au changement de profil. Si sa source des fonds n'est pas détenue par le nouveau profil, l'idée est financée au prorata pour ce profil, avec un message |
+| `level` | "novice" ou "pro", prérempli par le profil et repris de lui après un changement de mode |
+| `xray_cache`, `analysis_cache`, `explanation_cache` | résultats par `(mode, profil, portefeuille)`, `(mode, profil, portefeuille, idée)` et `(mode, run_id, niveau)` |
+| `xray_failures`, `analysis_failures`, `explanation_failures` | échecs mémorisés aux mêmes clés, avec un bouton "Réessayer" pour les erreurs (quotas Bedrock partagés) |
+| `analysis_request`, `level_reset`, `asset_cache`, `asset_failures`, `guardrail_pending` | demande explicite d'analyse en mode bedrock (quotas partagés), reprise du niveau au changement de mode, faits sur l'actif mémorisés, requête du garde-fou en attente |
+| `guardrail_history` | requêtes testées dans l'onglet du garde-fou et leurs verdicts |
 
 Les personas sont relus à chaque exécution (fichiers JSON locaux, coût négligeable).
 
 ## 4. Demandes aux autres flux
 
-À faire avant le gel des contrats (samedi 20 h 30), car ce sont des ajouts au contrat ou des décisions qui le touchent.
+État au samedi soir, après la fusion des flux A, B et C.
 
-| Flux | Demande | Pourquoi |
+| Flux | Demande | État |
 | --- | --- | --- |
-| B (Samer) | Réglé : `investor_profiles.json` met les trois personas en "pro", conforme à US-01. Seules les fixtures disent "novice" | US-01 |
-| B | Vérifier le verdict d'Amira avec "25 % dans TSLA" sur ses vraies règles (la fixture la donne "conforme" avec une seule règle) | Scène 2 |
-| B | Clé facultative `margin_display` dans `RuleCheck` | US-07, règle d'affichage 1 |
-| B | Liste fermée des objectifs pour le formulaire | US-02 sans texte libre |
-| B, C | Clé facultative `brief` (dossier transmis) dans `ExplanationResult` | US-13, "Ce que l'explicateur a vu" |
-| A (Naoufal) | Liste des `evidence_key` produites, une par chiffre affiché en radiographie et en comparaison | Règle d'affichage 1 |
-| A | `load_universe()` : ticker, nom, classe, devise, secteur | US-04 |
-| A | Écart avant/après : entrées de preuve dédiées, ou l'interface affiche seulement le sens | US-05 |
-| C (Godwin) | `run_analysis(mode="offline")` fusionné pour J2 (23 h 30), sinon l'interface reste en mode `fixture` | J2 |
-| C, B | Radiographie avant toute idée : aucune fonction gelée ne la fournit, car `run_analysis` exige une idée. Proposition : `run_xray(profile, portfolio, as_of=None) -> AnalysisResult` partiel (`snapshot_before`, `governance_before`, `evidence`, `limits`, trace), dans `analysis_pipeline.py`. Sinon, la radiographie ne s'affiche qu'après l'idée | US-03, parcours étape 2 |
-| D | Les fixtures d'analyse sont trop pauvres pour l'interface (une seule preuve "avant", aucune variante, trace sans appels d'outils, portefeuille de Robert réutilisé pour Amira). D ajoute ses propres fichiers `tests/fixtures/ui_*.json`, sans modifier ceux de B | D3 à D6 |
+| B (Samer) | Niveau par défaut des personas | Réglé : `investor_profiles.json` met les trois personas en "pro", conforme à US-01 |
+| B | Verdict d'Amira avec "25 % dans TSLA" | Réglé : tension sur ses vraies règles (Robert : conflit, Mateo : information manquante sur la règle ESG tant qu'aucune preuve ESG n'existe) |
+| B | Clé `margin_display` dans `RuleCheck` | Non fournie : la marge brute de la gouvernance est mise en forme avec `format_points` (règle d'affichage 2) |
+| B | Liste fermée des objectifs pour le formulaire | Non fournie : liste du flux D dans `ui_texts.py`, à confirmer |
+| B, C | Clé `brief` dans `ExplanationResult` | Réglé (PR 25) : affichée par "Ce que l'explicateur a vu" |
+| A (Naoufal) | Une `evidence_key` par chiffre affiché | Réglé : radiographie, comparaison, écarts (`*_delta`), poids par position, classe et secteur, variantes |
+| A | `load_universe()` | Réglé (`data_loading.py`) |
+| A | Écart avant/après | Réglé : preuves `<metric>_delta:portfolio_after` |
+| C (Godwin) | `run_analysis(mode="offline")` | Réglé : branché, données réelles |
+| C, B | Radiographie avant toute idée | Réglé côté interface : `get_xray` compose `analyze_portfolio`, la `ToolBox` et `evaluate`, sans agent |
+| C | Message précis quand l'idée est impossible | Le pipeline garde un message général : `get_analysis` redemande la raison exacte à l'outil de simulation (par exemple "NVDA ne pèse que 15 %") |
 
 ## 5. Tâches
 
 ### Sprint 1 : samedi soir, jusqu'à J2 (23 h 30)
 
 - [x] D1. Squelette : environnement Python 3.11, `streamlit_app.py`, onglets, avertissement, bandeau de données d'essai, mode affiché, `data_source.py` en mode `fixture`, `ui_texts.py`, `formatting.py` (US-12, US-15)
-- [x] D2a. Cartes des personas, badge "profil fictif", niveau prérempli (US-01). En mode `fixture` : Robert et Amira. En modes `offline` et `bedrock` : les trois personas avec âge et métier, par `load_personas` (fusionné dans la PR n° 8)
+- [x] D2a. Cartes des personas, badge "profil fictif", niveau prérempli (US-01). En mode `fixture` : Robert et Amira. En modes `offline` et `bedrock` : les trois personas avec âge et métier, par `load_personas` (fusionné dans la PR 8)
 - [x] D2b. Formulaire de profil construit (US-02), avancé du sprint 2. Contrôle relancé à chaque changement : erreurs, contradictions et points d'information de `check_answers` affichés tout de suite. Règles et seuils produits par `build_profile_from_answers`, chacun étiqueté "Hypothèse de l'équipe". Deux choix du flux D, à confirmer : la liste fermée des objectifs (`OBJECTIVE_OPTIONS` dans `ui_texts.py`, en attendant celle du flux B) et le portefeuille de départ, choisi parmi ceux des personas
-- [ ] D3. Radiographie : cartes de métriques par le registre, période, poids par secteur et par classe, statut par règle (US-03)
-- [ ] D4a. Idée "25 % dans TSLA" en un clic, avant/après, règles triées par gravité, contrefactuel, marges (US-05, US-06, US-07)
-- [ ] J2. Brancher `offline` si C3 est fusionné. PR `feat(ui): ...` relue et fusionnée
+- [x] D3. Radiographie : huit cartes de métriques par le registre, période et dates de la perte maximale, statut par règle, composition (positions, classes, secteurs), chaque chiffre cliquable (US-03)
+- [x] D4a. Idées en un clic dont "25 % dans TSLA", avant/après avec l'écart du registre, règles triées par gravité, seuils, marges, contrefactuel (US-05, US-06, US-07)
+- [x] J2. `offline` branché sur les vrais outils, la vraie gouvernance et le gabarit
 
 Terminé quand : la scène 1 se joue en mode `fixture` sans erreur, l'avertissement est visible dans chaque onglet, aucun chiffre calculé ne vient d'ailleurs que du registre.
 
 ### Sprint 2 : dimanche (S3 et S4), jusqu'au gel (J5, 18 h 30)
 
-- [ ] D4b. Sélecteurs complets, variantes, changement de profil qui garde l'idée (US-04, US-08, US-09)
-- [ ] D5. Explication : bascule, cache, preuves citées, limites, bouton "Vérifier" partout (US-10, US-11, US-12)
-- [ ] D6. Trace à six étapes, dossier transmis (US-13)
-- [ ] D7. Test du garde-fou (US-14)
-- [ ] D8. Sources et méthode, finitions (US-11)
-- [ ] D10 (P2). Deux profils côte à côte (US-19), seulement si J4 est vert
+- [x] D4b. Sélecteurs complets (actif de l'univers, poids de 1 à 100 %, source des fonds avec le poids actuel du titre), variantes dans un encadré "Simulation", changement de profil qui garde l'idée (US-04, US-08, US-09)
+- [x] D5. Explication : bascule novice/pro qui ne relance que l'explicateur, cache par niveau, origine du texte (agent ou gabarit), preuves citées cliquables, limites dans le texte fixe du flux B (US-10, US-11, US-12)
+- [x] D6. Trace à six étapes : acteur, statut, durée, modèle, outils appelés avec paramètres et preuves, raisons de repli, scores du garde-fou, trace S3, "Ce que l'explicateur a vu" (US-13)
+- [x] D7. Test du garde-fou : requêtes prédéfinies du flux C, permises et refusées, verdict en conversation avec le résultat attendu (US-14)
+- [x] D8. Sources et méthode : provenance des données, limites fixes, hypothèse des seuils, univers des actifs (US-11)
+- [x] US-18 (P2). Groupe corrélé : carte en radiographie et dans la comparaison, période, jours communs et méthode lus dans la preuve, règle R7 d'Amira, idée "40 % dans BTC-USD".
+- [ ] D10 (P2). Deux profils côte à côte (US-19) : abandonné sur décision de l'équipe
 
 Terminé quand : les scènes 1 à 5 se jouent en mode `offline` et en mode `bedrock`, et l'application est sur `main` avant dimanche 23 h 59.
 
@@ -152,5 +164,11 @@ Après le gel, seulement des corrections de bogues dans des branches `fix/...`, 
 ## 7. Questions ouvertes
 
 1. Onglets ou page unique pour la vidéo ? Par défaut : onglets.
-2. Libellé exact de l'avertissement : à reprendre des textes fixes de B (`fixed_texts.json`) dès qu'ils existent.
-3. Écart avant/après : chiffre (preuve dédiée de A) ou sens seulement ?
+2. Avertissement du bandeau : texte court du flux D. Les avertissements complets du flux B (`fixed_texts.json`) apparaissent en tête de chaque explication.
+3. Mode `bedrock` : vérifié seulement sans configuration (repli affiché). L'essai avec de vrais identifiants reste à faire sur le poste de démo.
+
+## 8. Règles d'affichage ajoutées après la revue
+
+- Le numéro de preuve (E1, E2...) n'est montré que pour le registre du résultat. La radiographie et les faits d'actif ont chacun leur registre, donc leurs preuves affichent la clé (`<métrique>:<sujet>`).
+- Les signes `$` du texte d'explication sont échappés : sans cela Streamlit lit deux montants comme une formule.
+- Étape 6 de la trace : une intervention du garde-fou, un ancrage sous le seuil ou un remplacement par le gabarit s'affichent "intervention", jamais "réussi".

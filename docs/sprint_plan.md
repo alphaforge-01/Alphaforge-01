@@ -166,7 +166,8 @@ class PortfolioSnapshot(TypedDict):   # data de analyze_portfolio
     weight_by_asset_class: dict[str, float]
     currency_exposure: dict[str, float]   # {"CAD": .., "USD": ..}
     defensive_share: float
-    largest_correlated_group_weight: float | None   # P2
+    largest_correlated_group_weight: float | None   # P2 : diversification.py ; None = trop peu d'observations
+    correlated_group_members: NotRequired[list[str]]   # titres du plus gros groupe corrélé (vide : aucun groupe)
 
 class Counterfactual(TypedDict):
     parameter: Literal["target_weight"]
