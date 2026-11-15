@@ -29,8 +29,8 @@ def fake_analysis(profile, portfolio, idea, as_of=None, mode="offline"):
         "trace": [{"name": "analysis", "actor": "analyste_test",
                    "details": {"fallback_reason": "configuration_incomplete"}}],
         "governance_before": {"overall_status": "compliant", "checks": []},
-        "governance_after": {"overall_status": "violation", "checks": [
-            {"rule_id": "R1", "label_fr": "Plafond", "status": "violation",
+        "governance_after": {"overall_status": "conflict", "checks": [
+            {"rule_id": "R1", "label_fr": "Plafond", "status": "conflict",
              "counterfactual": {"display_value": "5 %"}},
             {"rule_id": "R2", "label_fr": "Diversification", "status": "compliant"},
         ]},
@@ -68,7 +68,7 @@ def run(details, displayed="llm", **kw):
 
 
 def test_scenarios_shape_and_unique_ids():
-    assert [s.scenario_id for s in rs.SCENARIOS] == ["tsla_25", "btc_20", "nvda_20_from_largest", "xom_10"]
+    assert [s.scenario_id for s in rs.SCENARIOS] == ["tsla_25", "nvda_15", "btc_10", "btc_40", "xom_15"]
     for s in rs.SCENARIOS:
         assert {"ticker", "target_weight", "funding_source", "funding_ticker"} <= set(s.idea)
         assert 0 < s.idea["target_weight"] < 1
@@ -109,8 +109,8 @@ def test_run_one_maps_fields():
     assert o.is_fixture is True and o.effective_mode == "offline"
     assert o.analyst_actor == "analyste_test"
     assert o.analyst_fallback_reason == "configuration_incomplete"
-    assert (o.status_before, o.status_after) == ("compliant", "violation")
-    assert o.non_compliant == ["R1 Plafond : violation"]
+    assert (o.status_before, o.status_after) == ("compliant", "conflict")
+    assert o.non_compliant == ["R1 Plafond : conflict"]
     assert o.counterfactuals == {"R1": "5 %"}
     assert o.variants == [{"variant_id": "v1", "reason_code": "reduced", "target_weight": 0.05,
                            "funding_ticker": None, "status": "compliant"}]
@@ -225,7 +225,7 @@ def test_run_all_order_and_unknown_persona():
 
     names = sorted(load_personas())
     outcomes = rs.run_all(run_analysis=fake_analysis, explain=make_explain(LLM_OK))
-    assert len(outcomes) == 12
+    assert len(outcomes) == 3 * len(rs.SCENARIOS)
     assert [(o.persona, o.scenario_id) for o in outcomes] == [
         (n, s.scenario_id) for n in names for s in rs.SCENARIOS]
     assert all(o.ok for o in outcomes)
@@ -269,3 +269,21 @@ def test_main_exit_codes(tmp_path, monkeypatch):
 def test_main_rejects_unknown_mode(tmp_path):
     with pytest.raises(SystemExit):
         rs.main(["--mode", "nimporte", "--out", str(tmp_path)])
+
+
+def test_scenarios_match_ui_presets():
+    """Le rapport rejoue exactement les boutons de l'interface."""
+    ui_texts = pytest.importorskip("app.ui_texts")
+    presets = {(p["ticker"], p["target_weight"]) for p in ui_texts.IDEA_PRESETS}
+    assert {(s.idea["ticker"], s.idea["target_weight"]) for s in rs.SCENARIOS} == presets
+    assert all(s.idea["funding_source"] == "pro_rata" for s in rs.SCENARIOS)
+
+
+def test_real_run_records_financial_and_esg_verdicts():
+    """Vrai pipeline hors ligne : Mateo a un verdict financier et un verdict ESG distincts."""
+    outcomes = rs.run_all("offline", personas=["mateo"])
+    tsla = next(o for o in outcomes if o.scenario_id == "tsla_25")
+    assert tsla.ok
+    assert tsla.status_after == "missing_info"
+    assert tsla.financial_after == "compliant"
+    assert tsla.esg_after == "missing_info"

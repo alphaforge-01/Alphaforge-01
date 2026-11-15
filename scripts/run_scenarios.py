@@ -1,4 +1,4 @@
-"""Jeu de scénarios fixes : 3 personas x 4 demandes fictives, à relire avant la démo (flux A, tâche A7).
+"""Jeu de scénarios fixes : 3 personas x 5 demandes fictives (les boutons de l'interface), à relire avant la démo (flux A, tâche A7).
 
 Fait tourner le pipeline complet (`analysis_pipeline.run_analysis` puis `explain`
 aux niveaux novice et pro) sur un jeu de demandes fixe, et écrit dans
@@ -46,6 +46,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from alphaforge.bedrock_client import redact_text  # noqa: E402
+from alphaforge.governance import split_verdicts  # noqa: E402
 from alphaforge.profiles import load_personas  # noqa: E402
 
 DEFAULT_OUT_DIR = PROJECT_ROOT / "outputs" / "reports" / "scenarios"
@@ -66,20 +67,24 @@ class Scenario:
     idea: dict
 
 
+# Les 5 demandes prêtes de l'interface (`app/ui_texts.py`, IDEA_PRESETS), financement au prorata :
+# le rapport montre exactement ce qu'un utilisateur obtient en cliquant sur un bouton.
 SCENARIOS: tuple[Scenario, ...] = (
     Scenario("tsla_25",
-             "Demande fictive : porter TSLA à 25 % du portefeuille, financement au prorata (titre très médiatisé, scène 1)",
+             "Demande fictive : porter TSLA à 25 % du portefeuille, financement au prorata (titre très médiatisé)",
              {"ticker": "TSLA", "target_weight": 0.25, "funding_source": "pro_rata", "funding_ticker": None}),
-    Scenario("btc_20",
-             "Demande fictive : porter BTC-USD à 20 % du portefeuille, financement au prorata (cryptoactif)",
-             {"ticker": "BTC-USD", "target_weight": 0.20, "funding_source": "pro_rata", "funding_ticker": None}),
-    Scenario("nvda_20_from_largest",
-             "Demande fictive : porter NVDA à 20 %, financé par la plus grosse position (concentration techno)",
-             {"ticker": "NVDA", "target_weight": 0.20, "funding_source": "from_ticker",
-              "funding_ticker": LARGEST_HOLDING}),
-    Scenario("xom_10",
-             "Demande fictive : porter XOM à 10 %, financement au prorata (énergie, préférences ESG)",
-             {"ticker": "XOM", "target_weight": 0.10, "funding_source": "pro_rata", "funding_ticker": None}),
+    Scenario("nvda_15",
+             "Demande fictive : porter NVDA à 15 %, financement au prorata (technologie émergente)",
+             {"ticker": "NVDA", "target_weight": 0.15, "funding_source": "pro_rata", "funding_ticker": None}),
+    Scenario("btc_10",
+             "Demande fictive : porter BTC-USD à 10 %, financement au prorata (cryptoactif, petite part)",
+             {"ticker": "BTC-USD", "target_weight": 0.10, "funding_source": "pro_rata", "funding_ticker": None}),
+    Scenario("btc_40",
+             "Demande fictive : porter BTC-USD à 40 %, financement au prorata (cryptoactif, grosse part)",
+             {"ticker": "BTC-USD", "target_weight": 0.40, "funding_source": "pro_rata", "funding_ticker": None}),
+    Scenario("xom_15",
+             "Demande fictive : porter XOM à 15 %, financement au prorata (énergie, préférences ESG)",
+             {"ticker": "XOM", "target_weight": 0.15, "funding_source": "pro_rata", "funding_ticker": None}),
 )
 
 
@@ -99,6 +104,8 @@ class ScenarioOutcome:
     analyst_fallback_reason: str | None = None
     status_before: str | None = None
     status_after: str | None = None
+    financial_after: str | None = None   # verdict des seules règles financières (P1-9)
+    esg_after: str | None = None         # verdict des règles ESG, None si le profil n'en a pas
     non_compliant: list = field(default_factory=list)
     counterfactuals: dict = field(default_factory=dict)
     variants: list = field(default_factory=list)
@@ -176,6 +183,8 @@ def run_one(persona: str, data: dict, scenario: Scenario, mode: str, as_of: str 
         outcome.analyst_fallback_reason = (analysis_step.get("details") or {}).get("fallback_reason")
         outcome.status_before = result["governance_before"]["overall_status"]
         outcome.status_after = result["governance_after"]["overall_status"]
+        verdicts = split_verdicts(result["governance_after"])
+        outcome.financial_after, outcome.esg_after = verdicts["financial"], verdicts["esg"]
         checks = result["governance_after"]["checks"]
         outcome.non_compliant = [f"{c['rule_id']} {c['label_fr']} : {c['status']}"
                                  for c in checks if c["status"] != "compliant"]
@@ -252,15 +261,15 @@ def render_summary(outcomes: list[ScenarioOutcome], mode: str, as_of: str | None
         "",
         "## Scénarios",
         "",
-        "| Persona | Demande | Avant | Après | Règles non conformes | Contrefactuels | Variantes | "
-        "Explications (novice / pro) | Durée |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| Persona | Demande | Avant | Après | Financier / ESG après | Règles non conformes | Contrefactuels | "
+        "Variantes | Explications (novice / pro) | Durée |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     labels = {s.scenario_id: s.label_fr for s in SCENARIOS}
     for o in outcomes:
         label = labels.get(o.scenario_id, o.scenario_id) + (" **(sans effet)**" if o.no_effect else "")
         if not o.ok:
-            lines.append(f"| {o.persona} | {label} | échec | échec | {o.error} | | | | {o.duration_ms} ms |")
+            lines.append(f"| {o.persona} | {label} | échec | échec | | {o.error} | | | | {o.duration_ms} ms |")
             continue
         texts = " / ".join(
             ("modèle" if e["llm_produced"] else "gabarit")
@@ -274,6 +283,7 @@ def render_summary(outcomes: list[ScenarioOutcome], mode: str, as_of: str | None
         counterfactuals = "; ".join(f"{k} : {v}" for k, v in o.counterfactuals.items()) or "aucun"
         lines.append(
             f"| {o.persona} | {label} | {o.status_before} | **{o.status_after}** | "
+            f"{o.financial_after or 'aucune règle financière'} / {o.esg_after or 'aucune règle ESG'} | "
             f"{'<br>'.join(o.non_compliant) or 'aucune'} | {counterfactuals} | {variants} | {texts} | {o.duration_ms} ms |")
     lines += [
         "",
@@ -334,7 +344,7 @@ def resolve_out_dir(out: Path) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Jeu de scénarios fixes (3 personas x 4 demandes fictives).")
+    parser = argparse.ArgumentParser(description="Jeu de scénarios fixes (3 personas x 5 demandes fictives, les boutons de l'interface).")
     parser.add_argument("--mode", choices=("offline", "bedrock"), default="offline",
                         help="offline : sans AWS (par défaut) ; bedrock : agents réels, quotas partagés.")
     parser.add_argument("--as-of", default=None, help="Date d'analyse AAAA-MM-JJ (par défaut : fin des données).")
