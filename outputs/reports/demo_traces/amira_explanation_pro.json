@@ -1,0 +1,5152 @@
+{
+  "analysis": {
+    "as_of": "2026-11-12",
+    "created_at": "2026-11-15T02:35:44+00:00",
+    "evidence": {
+      "E1": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "23,65 %",
+        "evidence_id": "E1",
+        "evidence_key": "volatility_ann:portfolio_before",
+        "label_fr": "Volatilité annualisée (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "volatility_ann",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Écart-type des rendements quotidiens en CAD (n - 1), multiplié par la racine de 252.",
+        "unit": "pct",
+        "value": 0.23654240731875714
+      },
+      "E10": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "20 %",
+        "evidence_id": "E10",
+        "evidence_key": "top_asset_weight:portfolio_before",
+        "label_fr": "Poids du plus gros actif (QQQ) (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "top_asset_weight",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids le plus élevé du portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.2
+      },
+      "E100": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E100",
+        "evidence_key": "weight_by_sector.Broad market (U.S.):explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids du secteur Broad market (U.S.) (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (U.S.)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E101": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E101",
+        "evidence_key": "weight_by_sector.Bonds (Canada aggregate):explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids du secteur Bonds (Canada aggregate) (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Bonds (Canada aggregate)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E102": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E102",
+        "evidence_key": "weight_by_sector.Gold:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids du secteur Gold (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Gold",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E103": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "17 %",
+        "evidence_id": "E103",
+        "evidence_key": "currency_exposure.CAD:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Exposition au CAD (simulation explorée)",
+        "limit_ids": [
+          "LM3",
+          "LM4"
+        ],
+        "metric": "currency_exposure.CAD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions cotées dans cette devise (devise de cotation).",
+        "unit": "pct",
+        "value": 0.17
+      },
+      "E104": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "83 %",
+        "evidence_id": "E104",
+        "evidence_key": "currency_exposure.USD:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Exposition au USD (simulation explorée)",
+        "limit_ids": [
+          "LM3",
+          "LM4"
+        ],
+        "metric": "currency_exposure.USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions cotées dans cette devise (devise de cotation).",
+        "unit": "pct",
+        "value": 0.83
+      },
+      "E105": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "17 %",
+        "evidence_id": "E105",
+        "evidence_key": "weights.QQQ:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de QQQ (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.QQQ",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.17
+      },
+      "E106": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "15 %",
+        "evidence_id": "E106",
+        "evidence_key": "weights.TSLA:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de TSLA (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.TSLA",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.15
+      },
+      "E107": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "12,75 %",
+        "evidence_id": "E107",
+        "evidence_key": "weights.NVDA:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de NVDA (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.NVDA",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.1275
+      },
+      "E108": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E108",
+        "evidence_key": "weights.BTC-USD:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de BTC-USD (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.BTC-USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E109": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E109",
+        "evidence_key": "weights.MSFT:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de MSFT (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.MSFT",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E11": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "10 %",
+        "evidence_id": "E11",
+        "evidence_key": "defensive_share:portfolio_before",
+        "label_fr": "Part défensive (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "defensive_share",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids des obligations et de l'or (classes etf_bond et etf_commodity). Hypothèse de l'équipe.",
+        "unit": "pct",
+        "value": 0.1
+      },
+      "E110": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E110",
+        "evidence_key": "weights.SPY:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de SPY (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.SPY",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E111": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E111",
+        "evidence_key": "weights.XIU.TO:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de XIU.TO (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.XIU.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E112": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E112",
+        "evidence_key": "weights.AAPL:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de AAPL (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.AAPL",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E113": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E113",
+        "evidence_key": "weights.ETH-USD:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de ETH-USD (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.ETH-USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E114": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E114",
+        "evidence_key": "weights.GLD:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de GLD (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.GLD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E115": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E115",
+        "evidence_key": "weights.SHOP.TO:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de SHOP.TO (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.SHOP.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E116": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E116",
+        "evidence_key": "weights.XBB.TO:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de XBB.TO (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.XBB.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E117": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "+2,74 pts",
+        "evidence_id": "E117",
+        "evidence_key": "volatility_ann_delta:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Écart de volatilité (après moins avant) (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "volatility_ann_delta",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Volatilité après l'idée moins volatilité avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": 0.0274445611
+      },
+      "E118": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "+3,31 pts",
+        "evidence_id": "E118",
+        "evidence_key": "max_drawdown_delta:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Écart de perte maximale (après moins avant) (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_delta",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Perte maximale après l'idée moins perte maximale avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": 0.0331098499
+      },
+      "E119": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "-3 pts",
+        "evidence_id": "E119",
+        "evidence_key": "top_asset_weight_delta:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Écart du poids du plus gros actif (après moins avant) (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "top_asset_weight_delta",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids du plus gros actif après moins avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": -0.03
+      },
+      "E12": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "40 %",
+        "evidence_id": "E12",
+        "evidence_key": "weight_by_asset_class.etf_equity:portfolio_before",
+        "label_fr": "Poids de la classe d'actifs etf_equity (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_equity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.4
+      },
+      "E120": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "-1,5 pts",
+        "evidence_id": "E120",
+        "evidence_key": "defensive_share_delta:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Écart de part défensive (après moins avant) (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "defensive_share_delta",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Part défensive après moins avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": -0.015
+      },
+      "E121": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "26,4 %",
+        "evidence_id": "E121",
+        "evidence_key": "volatility_ann:variant:V1",
+        "label_fr": "Volatilité annualisée (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "volatility_ann",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Écart-type des rendements quotidiens en CAD (n - 1), multiplié par la racine de 252.",
+        "unit": "pct",
+        "value": 0.2639869684144045
+      },
+      "E122": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "41,75 %",
+        "evidence_id": "E122",
+        "evidence_key": "max_drawdown:variant:V1",
+        "label_fr": "Perte maximale historique (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Plus forte baisse entre un sommet et le creux suivant, sur les rendements quotidiens en CAD.",
+        "unit": "pct",
+        "value": 0.41747768478248604
+      },
+      "E123": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "41 748 $",
+        "evidence_id": "E123",
+        "evidence_key": "max_drawdown_cad:variant:V1",
+        "label_fr": "Perte maximale historique appliquée au capital fictif (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_cad",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Perte historique observée sur la période, appliquée au capital fictif. Ce n'est pas une prévision.",
+        "unit": "cad",
+        "value": 41747.77
+      },
+      "E124": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "2021-11-29",
+        "evidence_id": "E124",
+        "evidence_key": "max_drawdown_start:variant:V1",
+        "label_fr": "Date du sommet avant la perte maximale (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_start",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Dernier sommet de la valeur avant le creux de la perte maximale.",
+        "unit": "text",
+        "value": "2021-11-29"
+      },
+      "E125": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "2022-12-28",
+        "evidence_id": "E125",
+        "evidence_key": "max_drawdown_end:variant:V1",
+        "label_fr": "Date du creux de la perte maximale (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_end",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Date où la baisse depuis le sommet est la plus forte.",
+        "unit": "text",
+        "value": "2022-12-28"
+      },
+      "E126": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "201 jours",
+        "evidence_id": "E126",
+        "evidence_key": "recovery_days:variant:V1",
+        "label_fr": "Durée de récupération après le creux (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "recovery_days",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Jours civils entre le creux et le retour au niveau du sommet.",
+        "unit": "days",
+        "value": 201
+      },
+      "E127": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "595 jours",
+        "evidence_id": "E127",
+        "evidence_key": "underwater_days:variant:V1",
+        "label_fr": "Durée passée sous le sommet (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "underwater_days",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Jours civils entre le sommet et le retour à son niveau, ou la fin de la période si ce niveau n'est pas retrouvé.",
+        "unit": "days",
+        "value": 595
+      },
+      "E128": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "139,78 %",
+        "evidence_id": "E128",
+        "evidence_key": "total_return:variant:V1",
+        "label_fr": "Rendement cumulé sur la période (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "total_return",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Produit des (1 + rendement quotidien en CAD) moins 1.",
+        "unit": "pct",
+        "value": 1.3977617683507702
+      },
+      "E129": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "19,68 %",
+        "evidence_id": "E129",
+        "evidence_key": "return_ann:variant:V1",
+        "label_fr": "Rendement annualisé (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "return_ann",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Rendement composé ramené à un an de 252 jours de bourse, seulement si la période dure au moins un an.",
+        "unit": "pct",
+        "value": 0.19675202955672444
+      },
+      "E13": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "35 %",
+        "evidence_id": "E13",
+        "evidence_key": "weight_by_asset_class.equity:portfolio_before",
+        "label_fr": "Poids de la classe d'actifs equity (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.equity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.35
+      },
+      "E130": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "17 %",
+        "evidence_id": "E130",
+        "evidence_key": "top_asset_weight:variant:V1",
+        "label_fr": "Poids du plus gros actif (QQQ) (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "top_asset_weight",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids le plus élevé du portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.17
+      },
+      "E131": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E131",
+        "evidence_key": "defensive_share:variant:V1",
+        "label_fr": "Part défensive (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "defensive_share",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids des obligations et de l'or (classes etf_bond et etf_commodity). Hypothèse de l'équipe.",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E132": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "44,75 %",
+        "evidence_id": "E132",
+        "evidence_key": "weight_by_asset_class.equity:variant:V1",
+        "label_fr": "Poids de la classe d'actifs equity (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.equity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.4475
+      },
+      "E133": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "34 %",
+        "evidence_id": "E133",
+        "evidence_key": "weight_by_asset_class.etf_equity:variant:V1",
+        "label_fr": "Poids de la classe d'actifs etf_equity (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_equity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.34
+      },
+      "E134": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "12,75 %",
+        "evidence_id": "E134",
+        "evidence_key": "weight_by_asset_class.crypto:variant:V1",
+        "label_fr": "Poids de la classe d'actifs crypto (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.crypto",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.1275
+      },
+      "E135": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E135",
+        "evidence_key": "weight_by_asset_class.etf_bond:variant:V1",
+        "label_fr": "Poids de la classe d'actifs etf_bond (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_bond",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E136": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E136",
+        "evidence_key": "weight_by_asset_class.etf_commodity:variant:V1",
+        "label_fr": "Poids de la classe d'actifs etf_commodity (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_commodity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E137": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "29,75 %",
+        "evidence_id": "E137",
+        "evidence_key": "weight_by_sector.Information Technology:variant:V1",
+        "label_fr": "Poids du secteur Information Technology (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Information Technology",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.2975
+      },
+      "E138": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "17 %",
+        "evidence_id": "E138",
+        "evidence_key": "weight_by_sector.Broad market (U.S. growth/tech-heavy):variant:V1",
+        "label_fr": "Poids du secteur Broad market (U.S. growth/tech-heavy) (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (U.S. growth/tech-heavy)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.17
+      },
+      "E139": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "15 %",
+        "evidence_id": "E139",
+        "evidence_key": "weight_by_sector.Consumer Discretionary:variant:V1",
+        "label_fr": "Poids du secteur Consumer Discretionary (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Consumer Discretionary",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.15
+      },
+      "E14": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "15 %",
+        "evidence_id": "E14",
+        "evidence_key": "weight_by_asset_class.crypto:portfolio_before",
+        "label_fr": "Poids de la classe d'actifs crypto (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.crypto",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.15
+      },
+      "E140": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "12,75 %",
+        "evidence_id": "E140",
+        "evidence_key": "weight_by_sector.Crypto asset:variant:V1",
+        "label_fr": "Poids du secteur Crypto asset (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Crypto asset",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.1275
+      },
+      "E141": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E141",
+        "evidence_key": "weight_by_sector.Broad market (Canada):variant:V1",
+        "label_fr": "Poids du secteur Broad market (Canada) (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (Canada)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E142": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E142",
+        "evidence_key": "weight_by_sector.Broad market (U.S.):variant:V1",
+        "label_fr": "Poids du secteur Broad market (U.S.) (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (U.S.)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E143": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E143",
+        "evidence_key": "weight_by_sector.Bonds (Canada aggregate):variant:V1",
+        "label_fr": "Poids du secteur Bonds (Canada aggregate) (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Bonds (Canada aggregate)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E144": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E144",
+        "evidence_key": "weight_by_sector.Gold:variant:V1",
+        "label_fr": "Poids du secteur Gold (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Gold",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E145": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "17 %",
+        "evidence_id": "E145",
+        "evidence_key": "currency_exposure.CAD:variant:V1",
+        "label_fr": "Exposition au CAD (variante simulée)",
+        "limit_ids": [
+          "LM3",
+          "LM4"
+        ],
+        "metric": "currency_exposure.CAD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions cotées dans cette devise (devise de cotation).",
+        "unit": "pct",
+        "value": 0.17
+      },
+      "E146": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "83 %",
+        "evidence_id": "E146",
+        "evidence_key": "currency_exposure.USD:variant:V1",
+        "label_fr": "Exposition au USD (variante simulée)",
+        "limit_ids": [
+          "LM3",
+          "LM4"
+        ],
+        "metric": "currency_exposure.USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions cotées dans cette devise (devise de cotation).",
+        "unit": "pct",
+        "value": 0.83
+      },
+      "E147": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "17 %",
+        "evidence_id": "E147",
+        "evidence_key": "weights.QQQ:variant:V1",
+        "label_fr": "Poids de QQQ (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.QQQ",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.17
+      },
+      "E148": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "15 %",
+        "evidence_id": "E148",
+        "evidence_key": "weights.TSLA:variant:V1",
+        "label_fr": "Poids de TSLA (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.TSLA",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.15
+      },
+      "E149": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "12,75 %",
+        "evidence_id": "E149",
+        "evidence_key": "weights.NVDA:variant:V1",
+        "label_fr": "Poids de NVDA (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.NVDA",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.1275
+      },
+      "E15": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "5 %",
+        "evidence_id": "E15",
+        "evidence_key": "weight_by_asset_class.etf_bond:portfolio_before",
+        "label_fr": "Poids de la classe d'actifs etf_bond (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_bond",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.05
+      },
+      "E150": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E150",
+        "evidence_key": "weights.BTC-USD:variant:V1",
+        "label_fr": "Poids de BTC-USD (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.BTC-USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E151": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E151",
+        "evidence_key": "weights.MSFT:variant:V1",
+        "label_fr": "Poids de MSFT (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.MSFT",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E152": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E152",
+        "evidence_key": "weights.SPY:variant:V1",
+        "label_fr": "Poids de SPY (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.SPY",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E153": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E153",
+        "evidence_key": "weights.XIU.TO:variant:V1",
+        "label_fr": "Poids de XIU.TO (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.XIU.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E154": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E154",
+        "evidence_key": "weights.AAPL:variant:V1",
+        "label_fr": "Poids de AAPL (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.AAPL",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E155": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E155",
+        "evidence_key": "weights.ETH-USD:variant:V1",
+        "label_fr": "Poids de ETH-USD (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.ETH-USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E156": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E156",
+        "evidence_key": "weights.GLD:variant:V1",
+        "label_fr": "Poids de GLD (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.GLD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E157": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E157",
+        "evidence_key": "weights.SHOP.TO:variant:V1",
+        "label_fr": "Poids de SHOP.TO (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.SHOP.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E158": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E158",
+        "evidence_key": "weights.XBB.TO:variant:V1",
+        "label_fr": "Poids de XBB.TO (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.XBB.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E159": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "+2,74 pts",
+        "evidence_id": "E159",
+        "evidence_key": "volatility_ann_delta:variant:V1",
+        "label_fr": "Écart de volatilité (après moins avant) (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "volatility_ann_delta",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Volatilité après l'idée moins volatilité avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": 0.0274445611
+      },
+      "E16": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "5 %",
+        "evidence_id": "E16",
+        "evidence_key": "weight_by_asset_class.etf_commodity:portfolio_before",
+        "label_fr": "Poids de la classe d'actifs etf_commodity (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_commodity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.05
+      },
+      "E160": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "+3,31 pts",
+        "evidence_id": "E160",
+        "evidence_key": "max_drawdown_delta:variant:V1",
+        "label_fr": "Écart de perte maximale (après moins avant) (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_delta",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Perte maximale après l'idée moins perte maximale avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": 0.0331098499
+      },
+      "E161": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "-3 pts",
+        "evidence_id": "E161",
+        "evidence_key": "top_asset_weight_delta:variant:V1",
+        "label_fr": "Écart du poids du plus gros actif (après moins avant) (variante simulée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "top_asset_weight_delta",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids du plus gros actif après moins avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": -0.03
+      },
+      "E162": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "-1,5 pts",
+        "evidence_id": "E162",
+        "evidence_key": "defensive_share_delta:variant:V1",
+        "label_fr": "Écart de part défensive (après moins avant) (variante simulée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "defensive_share_delta",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "variant:V1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Part défensive après moins avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": -0.015
+      },
+      "E17": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "35 %",
+        "evidence_id": "E17",
+        "evidence_key": "weight_by_sector.Information Technology:portfolio_before",
+        "label_fr": "Poids du secteur Information Technology (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Information Technology",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.35
+      },
+      "E18": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "20 %",
+        "evidence_id": "E18",
+        "evidence_key": "weight_by_sector.Broad market (U.S. growth/tech-heavy):portfolio_before",
+        "label_fr": "Poids du secteur Broad market (U.S. growth/tech-heavy) (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (U.S. growth/tech-heavy)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.2
+      },
+      "E19": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "15 %",
+        "evidence_id": "E19",
+        "evidence_key": "weight_by_sector.Crypto asset:portfolio_before",
+        "label_fr": "Poids du secteur Crypto asset (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Crypto asset",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.15
+      },
+      "E2": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "38,44 %",
+        "evidence_id": "E2",
+        "evidence_key": "max_drawdown:portfolio_before",
+        "label_fr": "Perte maximale historique (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Plus forte baisse entre un sommet et le creux suivant, sur les rendements quotidiens en CAD.",
+        "unit": "pct",
+        "value": 0.3843678349086894
+      },
+      "E20": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "10 %",
+        "evidence_id": "E20",
+        "evidence_key": "weight_by_sector.Broad market (Canada):portfolio_before",
+        "label_fr": "Poids du secteur Broad market (Canada) (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (Canada)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.1
+      },
+      "E21": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "10 %",
+        "evidence_id": "E21",
+        "evidence_key": "weight_by_sector.Broad market (U.S.):portfolio_before",
+        "label_fr": "Poids du secteur Broad market (U.S.) (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (U.S.)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.1
+      },
+      "E22": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "5 %",
+        "evidence_id": "E22",
+        "evidence_key": "weight_by_sector.Bonds (Canada aggregate):portfolio_before",
+        "label_fr": "Poids du secteur Bonds (Canada aggregate) (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Bonds (Canada aggregate)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.05
+      },
+      "E23": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "5 %",
+        "evidence_id": "E23",
+        "evidence_key": "weight_by_sector.Gold:portfolio_before",
+        "label_fr": "Poids du secteur Gold (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Gold",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.05
+      },
+      "E24": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "20 %",
+        "evidence_id": "E24",
+        "evidence_key": "currency_exposure.CAD:portfolio_before",
+        "label_fr": "Exposition au CAD (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM3",
+          "LM4"
+        ],
+        "metric": "currency_exposure.CAD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions cotées dans cette devise (devise de cotation).",
+        "unit": "pct",
+        "value": 0.2
+      },
+      "E25": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "80 %",
+        "evidence_id": "E25",
+        "evidence_key": "currency_exposure.USD:portfolio_before",
+        "label_fr": "Exposition au USD (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM3",
+          "LM4"
+        ],
+        "metric": "currency_exposure.USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Somme des poids des positions cotées dans cette devise (devise de cotation).",
+        "unit": "pct",
+        "value": 0.8
+      },
+      "E26": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "20 %",
+        "evidence_id": "E26",
+        "evidence_key": "weights.QQQ:portfolio_before",
+        "label_fr": "Poids de QQQ (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.QQQ",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.2
+      },
+      "E27": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "15 %",
+        "evidence_id": "E27",
+        "evidence_key": "weights.NVDA:portfolio_before",
+        "label_fr": "Poids de NVDA (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.NVDA",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.15
+      },
+      "E28": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "10 %",
+        "evidence_id": "E28",
+        "evidence_key": "weights.BTC-USD:portfolio_before",
+        "label_fr": "Poids de BTC-USD (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.BTC-USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.1
+      },
+      "E29": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "10 %",
+        "evidence_id": "E29",
+        "evidence_key": "weights.MSFT:portfolio_before",
+        "label_fr": "Poids de MSFT (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.MSFT",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.1
+      },
+      "E3": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "38 437 $",
+        "evidence_id": "E3",
+        "evidence_key": "max_drawdown_cad:portfolio_before",
+        "label_fr": "Perte maximale historique appliquée au capital fictif (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_cad",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Perte historique observée sur la période, appliquée au capital fictif. Ce n'est pas une prévision.",
+        "unit": "cad",
+        "value": 38436.78
+      },
+      "E30": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "10 %",
+        "evidence_id": "E30",
+        "evidence_key": "weights.SPY:portfolio_before",
+        "label_fr": "Poids de SPY (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.SPY",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.1
+      },
+      "E31": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "10 %",
+        "evidence_id": "E31",
+        "evidence_key": "weights.XIU.TO:portfolio_before",
+        "label_fr": "Poids de XIU.TO (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.XIU.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.1
+      },
+      "E32": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "5 %",
+        "evidence_id": "E32",
+        "evidence_key": "weights.AAPL:portfolio_before",
+        "label_fr": "Poids de AAPL (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.AAPL",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.05
+      },
+      "E33": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "5 %",
+        "evidence_id": "E33",
+        "evidence_key": "weights.ETH-USD:portfolio_before",
+        "label_fr": "Poids de ETH-USD (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.ETH-USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.05
+      },
+      "E34": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "5 %",
+        "evidence_id": "E34",
+        "evidence_key": "weights.GLD:portfolio_before",
+        "label_fr": "Poids de GLD (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.GLD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.05
+      },
+      "E35": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "5 %",
+        "evidence_id": "E35",
+        "evidence_key": "weights.SHOP.TO:portfolio_before",
+        "label_fr": "Poids de SHOP.TO (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.SHOP.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.05
+      },
+      "E36": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "5 %",
+        "evidence_id": "E36",
+        "evidence_key": "weights.XBB.TO:portfolio_before",
+        "label_fr": "Poids de XBB.TO (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.XBB.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.05
+      },
+      "E37": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "29,13 %",
+        "evidence_id": "E37",
+        "evidence_key": "volatility_ann:portfolio_after",
+        "label_fr": "Volatilité annualisée (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "volatility_ann",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Écart-type des rendements quotidiens en CAD (n - 1), multiplié par la racine de 252.",
+        "unit": "pct",
+        "value": 0.29134377513511744
+      },
+      "E38": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "45,31 %",
+        "evidence_id": "E38",
+        "evidence_key": "max_drawdown:portfolio_after",
+        "label_fr": "Perte maximale historique (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Plus forte baisse entre un sommet et le creux suivant, sur les rendements quotidiens en CAD.",
+        "unit": "pct",
+        "value": 0.45306236465191607
+      },
+      "E39": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "45 306 $",
+        "evidence_id": "E39",
+        "evidence_key": "max_drawdown_cad:portfolio_after",
+        "label_fr": "Perte maximale historique appliquée au capital fictif (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_cad",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Perte historique observée sur la période, appliquée au capital fictif. Ce n'est pas une prévision.",
+        "unit": "cad",
+        "value": 45306.24
+      },
+      "E4": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "2021-11-29",
+        "evidence_id": "E4",
+        "evidence_key": "max_drawdown_start:portfolio_before",
+        "label_fr": "Date du sommet avant la perte maximale (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_start",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Dernier sommet de la valeur avant le creux de la perte maximale.",
+        "unit": "text",
+        "value": "2021-11-29"
+      },
+      "E40": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "2021-11-29",
+        "evidence_id": "E40",
+        "evidence_key": "max_drawdown_start:portfolio_after",
+        "label_fr": "Date du sommet avant la perte maximale (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_start",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Dernier sommet de la valeur avant le creux de la perte maximale.",
+        "unit": "text",
+        "value": "2021-11-29"
+      },
+      "E41": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "2022-12-28",
+        "evidence_id": "E41",
+        "evidence_key": "max_drawdown_end:portfolio_after",
+        "label_fr": "Date du creux de la perte maximale (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_end",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Date où la baisse depuis le sommet est la plus forte.",
+        "unit": "text",
+        "value": "2022-12-28"
+      },
+      "E42": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "321 jours",
+        "evidence_id": "E42",
+        "evidence_key": "recovery_days:portfolio_after",
+        "label_fr": "Durée de récupération après le creux (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "recovery_days",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Jours civils entre le creux et le retour au niveau du sommet.",
+        "unit": "days",
+        "value": 321
+      },
+      "E43": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "715 jours",
+        "evidence_id": "E43",
+        "evidence_key": "underwater_days:portfolio_after",
+        "label_fr": "Durée passée sous le sommet (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "underwater_days",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Jours civils entre le sommet et le retour à son niveau, ou la fin de la période si ce niveau n'est pas retrouvé.",
+        "unit": "days",
+        "value": 715
+      },
+      "E44": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "133,27 %",
+        "evidence_id": "E44",
+        "evidence_key": "total_return:portfolio_after",
+        "label_fr": "Rendement cumulé sur la période (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "total_return",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Produit des (1 + rendement quotidien en CAD) moins 1.",
+        "unit": "pct",
+        "value": 1.3326937034718056
+      },
+      "E45": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "19 %",
+        "evidence_id": "E45",
+        "evidence_key": "return_ann:portfolio_after",
+        "label_fr": "Rendement annualisé (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "return_ann",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Rendement composé ramené à un an de 252 jours de bourse, seulement si la période dure au moins un an.",
+        "unit": "pct",
+        "value": 0.1900089841769994
+      },
+      "E46": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "25 %",
+        "evidence_id": "E46",
+        "evidence_key": "top_asset_weight:portfolio_after",
+        "label_fr": "Poids du plus gros actif (TSLA) (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "top_asset_weight",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids le plus élevé du portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.25
+      },
+      "E47": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "7,5 %",
+        "evidence_id": "E47",
+        "evidence_key": "defensive_share:portfolio_after",
+        "label_fr": "Part défensive (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "defensive_share",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids des obligations et de l'or (classes etf_bond et etf_commodity). Hypothèse de l'équipe.",
+        "unit": "pct",
+        "value": 0.075
+      },
+      "E48": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "51,25 %",
+        "evidence_id": "E48",
+        "evidence_key": "weight_by_asset_class.equity:portfolio_after",
+        "label_fr": "Poids de la classe d'actifs equity (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.equity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.5125
+      },
+      "E49": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "30 %",
+        "evidence_id": "E49",
+        "evidence_key": "weight_by_asset_class.etf_equity:portfolio_after",
+        "label_fr": "Poids de la classe d'actifs etf_equity (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_equity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.3
+      },
+      "E5": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "2022-10-11",
+        "evidence_id": "E5",
+        "evidence_key": "max_drawdown_end:portfolio_before",
+        "label_fr": "Date du creux de la perte maximale (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_end",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Date où la baisse depuis le sommet est la plus forte.",
+        "unit": "text",
+        "value": "2022-10-11"
+      },
+      "E50": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "11,25 %",
+        "evidence_id": "E50",
+        "evidence_key": "weight_by_asset_class.crypto:portfolio_after",
+        "label_fr": "Poids de la classe d'actifs crypto (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.crypto",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.1125
+      },
+      "E51": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "3,75 %",
+        "evidence_id": "E51",
+        "evidence_key": "weight_by_asset_class.etf_bond:portfolio_after",
+        "label_fr": "Poids de la classe d'actifs etf_bond (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_bond",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0375
+      },
+      "E52": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "3,75 %",
+        "evidence_id": "E52",
+        "evidence_key": "weight_by_asset_class.etf_commodity:portfolio_after",
+        "label_fr": "Poids de la classe d'actifs etf_commodity (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_commodity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0375
+      },
+      "E53": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "26,25 %",
+        "evidence_id": "E53",
+        "evidence_key": "weight_by_sector.Information Technology:portfolio_after",
+        "label_fr": "Poids du secteur Information Technology (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Information Technology",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.2625
+      },
+      "E54": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "25 %",
+        "evidence_id": "E54",
+        "evidence_key": "weight_by_sector.Consumer Discretionary:portfolio_after",
+        "label_fr": "Poids du secteur Consumer Discretionary (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Consumer Discretionary",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.25
+      },
+      "E55": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "15 %",
+        "evidence_id": "E55",
+        "evidence_key": "weight_by_sector.Broad market (U.S. growth/tech-heavy):portfolio_after",
+        "label_fr": "Poids du secteur Broad market (U.S. growth/tech-heavy) (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (U.S. growth/tech-heavy)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.15
+      },
+      "E56": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "11,25 %",
+        "evidence_id": "E56",
+        "evidence_key": "weight_by_sector.Crypto asset:portfolio_after",
+        "label_fr": "Poids du secteur Crypto asset (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Crypto asset",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.1125
+      },
+      "E57": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "7,5 %",
+        "evidence_id": "E57",
+        "evidence_key": "weight_by_sector.Broad market (Canada):portfolio_after",
+        "label_fr": "Poids du secteur Broad market (Canada) (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (Canada)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.075
+      },
+      "E58": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "7,5 %",
+        "evidence_id": "E58",
+        "evidence_key": "weight_by_sector.Broad market (U.S.):portfolio_after",
+        "label_fr": "Poids du secteur Broad market (U.S.) (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (U.S.)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.075
+      },
+      "E59": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "3,75 %",
+        "evidence_id": "E59",
+        "evidence_key": "weight_by_sector.Bonds (Canada aggregate):portfolio_after",
+        "label_fr": "Poids du secteur Bonds (Canada aggregate) (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Bonds (Canada aggregate)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0375
+      },
+      "E6": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "275 jours",
+        "evidence_id": "E6",
+        "evidence_key": "recovery_days:portfolio_before",
+        "label_fr": "Durée de récupération après le creux (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "recovery_days",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Jours civils entre le creux et le retour au niveau du sommet.",
+        "unit": "days",
+        "value": 275
+      },
+      "E60": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "3,75 %",
+        "evidence_id": "E60",
+        "evidence_key": "weight_by_sector.Gold:portfolio_after",
+        "label_fr": "Poids du secteur Gold (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Gold",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0375
+      },
+      "E61": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "15 %",
+        "evidence_id": "E61",
+        "evidence_key": "currency_exposure.CAD:portfolio_after",
+        "label_fr": "Exposition au CAD (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM3",
+          "LM4"
+        ],
+        "metric": "currency_exposure.CAD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions cotées dans cette devise (devise de cotation).",
+        "unit": "pct",
+        "value": 0.15
+      },
+      "E62": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "85 %",
+        "evidence_id": "E62",
+        "evidence_key": "currency_exposure.USD:portfolio_after",
+        "label_fr": "Exposition au USD (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM3",
+          "LM4"
+        ],
+        "metric": "currency_exposure.USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions cotées dans cette devise (devise de cotation).",
+        "unit": "pct",
+        "value": 0.85
+      },
+      "E63": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "25 %",
+        "evidence_id": "E63",
+        "evidence_key": "weights.TSLA:portfolio_after",
+        "label_fr": "Poids de TSLA (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.TSLA",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.25
+      },
+      "E64": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "15 %",
+        "evidence_id": "E64",
+        "evidence_key": "weights.QQQ:portfolio_after",
+        "label_fr": "Poids de QQQ (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.QQQ",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.15
+      },
+      "E65": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "11,25 %",
+        "evidence_id": "E65",
+        "evidence_key": "weights.NVDA:portfolio_after",
+        "label_fr": "Poids de NVDA (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.NVDA",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.1125
+      },
+      "E66": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "7,5 %",
+        "evidence_id": "E66",
+        "evidence_key": "weights.BTC-USD:portfolio_after",
+        "label_fr": "Poids de BTC-USD (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.BTC-USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.075
+      },
+      "E67": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "7,5 %",
+        "evidence_id": "E67",
+        "evidence_key": "weights.MSFT:portfolio_after",
+        "label_fr": "Poids de MSFT (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.MSFT",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.075
+      },
+      "E68": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "7,5 %",
+        "evidence_id": "E68",
+        "evidence_key": "weights.SPY:portfolio_after",
+        "label_fr": "Poids de SPY (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.SPY",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.075
+      },
+      "E69": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "7,5 %",
+        "evidence_id": "E69",
+        "evidence_key": "weights.XIU.TO:portfolio_after",
+        "label_fr": "Poids de XIU.TO (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.XIU.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.075
+      },
+      "E7": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "591 jours",
+        "evidence_id": "E7",
+        "evidence_key": "underwater_days:portfolio_before",
+        "label_fr": "Durée passée sous le sommet (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "underwater_days",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Jours civils entre le sommet et le retour à son niveau, ou la fin de la période si ce niveau n'est pas retrouvé.",
+        "unit": "days",
+        "value": 591
+      },
+      "E70": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "3,75 %",
+        "evidence_id": "E70",
+        "evidence_key": "weights.AAPL:portfolio_after",
+        "label_fr": "Poids de AAPL (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.AAPL",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0375
+      },
+      "E71": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "3,75 %",
+        "evidence_id": "E71",
+        "evidence_key": "weights.ETH-USD:portfolio_after",
+        "label_fr": "Poids de ETH-USD (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.ETH-USD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0375
+      },
+      "E72": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "3,75 %",
+        "evidence_id": "E72",
+        "evidence_key": "weights.GLD:portfolio_after",
+        "label_fr": "Poids de GLD (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.GLD",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0375
+      },
+      "E73": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "3,75 %",
+        "evidence_id": "E73",
+        "evidence_key": "weights.SHOP.TO:portfolio_after",
+        "label_fr": "Poids de SHOP.TO (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.SHOP.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0375
+      },
+      "E74": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "3,75 %",
+        "evidence_id": "E74",
+        "evidence_key": "weights.XBB.TO:portfolio_after",
+        "label_fr": "Poids de XBB.TO (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "weights.XBB.TO",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids de la position dans le portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.0375
+      },
+      "E75": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "+5,48 pts",
+        "evidence_id": "E75",
+        "evidence_key": "volatility_ann_delta:portfolio_after",
+        "label_fr": "Écart de volatilité (après moins avant) (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "volatility_ann_delta",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Volatilité après l'idée moins volatilité avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": 0.0548013678
+      },
+      "E76": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "+6,87 pts",
+        "evidence_id": "E76",
+        "evidence_key": "max_drawdown_delta:portfolio_after",
+        "label_fr": "Écart de perte maximale (après moins avant) (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_delta",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Perte maximale après l'idée moins perte maximale avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": 0.0686945297
+      },
+      "E77": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "+5 pts",
+        "evidence_id": "E77",
+        "evidence_key": "top_asset_weight_delta:portfolio_after",
+        "label_fr": "Écart du poids du plus gros actif (après moins avant) (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "top_asset_weight_delta",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids du plus gros actif après moins avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": 0.05
+      },
+      "E78": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "-2,5 pts",
+        "evidence_id": "E78",
+        "evidence_key": "defensive_share_delta:portfolio_after",
+        "label_fr": "Écart de part défensive (après moins avant) (portefeuille après l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "defensive_share_delta",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "portfolio_after",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Part défensive après moins avant, en points de pourcentage.",
+        "unit": "pct",
+        "value": -0.025
+      },
+      "E79": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "26,4 %",
+        "evidence_id": "E79",
+        "evidence_key": "volatility_ann:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Volatilité annualisée (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "volatility_ann",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Écart-type des rendements quotidiens en CAD (n - 1), multiplié par la racine de 252.",
+        "unit": "pct",
+        "value": 0.2639869684144045
+      },
+      "E8": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "144,47 %",
+        "evidence_id": "E8",
+        "evidence_key": "total_return:portfolio_before",
+        "label_fr": "Rendement cumulé sur la période (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "total_return",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Produit des (1 + rendement quotidien en CAD) moins 1.",
+        "unit": "pct",
+        "value": 1.4446898195711508
+      },
+      "E80": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "41,75 %",
+        "evidence_id": "E80",
+        "evidence_key": "max_drawdown:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Perte maximale historique (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Plus forte baisse entre un sommet et le creux suivant, sur les rendements quotidiens en CAD.",
+        "unit": "pct",
+        "value": 0.41747768478248604
+      },
+      "E81": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "41 748 $",
+        "evidence_id": "E81",
+        "evidence_key": "max_drawdown_cad:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Perte maximale historique appliquée au capital fictif (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_cad",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Perte historique observée sur la période, appliquée au capital fictif. Ce n'est pas une prévision.",
+        "unit": "cad",
+        "value": 41747.77
+      },
+      "E82": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "2021-11-29",
+        "evidence_id": "E82",
+        "evidence_key": "max_drawdown_start:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Date du sommet avant la perte maximale (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_start",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Dernier sommet de la valeur avant le creux de la perte maximale.",
+        "unit": "text",
+        "value": "2021-11-29"
+      },
+      "E83": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "2022-12-28",
+        "evidence_id": "E83",
+        "evidence_key": "max_drawdown_end:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Date du creux de la perte maximale (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "max_drawdown_end",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Date où la baisse depuis le sommet est la plus forte.",
+        "unit": "text",
+        "value": "2022-12-28"
+      },
+      "E84": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "201 jours",
+        "evidence_id": "E84",
+        "evidence_key": "recovery_days:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Durée de récupération après le creux (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "recovery_days",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Jours civils entre le creux et le retour au niveau du sommet.",
+        "unit": "days",
+        "value": 201
+      },
+      "E85": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "595 jours",
+        "evidence_id": "E85",
+        "evidence_key": "underwater_days:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Durée passée sous le sommet (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "underwater_days",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Jours civils entre le sommet et le retour à son niveau, ou la fin de la période si ce niveau n'est pas retrouvé.",
+        "unit": "days",
+        "value": 595
+      },
+      "E86": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "139,78 %",
+        "evidence_id": "E86",
+        "evidence_key": "total_return:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Rendement cumulé sur la période (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "total_return",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Produit des (1 + rendement quotidien en CAD) moins 1.",
+        "unit": "pct",
+        "value": 1.3977617683507702
+      },
+      "E87": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "19,68 %",
+        "evidence_id": "E87",
+        "evidence_key": "return_ann:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Rendement annualisé (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "return_ann",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Rendement composé ramené à un an de 252 jours de bourse, seulement si la période dure au moins un an.",
+        "unit": "pct",
+        "value": 0.19675202955672444
+      },
+      "E88": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "17 %",
+        "evidence_id": "E88",
+        "evidence_key": "top_asset_weight:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids du plus gros actif (QQQ) (simulation explorée)",
+        "limit_ids": [
+          "LM4"
+        ],
+        "metric": "top_asset_weight",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids le plus élevé du portefeuille fictif.",
+        "unit": "pct",
+        "value": 0.17
+      },
+      "E89": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E89",
+        "evidence_key": "defensive_share:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Part défensive (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "defensive_share",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Poids des obligations et de l'or (classes etf_bond et etf_commodity). Hypothèse de l'équipe.",
+        "unit": "pct",
+        "value": 0.085
+      },
+      "E9": {
+        "as_of": "2026-11-12",
+        "currency": "CAD",
+        "display_value": "20,15 %",
+        "evidence_id": "E9",
+        "evidence_key": "return_ann:portfolio_before",
+        "label_fr": "Rendement annualisé (portefeuille avant l'ajout)",
+        "limit_ids": [
+          "LM1",
+          "LM2",
+          "LM3",
+          "LM4",
+          "LM5"
+        ],
+        "metric": "return_ann",
+        "n_observations": 1227,
+        "period_end": "2026-11-12",
+        "period_start": "2021-11-12",
+        "qualifier": null,
+        "source_ids": [
+          "prices_daily.csv",
+          "fx_usdcad_daily.csv"
+        ],
+        "subject": "portfolio_before",
+        "tool_name": "analyze_portfolio",
+        "transformation": "Rendement composé ramené à un an de 252 jours de bourse, seulement si la période dure au moins un an.",
+        "unit": "pct",
+        "value": 0.2015255157855631
+      },
+      "E90": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "44,75 %",
+        "evidence_id": "E90",
+        "evidence_key": "weight_by_asset_class.equity:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de la classe d'actifs equity (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.equity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.4475
+      },
+      "E91": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "34 %",
+        "evidence_id": "E91",
+        "evidence_key": "weight_by_asset_class.etf_equity:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de la classe d'actifs etf_equity (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_equity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.34
+      },
+      "E92": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "12,75 %",
+        "evidence_id": "E92",
+        "evidence_key": "weight_by_asset_class.crypto:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de la classe d'actifs crypto (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.crypto",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.1275
+      },
+      "E93": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E93",
+        "evidence_key": "weight_by_asset_class.etf_bond:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de la classe d'actifs etf_bond (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_bond",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E94": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "4,25 %",
+        "evidence_id": "E94",
+        "evidence_key": "weight_by_asset_class.etf_commodity:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids de la classe d'actifs etf_commodity (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_asset_class.etf_commodity",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de cette classe (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.0425
+      },
+      "E95": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "29,75 %",
+        "evidence_id": "E95",
+        "evidence_key": "weight_by_sector.Information Technology:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids du secteur Information Technology (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Information Technology",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.2975
+      },
+      "E96": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "17 %",
+        "evidence_id": "E96",
+        "evidence_key": "weight_by_sector.Broad market (U.S. growth/tech-heavy):explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids du secteur Broad market (U.S. growth/tech-heavy) (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (U.S. growth/tech-heavy)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.17
+      },
+      "E97": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "15 %",
+        "evidence_id": "E97",
+        "evidence_key": "weight_by_sector.Consumer Discretionary:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids du secteur Consumer Discretionary (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Consumer Discretionary",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.15
+      },
+      "E98": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "12,75 %",
+        "evidence_id": "E98",
+        "evidence_key": "weight_by_sector.Crypto asset:explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids du secteur Crypto asset (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Crypto asset",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.1275
+      },
+      "E99": {
+        "as_of": "2026-11-12",
+        "currency": null,
+        "display_value": "8,5 %",
+        "evidence_id": "E99",
+        "evidence_key": "weight_by_sector.Broad market (Canada):explored:simulate_portfolio_change-54819dd1",
+        "label_fr": "Poids du secteur Broad market (Canada) (simulation explorée)",
+        "limit_ids": [
+          "LM1",
+          "LM4"
+        ],
+        "metric": "weight_by_sector.Broad market (Canada)",
+        "n_observations": null,
+        "period_end": null,
+        "period_start": null,
+        "qualifier": null,
+        "source_ids": [
+          "assets_universe.csv"
+        ],
+        "subject": "explored:simulate_portfolio_change-54819dd1",
+        "tool_name": "simulate_portfolio_change",
+        "transformation": "Somme des poids des positions de ce secteur (univers des organisateurs).",
+        "unit": "pct",
+        "value": 0.085
+      }
+    },
+    "governance_after": {
+      "checks": [
+        {
+          "check_id": "G1",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E46"
+          ],
+          "label_fr": "Concentration par actif",
+          "limit_threshold": 0.5,
+          "margin": 0.1,
+          "missing_reason": null,
+          "rule_id": "R1",
+          "rule_type": "max_single_asset_weight",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.25,
+          "warn_threshold": 0.35
+        },
+        {
+          "check_id": "G2",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E37"
+          ],
+          "label_fr": "Volatilité annuelle",
+          "limit_threshold": 0.45,
+          "margin": 0.008656,
+          "missing_reason": null,
+          "rule_id": "R2",
+          "rule_type": "max_portfolio_volatility",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.29134377513511744,
+          "warn_threshold": 0.3
+        },
+        {
+          "check_id": "G3",
+          "counterfactual": {
+            "compliant_at_or_below": 0.1,
+            "display_value": "10 %",
+            "parameter": "target_weight"
+          },
+          "evidence_ids": [
+            "E38"
+          ],
+          "label_fr": "Perte maximale historique",
+          "limit_threshold": 0.65,
+          "margin": 0.196938,
+          "missing_reason": null,
+          "rule_id": "R3",
+          "rule_type": "max_portfolio_drawdown",
+          "status": "tension",
+          "unit": "pct",
+          "value": 0.45306236465191607,
+          "warn_threshold": 0.4
+        },
+        {
+          "check_id": "G4",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E47"
+          ],
+          "label_fr": "Part défensive minimale",
+          "limit_threshold": 0.0,
+          "margin": 0.025,
+          "missing_reason": null,
+          "rule_id": "R4",
+          "rule_type": "min_defensive_share",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.075,
+          "warn_threshold": 0.05
+        },
+        {
+          "check_id": "G5",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E50"
+          ],
+          "label_fr": "Concentration en cryptoactifs",
+          "limit_threshold": 0.35,
+          "margin": 0.0875,
+          "missing_reason": null,
+          "rule_id": "R5",
+          "rule_type": "max_asset_class_weight",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.1125,
+          "warn_threshold": 0.2
+        },
+        {
+          "check_id": "G6",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E48"
+          ],
+          "label_fr": "Concentration en actions individuelles",
+          "limit_threshold": 0.85,
+          "margin": 0.1875,
+          "missing_reason": null,
+          "rule_id": "R6",
+          "rule_type": "max_asset_class_weight",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.5125,
+          "warn_threshold": 0.7
+        }
+      ],
+      "overall_status": "tension",
+      "profile_id": "amira",
+      "subject": "portfolio_after"
+    },
+    "governance_before": {
+      "checks": [
+        {
+          "check_id": "G1",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E10"
+          ],
+          "label_fr": "Concentration par actif",
+          "limit_threshold": 0.5,
+          "margin": 0.15,
+          "missing_reason": null,
+          "rule_id": "R1",
+          "rule_type": "max_single_asset_weight",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.2,
+          "warn_threshold": 0.35
+        },
+        {
+          "check_id": "G2",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E1"
+          ],
+          "label_fr": "Volatilité annuelle",
+          "limit_threshold": 0.45,
+          "margin": 0.063458,
+          "missing_reason": null,
+          "rule_id": "R2",
+          "rule_type": "max_portfolio_volatility",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.23654240731875714,
+          "warn_threshold": 0.3
+        },
+        {
+          "check_id": "G3",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E2"
+          ],
+          "label_fr": "Perte maximale historique",
+          "limit_threshold": 0.65,
+          "margin": 0.015632,
+          "missing_reason": null,
+          "rule_id": "R3",
+          "rule_type": "max_portfolio_drawdown",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.3843678349086894,
+          "warn_threshold": 0.4
+        },
+        {
+          "check_id": "G4",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E11"
+          ],
+          "label_fr": "Part défensive minimale",
+          "limit_threshold": 0.0,
+          "margin": 0.05,
+          "missing_reason": null,
+          "rule_id": "R4",
+          "rule_type": "min_defensive_share",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.1,
+          "warn_threshold": 0.05
+        },
+        {
+          "check_id": "G5",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E14"
+          ],
+          "label_fr": "Concentration en cryptoactifs",
+          "limit_threshold": 0.35,
+          "margin": 0.05,
+          "missing_reason": null,
+          "rule_id": "R5",
+          "rule_type": "max_asset_class_weight",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.15,
+          "warn_threshold": 0.2
+        },
+        {
+          "check_id": "G6",
+          "counterfactual": null,
+          "evidence_ids": [
+            "E13"
+          ],
+          "label_fr": "Concentration en actions individuelles",
+          "limit_threshold": 0.85,
+          "margin": 0.35,
+          "missing_reason": null,
+          "rule_id": "R6",
+          "rule_type": "max_asset_class_weight",
+          "status": "compliant",
+          "unit": "pct",
+          "value": 0.35,
+          "warn_threshold": 0.7
+        }
+      ],
+      "overall_status": "compliant",
+      "profile_id": "amira",
+      "subject": "portfolio_before"
+    },
+    "idea": {
+      "funding_source": "pro_rata",
+      "funding_ticker": null,
+      "target_weight": 0.25,
+      "ticker": "TSLA"
+    },
+    "is_fixture": false,
+    "limits": [
+      {
+        "limit_id": "LM1",
+        "text_novice": "Les actifs étudiés ont été choisis à la fin de la période, parmi des noms qui sont aujourd'hui de grandes entreprises ou des fonds connus. Les résultats passés peuvent donc paraître meilleurs que ceux d'un choix fait au début de la période.",
+        "text_pro": "Biais du survivant : l'univers a été constitué à la fin de la fenêtre à partir de titres de grande taille à cette date. Les statistiques historiques sont biaisées vers le haut par rapport à un univers fixé au début de la fenêtre. Secteurs et libellés sont ceux d'aujourd'hui.",
+        "topic": "survivorship_bias"
+      },
+      {
+        "limit_id": "LM2",
+        "text_novice": "L'historique couvre seulement cinq ans et contient une seule grande baisse des marchés. Ce qui ne s'est pas produit pendant ces cinq ans n'apparaît pas dans les chiffres, et le passé ne dit pas ce qui arrivera. La volatilité n'est qu'un indicateur de risque parmi d'autres : l'horizon, la diversification et les préférences comptent aussi.",
+        "text_pro": "Fenêtre d'historique limitée à cinq ans : peu d'observations indépendantes et un seul épisode de baisse marquée. La volatilité et la perte maximale dépendent de cette fenêtre. Ces mesures décrivent le passé et ne constituent pas une projection. La volatilité est un indicateur de risque parmi d'autres, au même titre que l'horizon, la diversification et les préférences.",
+        "topic": "limited_history"
+      },
+      {
+        "limit_id": "LM3",
+        "text_novice": "Les actifs américains sont cotés en dollars américains et ceux de la Bourse de Toronto en dollars canadiens. Les montants sont convertis en dollars canadiens au taux de la Banque du Canada. Les jours sans cotation commune sont écartés et les cryptomonnaies, qui s'échangent tous les jours, sont ramenées au même calendrier. Chaque chiffre indique sa période et sa devise.",
+        "text_pro": "Conversion en dollars canadiens au taux USD/CAD de la Banque du Canada, reporté en avant les jours sans publication. Calendrier commun : jours où tous les actifs hors crypto ont un prix, crypto ramenée à ce calendrier, journées crypto en UTC. Seuls les rendements sont utilisés, les niveaux de prix ajustés étant rétro-ajustés. Aucune donnée postérieure à la date d'analyse.",
+        "topic": "dates_and_currencies"
+      },
+      {
+        "limit_id": "LM4",
+        "text_novice": "La simulation calcule ce que l'idée aurait donné dans le passé, avec des parts gardées identiques chaque jour. Les frais, les impôts et les coûts d'exécution ne sont pas pris en compte. Les seuils du profil sont des hypothèses de l'équipe, pas des règles officielles.",
+        "text_pro": "Hypothèses : poids fixes rééquilibrés chaque jour, rendements historiques recalculés avec les poids de l'idée, capital fictif, aucun frais, impôt ni coût d'exécution. Les seuils des règles sont des hypothèses de l'équipe, réglables, et non des normes.",
+        "topic": "simulation_assumptions"
+      },
+      {
+        "limit_id": "LM5",
+        "text_novice": "Les données viennent de sources publiques gratuites, sans certification officielle, et peuvent contenir des erreurs ou des trous. Aucune note ESG, aucune nouvelle et aucune donnée sur les comptes des entreprises ne sont incluses, sauf preuve datée citée. Quand une donnée manque, le résultat affiché est : information manquante, jamais une valeur devinée.",
+        "text_pro": "Prix : Yahoo Finance via yfinance, non certifiés par une bourse, ajustés des dividendes et des fractionnements. Taux de change et taux directeurs : Banque du Canada. Séries FRED : valeurs révisées, non les premières publications. Aucune note ESG, nouvelle ni donnée fondamentale dans les données de base. Donnée absente : statut information manquante, aucune valeur par défaut.",
+        "topic": "data_quality_availability"
+      }
+    ],
+    "mode": "bedrock",
+    "portfolio_before": {
+      "base_currency": "CAD",
+      "is_fictional": true,
+      "label_fr": "Portefeuille fictif d'Amira",
+      "portfolio_id": "portfolio_amira",
+      "positions": [
+        {
+          "ticker": "NVDA",
+          "weight": 0.15
+        },
+        {
+          "ticker": "QQQ",
+          "weight": 0.2
+        },
+        {
+          "ticker": "MSFT",
+          "weight": 0.1
+        },
+        {
+          "ticker": "AAPL",
+          "weight": 0.05
+        },
+        {
+          "ticker": "SHOP.TO",
+          "weight": 0.05
+        },
+        {
+          "ticker": "XIU.TO",
+          "weight": 0.1
+        },
+        {
+          "ticker": "SPY",
+          "weight": 0.1
+        },
+        {
+          "ticker": "BTC-USD",
+          "weight": 0.1
+        },
+        {
+          "ticker": "ETH-USD",
+          "weight": 0.05
+        },
+        {
+          "ticker": "XBB.TO",
+          "weight": 0.05
+        },
+        {
+          "ticker": "GLD",
+          "weight": 0.05
+        }
+      ]
+    },
+    "profile": {
+      "capital_cad": 100000.0,
+      "crypto_allowed": true,
+      "default_level": "pro",
+      "display_name": "Amira",
+      "esg_preference": "none",
+      "experience": "intermediate",
+      "horizon_years_max": 30,
+      "horizon_years_min": 15,
+      "is_fictional": true,
+      "objective": "Croissance à long terme avec diversification",
+      "profile_id": "amira",
+      "risk_tolerance": "high",
+      "rules": [
+        {
+          "direction": "max",
+          "is_assumption": true,
+          "label_fr": "Concentration par actif",
+          "limit_threshold": 0.5,
+          "origin": "persona",
+          "params": {},
+          "rule_id": "R1",
+          "rule_type": "max_single_asset_weight",
+          "unit": "pct",
+          "warn_threshold": 0.35
+        },
+        {
+          "direction": "max",
+          "is_assumption": true,
+          "label_fr": "Volatilité annuelle",
+          "limit_threshold": 0.45,
+          "origin": "persona",
+          "params": {},
+          "rule_id": "R2",
+          "rule_type": "max_portfolio_volatility",
+          "unit": "pct",
+          "warn_threshold": 0.3
+        },
+        {
+          "direction": "max",
+          "is_assumption": true,
+          "label_fr": "Perte maximale historique",
+          "limit_threshold": 0.65,
+          "origin": "persona",
+          "params": {},
+          "rule_id": "R3",
+          "rule_type": "max_portfolio_drawdown",
+          "unit": "pct",
+          "warn_threshold": 0.4
+        },
+        {
+          "direction": "min",
+          "is_assumption": true,
+          "label_fr": "Part défensive minimale",
+          "limit_threshold": 0.0,
+          "origin": "persona",
+          "params": {},
+          "rule_id": "R4",
+          "rule_type": "min_defensive_share",
+          "unit": "pct",
+          "warn_threshold": 0.05
+        },
+        {
+          "direction": "max",
+          "is_assumption": true,
+          "label_fr": "Concentration en cryptoactifs",
+          "limit_threshold": 0.35,
+          "origin": "persona",
+          "params": {
+            "asset_class": "crypto"
+          },
+          "rule_id": "R5",
+          "rule_type": "max_asset_class_weight",
+          "unit": "pct",
+          "warn_threshold": 0.2
+        },
+        {
+          "direction": "max",
+          "is_assumption": true,
+          "label_fr": "Concentration en actions individuelles",
+          "limit_threshold": 0.85,
+          "origin": "persona",
+          "params": {
+            "asset_class": "equity"
+          },
+          "rule_id": "R6",
+          "rule_type": "max_asset_class_weight",
+          "unit": "pct",
+          "warn_threshold": 0.7
+        }
+      ]
+    },
+    "run_id": "821b79953d214923",
+    "snapshot_after": {
+      "currency_exposure": {
+        "CAD": 0.15,
+        "USD": 0.85
+      },
+      "defensive_share": 0.075,
+      "largest_correlated_group_weight": null,
+      "max_drawdown": 0.45306236465191607,
+      "max_drawdown_end": "2022-12-28",
+      "max_drawdown_start": "2021-11-29",
+      "recovery_days": 321,
+      "subject": "portfolio_after",
+      "top_asset": "TSLA",
+      "top_asset_weight": 0.25,
+      "volatility_ann": 0.29134377513511744,
+      "weight_by_asset_class": {
+        "crypto": 0.1125,
+        "equity": 0.5125,
+        "etf_bond": 0.0375,
+        "etf_commodity": 0.0375,
+        "etf_equity": 0.3
+      },
+      "weight_by_sector": {
+        "Bonds (Canada aggregate)": 0.0375,
+        "Broad market (Canada)": 0.075,
+        "Broad market (U.S. growth/tech-heavy)": 0.15,
+        "Broad market (U.S.)": 0.075,
+        "Consumer Discretionary": 0.25,
+        "Crypto asset": 0.1125,
+        "Gold": 0.0375,
+        "Information Technology": 0.2625
+      },
+      "weights": {
+        "AAPL": 0.0375,
+        "BTC-USD": 0.075,
+        "ETH-USD": 0.0375,
+        "GLD": 0.0375,
+        "MSFT": 0.075,
+        "NVDA": 0.1125,
+        "QQQ": 0.15,
+        "SHOP.TO": 0.0375,
+        "SPY": 0.075,
+        "TSLA": 0.25,
+        "XBB.TO": 0.0375,
+        "XIU.TO": 0.075
+      }
+    },
+    "snapshot_before": {
+      "currency_exposure": {
+        "CAD": 0.2,
+        "USD": 0.8
+      },
+      "defensive_share": 0.1,
+      "largest_correlated_group_weight": null,
+      "max_drawdown": 0.3843678349086894,
+      "max_drawdown_end": "2022-10-11",
+      "max_drawdown_start": "2021-11-29",
+      "recovery_days": 275,
+      "subject": "portfolio_before",
+      "top_asset": "QQQ",
+      "top_asset_weight": 0.2,
+      "volatility_ann": 0.23654240731875714,
+      "weight_by_asset_class": {
+        "crypto": 0.15,
+        "equity": 0.35,
+        "etf_bond": 0.05,
+        "etf_commodity": 0.05,
+        "etf_equity": 0.4
+      },
+      "weight_by_sector": {
+        "Bonds (Canada aggregate)": 0.05,
+        "Broad market (Canada)": 0.1,
+        "Broad market (U.S. growth/tech-heavy)": 0.2,
+        "Broad market (U.S.)": 0.1,
+        "Crypto asset": 0.15,
+        "Gold": 0.05,
+        "Information Technology": 0.35
+      },
+      "weights": {
+        "AAPL": 0.05,
+        "BTC-USD": 0.1,
+        "ETH-USD": 0.05,
+        "GLD": 0.05,
+        "MSFT": 0.1,
+        "NVDA": 0.15,
+        "QQQ": 0.2,
+        "SHOP.TO": 0.05,
+        "SPY": 0.1,
+        "XBB.TO": 0.05,
+        "XIU.TO": 0.1
+      }
+    },
+    "submission": {
+      "highlight_evidence_ids": [
+        "E38",
+        "E80"
+      ],
+      "understood_idea": {
+        "funding_source": "pro_rata",
+        "funding_ticker": null,
+        "target_weight": 0.25,
+        "ticker": "TSLA"
+      },
+      "unsupported_requests": [],
+      "variants": [
+        {
+          "idea": {
+            "funding_source": "pro_rata",
+            "funding_ticker": null,
+            "target_weight": 0.15,
+            "ticker": "TSLA"
+          },
+          "reason_code": "reduce_weight"
+        }
+      ]
+    },
+    "trace": [
+      {
+        "actor": "agent",
+        "details": {
+          "mode_effective": "bedrock",
+          "mode_requested": "bedrock",
+          "stop_reason": "submitted",
+          "tool_calls": [
+            {
+              "evidence_ids": [
+                "E1",
+                "E2",
+                "E3",
+                "E4",
+                "E5",
+                "E6",
+                "E7",
+                "E8",
+                "E9",
+                "E10",
+                "E11",
+                "E12",
+                "E13",
+                "E14",
+                "E15",
+                "E16",
+                "E17",
+                "E18",
+                "E19",
+                "E20",
+                "E21",
+                "E22",
+                "E23",
+                "E24",
+                "E25",
+                "E26",
+                "E27",
+                "E28",
+                "E29",
+                "E30",
+                "E31",
+                "E32",
+                "E33",
+                "E34",
+                "E35",
+                "E36"
+              ],
+              "params": {},
+              "status": "ok",
+              "tool_name": "analyze_portfolio"
+            },
+            {
+              "evidence_ids": [
+                "E37",
+                "E38",
+                "E39",
+                "E40",
+                "E41",
+                "E42",
+                "E43",
+                "E44",
+                "E45",
+                "E46",
+                "E47",
+                "E48",
+                "E49",
+                "E50",
+                "E51",
+                "E52",
+                "E53",
+                "E54",
+                "E55",
+                "E56",
+                "E57",
+                "E58",
+                "E59",
+                "E60",
+                "E61",
+                "E62",
+                "E63",
+                "E64",
+                "E65",
+                "E66",
+                "E67",
+                "E68",
+                "E69",
+                "E70",
+                "E71",
+                "E72",
+                "E73",
+                "E74",
+                "E75",
+                "E76",
+                "E77",
+                "E78"
+              ],
+              "params": {
+                "funding_source": "pro_rata",
+                "funding_ticker": null,
+                "target_weight": 0.25,
+                "ticker": "TSLA"
+              },
+              "status": "ok",
+              "tool_name": "simulate_portfolio_change"
+            },
+            {
+              "evidence_ids": [
+                "E79",
+                "E80",
+                "E81",
+                "E82",
+                "E83",
+                "E84",
+                "E85",
+                "E86",
+                "E87",
+                "E88",
+                "E89",
+                "E90",
+                "E91",
+                "E92",
+                "E93",
+                "E94",
+                "E95",
+                "E96",
+                "E97",
+                "E98",
+                "E99",
+                "E100",
+                "E101",
+                "E102",
+                "E103",
+                "E104",
+                "E105",
+                "E106",
+                "E107",
+                "E108",
+                "E109",
+                "E110",
+                "E111",
+                "E112",
+                "E113",
+                "E114",
+                "E115",
+                "E116",
+                "E117",
+                "E118",
+                "E119",
+                "E120"
+              ],
+              "params": {
+                "funding_source": "pro_rata",
+                "funding_ticker": null,
+                "target_weight": 0.15,
+                "ticker": "TSLA"
+              },
+              "status": "ok",
+              "tool_name": "simulate_portfolio_change"
+            },
+            {
+              "evidence_ids": [],
+              "params": {
+                "funding_source": "from_ticker",
+                "funding_ticker": "NVDA",
+                "target_weight": 0.25,
+                "ticker": "TSLA"
+              },
+              "status": "error",
+              "tool_name": "simulate_portfolio_change"
+            },
+            {
+              "evidence_ids": [
+                "E121",
+                "E122",
+                "E123",
+                "E124",
+                "E125",
+                "E126",
+                "E127",
+                "E128",
+                "E129",
+                "E130",
+                "E131",
+                "E132",
+                "E133",
+                "E134",
+                "E135",
+                "E136",
+                "E137",
+                "E138",
+                "E139",
+                "E140",
+                "E141",
+                "E142",
+                "E143",
+                "E144",
+                "E145",
+                "E146",
+                "E147",
+                "E148",
+                "E149",
+                "E150",
+                "E151",
+                "E152",
+                "E153",
+                "E154",
+                "E155",
+                "E156",
+                "E157",
+                "E158",
+                "E159",
+                "E160",
+                "E161",
+                "E162"
+              ],
+              "params": {
+                "funding_source": "pro_rata",
+                "funding_ticker": null,
+                "target_weight": 0.15,
+                "ticker": "TSLA"
+              },
+              "status": "ok",
+              "tool_name": "simulate_portfolio_change"
+            }
+          ],
+          "turns": 3
+        },
+        "duration_ms": 7514,
+        "model_id": "us.anthropic.claude-haiku-5-5",
+        "name": "analysis",
+        "status": "ok",
+        "step": 1
+      },
+      {
+        "actor": "code",
+        "details": {
+          "checks": [
+            {
+              "check_id": "G1",
+              "margin": 0.1,
+              "status": "compliant"
+            },
+            {
+              "check_id": "G2",
+              "margin": 0.008656,
+              "status": "compliant"
+            },
+            {
+              "check_id": "G3",
+              "margin": 0.196938,
+              "status": "tension"
+            },
+            {
+              "check_id": "G4",
+              "margin": 0.025,
+              "status": "compliant"
+            },
+            {
+              "check_id": "G5",
+              "margin": 0.0875,
+              "status": "compliant"
+            },
+            {
+              "check_id": "G6",
+              "margin": 0.1875,
+              "status": "compliant"
+            }
+          ],
+          "overall_after": "tension",
+          "overall_before": "compliant",
+          "variants": [
+            {
+              "overall_status": "tension",
+              "variant_id": "V1"
+            }
+          ]
+        },
+        "duration_ms": 107,
+        "model_id": null,
+        "name": "governance",
+        "status": "ok",
+        "step": 2
+      },
+      {
+        "actor": "code",
+        "details": {
+          "brief_id": "brief-472f1a9758b4ef2d",
+          "level": "pro",
+          "limit_ids": [
+            "LM1",
+            "LM2",
+            "LM3",
+            "LM4",
+            "LM5"
+          ],
+          "ranked_factors": [
+            "G3"
+          ],
+          "trace_saved": {
+            "location": "traces/2026-11-15/821b79953d214923.json",
+            "reason": null,
+            "saved": true
+          }
+        },
+        "duration_ms": 0,
+        "model_id": null,
+        "name": "brief",
+        "status": "ok",
+        "step": 3
+      }
+    ],
+    "variants": [
+      {
+        "governance": {
+          "checks": [
+            {
+              "check_id": "G1",
+              "counterfactual": null,
+              "evidence_ids": [
+                "E130"
+              ],
+              "label_fr": "Concentration par actif",
+              "limit_threshold": 0.5,
+              "margin": 0.18,
+              "missing_reason": null,
+              "rule_id": "R1",
+              "rule_type": "max_single_asset_weight",
+              "status": "compliant",
+              "unit": "pct",
+              "value": 0.17,
+              "warn_threshold": 0.35
+            },
+            {
+              "check_id": "G2",
+              "counterfactual": null,
+              "evidence_ids": [
+                "E121"
+              ],
+              "label_fr": "Volatilité annuelle",
+              "limit_threshold": 0.45,
+              "margin": 0.036013,
+              "missing_reason": null,
+              "rule_id": "R2",
+              "rule_type": "max_portfolio_volatility",
+              "status": "compliant",
+              "unit": "pct",
+              "value": 0.2639869684144045,
+              "warn_threshold": 0.3
+            },
+            {
+              "check_id": "G3",
+              "counterfactual": {
+                "compliant_at_or_below": 0.1,
+                "display_value": "10 %",
+                "parameter": "target_weight"
+              },
+              "evidence_ids": [
+                "E122"
+              ],
+              "label_fr": "Perte maximale historique",
+              "limit_threshold": 0.65,
+              "margin": 0.232522,
+              "missing_reason": null,
+              "rule_id": "R3",
+              "rule_type": "max_portfolio_drawdown",
+              "status": "tension",
+              "unit": "pct",
+              "value": 0.41747768478248604,
+              "warn_threshold": 0.4
+            },
+            {
+              "check_id": "G4",
+              "counterfactual": null,
+              "evidence_ids": [
+                "E131"
+              ],
+              "label_fr": "Part défensive minimale",
+              "limit_threshold": 0.0,
+              "margin": 0.035,
+              "missing_reason": null,
+              "rule_id": "R4",
+              "rule_type": "min_defensive_share",
+              "status": "compliant",
+              "unit": "pct",
+              "value": 0.085,
+              "warn_threshold": 0.05
+            },
+            {
+              "check_id": "G5",
+              "counterfactual": null,
+              "evidence_ids": [
+                "E134"
+              ],
+              "label_fr": "Concentration en cryptoactifs",
+              "limit_threshold": 0.35,
+              "margin": 0.0725,
+              "missing_reason": null,
+              "rule_id": "R5",
+              "rule_type": "max_asset_class_weight",
+              "status": "compliant",
+              "unit": "pct",
+              "value": 0.1275,
+              "warn_threshold": 0.2
+            },
+            {
+              "check_id": "G6",
+              "counterfactual": null,
+              "evidence_ids": [
+                "E132"
+              ],
+              "label_fr": "Concentration en actions individuelles",
+              "limit_threshold": 0.85,
+              "margin": 0.2525,
+              "missing_reason": null,
+              "rule_id": "R6",
+              "rule_type": "max_asset_class_weight",
+              "status": "compliant",
+              "unit": "pct",
+              "value": 0.4475,
+              "warn_threshold": 0.7
+            }
+          ],
+          "overall_status": "tension",
+          "profile_id": "amira",
+          "subject": "variant:V1"
+        },
+        "idea": {
+          "funding_source": "pro_rata",
+          "funding_ticker": null,
+          "target_weight": 0.15,
+          "ticker": "TSLA"
+        },
+        "reason_code": "reduce_weight",
+        "snapshot": {
+          "currency_exposure": {
+            "CAD": 0.17,
+            "USD": 0.83
+          },
+          "defensive_share": 0.085,
+          "largest_correlated_group_weight": null,
+          "max_drawdown": 0.41747768478248604,
+          "max_drawdown_end": "2022-12-28",
+          "max_drawdown_start": "2021-11-29",
+          "recovery_days": 201,
+          "subject": "variant:V1",
+          "top_asset": "QQQ",
+          "top_asset_weight": 0.17,
+          "volatility_ann": 0.2639869684144045,
+          "weight_by_asset_class": {
+            "crypto": 0.1275,
+            "equity": 0.4475,
+            "etf_bond": 0.0425,
+            "etf_commodity": 0.0425,
+            "etf_equity": 0.34
+          },
+          "weight_by_sector": {
+            "Bonds (Canada aggregate)": 0.0425,
+            "Broad market (Canada)": 0.085,
+            "Broad market (U.S. growth/tech-heavy)": 0.17,
+            "Broad market (U.S.)": 0.085,
+            "Consumer Discretionary": 0.15,
+            "Crypto asset": 0.1275,
+            "Gold": 0.0425,
+            "Information Technology": 0.2975
+          },
+          "weights": {
+            "AAPL": 0.0425,
+            "BTC-USD": 0.085,
+            "ETH-USD": 0.0425,
+            "GLD": 0.0425,
+            "MSFT": 0.085,
+            "NVDA": 0.1275,
+            "QQQ": 0.17,
+            "SHOP.TO": 0.0425,
+            "SPY": 0.085,
+            "TSLA": 0.15,
+            "XBB.TO": 0.0425,
+            "XIU.TO": 0.085
+          }
+        },
+        "variant_id": "V1"
+      }
+    ]
+  },
+  "disclaimer": "Simulation educative sur des donnees fictives. Ce n'est pas un conseil financier personnalise.",
+  "explanation": {
+    "attempt": 1,
+    "guardrail": {
+      "action": "none",
+      "check": "output_grounding",
+      "denied_topics": [],
+      "grounding_score": 0.4,
+      "mode": "detect",
+      "relevance_score": 1.0
+    },
+    "level": "pro",
+    "model_id": "us.anthropic.claude-sonnet-5-5",
+    "origin": "llm",
+    "prompt_version": "explainer_v4",
+    "rendered_markdown": "# Explication (niveau pro)\n\n> **Avertissement**\n> - Simulation fictive : profil, portefeuille et capital sont fictifs, et les montants viennent du capital fictif.\n> - Usage éducatif seulement : l'outil illustre une vérification de cohérence entre une idée et un profil fictif.\n> - Aucun conseil financier personnalisé : les verdicts mesurent la cohérence avec des règles hypothétiques, sans recommandation sur un actif.\n> - Aucune transaction réelle : aucun ordre n'est passé, aucun compte de courtage ni interface de négociation n'est connecté.\n\nIdée simulée : « TSLA », poids cible 25 %, financé au prorata des positions existantes.\n\n## Résumé\n\nLa perte maximale historique du portefeuille après l'ajout atteint 45,31 % et est en tension avec la règle **Perte maximale historique** (en tension). Les autres contrôles du dossier sont conformes.\n\n## Ce qui pèse dans le verdict\n\n1. La perte maximale historique du portefeuille atteint 45,31 % : elle dépasse le seuil d'alerte de la règle **Perte maximale historique** (en tension) et reste sous la limite.\n\n## Ce qui ferait changer le verdict\n\nUn poids cible de TSLA réduit, au niveau indiqué par le contrôle **Perte maximale historique** (en tension), placerait la perte maximale du portefeuille dans la règle.\n\n- Perte maximale historique : le plus grand poids testé conforme à cette règle est 10 %.\n\n## Variantes simulées\n\nUne variante simulée qui réduit le poids ramène la perte maximale du portefeuille à 41,75 %, mais reste en tension avec la règle **Perte maximale historique** (en tension).\n\n## Détail des contrôles\n\n| Contrôle | Règle | Statut | Valeur | Seuil d'avertissement | Limite | Marge | Preuves |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| G1 | R1 (max_single_asset_weight, max) | conforme | 25 % | 35 % | 50 % | 10 pts | E46 |\n| G2 | R2 (max_portfolio_volatility, max) | conforme | 29,13 % | 30 % | 45 % | 0,87 pts | E37 |\n| G3 | R3 (max_portfolio_drawdown, max) | en tension | 45,31 % | 40 % | 65 % | 19,69 pts | E38 |\n| G4 | R4 (min_defensive_share, min) | conforme | 7,5 % | 5 % | 0 % | 2,5 pts | E47 |\n| G5 | R5 (max_asset_class_weight, max) | conforme | 11,25 % | 20 % | 35 % | 8,75 pts | E50 |\n| G6 | R6 (max_asset_class_weight, max) | conforme | 51,25 % | 70 % | 85 % | 18,75 pts | E48 |\n\nLes seuils sont des hypothèses de l'équipe, pas des normes, et sont réglables.\n\n## Limites\n\nCes mesures décrivent le passé sur une fenêtre limitée, avec un biais du survivant et des seuils qui sont des hypothèses de l'équipe.\n\n- **LM1** : Biais du survivant : l'univers a été constitué à la fin de la fenêtre à partir de titres de grande taille à cette date. Les statistiques historiques sont biaisées vers le haut par rapport à un univers fixé au début de la fenêtre. Secteurs et libellés sont ceux d'aujourd'hui.\n- **LM2** : Fenêtre d'historique limitée à cinq ans : peu d'observations indépendantes et un seul épisode de baisse marquée. La volatilité et la perte maximale dépendent de cette fenêtre. Ces mesures décrivent le passé et ne constituent pas une projection. La volatilité est un indicateur de risque parmi d'autres, au même titre que l'horizon, la diversification et les préférences.\n- **LM3** : Conversion en dollars canadiens au taux USD/CAD de la Banque du Canada, reporté en avant les jours sans publication. Calendrier commun : jours où tous les actifs hors crypto ont un prix, crypto ramenée à ce calendrier, journées crypto en UTC. Seuls les rendements sont utilisés, les niveaux de prix ajustés étant rétro-ajustés. Aucune donnée postérieure à la date d'analyse.\n- **LM4** : Hypothèses : poids fixes rééquilibrés chaque jour, rendements historiques recalculés avec les poids de l'idée, capital fictif, aucun frais, impôt ni coût d'exécution. Les seuils des règles sont des hypothèses de l'équipe, réglables, et non des normes.\n- **LM5** : Prix : Yahoo Finance via yfinance, non certifiés par une bourse, ajustés des dividendes et des fractionnements. Taux de change et taux directeurs : Banque du Canada. Séries FRED : valeurs révisées, non les premières publications. Aucune note ESG, nouvelle ni donnée fondamentale dans les données de base. Donnée absente : statut information manquante, aucune valeur par défaut.\n\n## Preuves citées\n\n- **E37** : Volatilité annualisée (portefeuille après l'ajout) = 29,13 %; période 2021-11-12 au 2026-11-12; devise CAD; sources prices_daily.csv, fx_usdcad_daily.csv; transformation : Écart-type des rendements quotidiens en CAD (n - 1), multiplié par la racine de 252.; outil simulate_portfolio_change, clé volatility_ann:portfolio_after; 1227 observations; à la date 2026-11-12; limites LM1, LM2, LM3, LM4, LM5.\n- **E38** : Perte maximale historique (portefeuille après l'ajout) = 45,31 %; période 2021-11-12 au 2026-11-12; devise CAD; sources prices_daily.csv, fx_usdcad_daily.csv; transformation : Plus forte baisse entre un sommet et le creux suivant, sur les rendements quotidiens en CAD.; outil simulate_portfolio_change, clé max_drawdown:portfolio_after; 1227 observations; à la date 2026-11-12; limites LM1, LM2, LM3, LM4, LM5.\n- **E46** : Poids du plus gros actif (TSLA) (portefeuille après l'ajout) = 25 %; transformation : Poids le plus élevé du portefeuille fictif.; outil simulate_portfolio_change, clé top_asset_weight:portfolio_after; à la date 2026-11-12; limites LM4.\n- **E47** : Part défensive (portefeuille après l'ajout) = 7,5 %; sources assets_universe.csv; transformation : Poids des obligations et de l'or (classes etf_bond et etf_commodity). Hypothèse de l'équipe.; outil simulate_portfolio_change, clé defensive_share:portfolio_after; à la date 2026-11-12; limites LM1, LM4.\n- **E48** : Poids de la classe d'actifs equity (portefeuille après l'ajout) = 51,25 %; sources assets_universe.csv; transformation : Somme des poids des positions de cette classe (univers des organisateurs).; outil simulate_portfolio_change, clé weight_by_asset_class.equity:portfolio_after; à la date 2026-11-12; limites LM1, LM4.\n- **E50** : Poids de la classe d'actifs crypto (portefeuille après l'ajout) = 11,25 %; sources assets_universe.csv; transformation : Somme des poids des positions de cette classe (univers des organisateurs).; outil simulate_portfolio_change, clé weight_by_asset_class.crypto:portfolio_after; à la date 2026-11-12; limites LM1, LM4.\n- **E122** : Perte maximale historique (variante simulée) = 41,75 %; période 2021-11-12 au 2026-11-12; devise CAD; sources prices_daily.csv, fx_usdcad_daily.csv; transformation : Plus forte baisse entre un sommet et le creux suivant, sur les rendements quotidiens en CAD.; outil simulate_portfolio_change, clé max_drawdown:variant:V1; 1227 observations; à la date 2026-11-12; limites LM1, LM2, LM3, LM4, LM5.\n",
+    "trace": [
+      {
+        "actor": "agent",
+        "details": {
+          "attempt": 1,
+          "brief_id": "brief-472f1a9758b4ef2d",
+          "from_cache": false,
+          "level": "pro",
+          "origin": "llm"
+        },
+        "duration_ms": 7517,
+        "model_id": "us.anthropic.claude-sonnet-5-5",
+        "name": "explanation",
+        "status": "ok",
+        "step": 4
+      },
+      {
+        "actor": "code",
+        "details": {
+          "checked_references": 3,
+          "is_valid": true,
+          "rejection_codes": []
+        },
+        "duration_ms": 2,
+        "model_id": null,
+        "name": "validation",
+        "status": "ok",
+        "step": 5
+      },
+      {
+        "actor": "guardrail",
+        "details": {
+          "action": "none",
+          "checked_chars": 831,
+          "grounding_below_threshold": [
+            "GROUNDING"
+          ],
+          "grounding_score": 0.4,
+          "grounding_weak": true,
+          "mode": "detect",
+          "relevance_score": 1.0,
+          "trace_saved": {
+            "location": "traces/2026-11-15/821b79953d214923-explication-pro.json",
+            "reason": null,
+            "saved": true
+          }
+        },
+        "duration_ms": 524,
+        "model_id": null,
+        "name": "guardrail",
+        "status": "ok",
+        "step": 6
+      }
+    ],
+    "validation": {
+      "checked_references": [
+        "E38",
+        "G3",
+        "E122"
+      ],
+      "is_valid": true,
+      "rejections": []
+    }
+  },
+  "note": "Trace construite par le code a partir des appels reels. Aucun raisonnement interne de modele.",
+  "schema_version": 1
+}
