@@ -2,59 +2,142 @@
 
 Tout texte destiné à l'utilisateur vit ici. Le code reste en anglais.
 Ponctuation ASCII seulement (règle 1 de CLAUDE.md) : pas de guillemets
-typographiques, pas de tiret cadratin, pas d'emoji.
+typographiques, pas de tiret cadratin, pas d'emoji. Principe : une phrase
+courte à l'écran, le détail dans une info-bulle ou un encadré repliable.
 """
 
 PAGE_TITLE = "AlphaForge"
-APP_TITLE = "AlphaForge : copilote de cohérence"
-APP_SUBTITLE = (
-    "Votre portefeuille fictif correspond-il à votre profil, "
-    "et que change votre idée de placement ?"
-)
+BRAND = "AlphaForge"
+BRAND_TAGLINE = "copilote de cohérence"
 
 DISCLAIMER = (
-    "Simulation à but éducatif, pas un conseil financier personnalisé. "
-    "Profils, portefeuilles et montants sont fictifs."
+    "Simulation éducative, pas un conseil financier personnalisé. "
+    "Profils, portefeuilles et montants fictifs."
 )
-FIXTURE_BANNER = (
-    "Données d'essai : les chiffres affichés sont inventés et ne décrivent aucun marché."
-)
+FIXTURE_BANNER = "Données d'essai : chiffres inventés, ils ne décrivent aucun marché."
 NOT_AVAILABLE = "non disponible"
 
-TAB_ANALYSIS = "Analyse"
-TAB_GUARDRAIL = "Test du garde-fou"
-TAB_SOURCES = "Sources et méthode"
+# --- Navigation ----------------------------------------------------------------
+NAV_JOURNEY = "Parcours"
+NAV_CHECKS = "Vérifier"
+PAGE_NAMES = {
+    "home": "Accueil",
+    "simulation": "Simulation",
+    "custom": "Créer un profil fictif",
+    "guardrail": "Test du garde-fou",
+    "sources": "Sources et méthode",
+}
+PAGE_INTROS = {
+    "home": "Testez une idée de placement contre un profil d'investisseur fictif, avec chaque chiffre vérifiable.",
+    "simulation": "Décrivez une idée ou réglez-la à la main : l'agent vérifie sa cohérence avec le profil, il ne recommande rien.",
+    "custom": "Répondez par cases et curseurs : aucune donnée personnelle n'est demandée.",
+    "guardrail": "Requêtes prédéfinies : le garde-fou doit laisser passer les unes et refuser les autres.",
+    "sources": "D'où viennent les données et ce que les chiffres ne disent pas.",
+}
+NEXT_STEP = "Étape suivante : {page}"
+GO_TO = "Aller à : {page}"
+NEED_PROFILE = "Choisissez d'abord un profil."
+PROFILE_NOT_IN_MODE = "Ce profil n'existe pas dans ce mode de données. Choisissez-en un autre."
 
-SECTION_PROFILE = "1. Profil"
-SECTION_XRAY = "2. Radiographie du portefeuille"
-SECTION_IDEA = "3. Idée de placement"
-SECTION_RESULT = "4. Résultat"
-SECTION_EXPLANATION = "5. Explication"
-SECTION_TRACE = "6. Trace des étapes"
+# --- Accueil ----------------------------------------------------------------------
+HOME_PROFILES_TITLE = "Choisir un profil du datathon"
+HOME_CUSTOM_LINK = "Ou créer un profil fictif"
+HOME_LEVEL_TITLE = "Niveau d'explication de l'agent"
+HOME_LEVEL_CHOSEN = "Niveau choisi"
+HOME_PREVIEW_SOURCE = (
+    "Aperçu : même passage (Résumé) rédigé par l'agent explicateur pour {persona} et l'idée "
+    "\"25 % dans TSLA\", modèle {model}, chiffres à la date de la trace. Textes réels, tirés de {novice} et {pro}."
+)
 
-# --- Barre latérale ---------------------------------------------------------
-SIDEBAR_TITLE = "Session"
+# --- Simulation et conversation -------------------------------------------------------
+SIM_SHOW_XRAY = "Afficher la radiographie du portefeuille"
+SIM_MANUAL = "Réglages manuels"
+CHAT_PLACEHOLDER = "Ex. : Et si je mettais 25 % dans TSLA ?"
+CHAT_WELCOME = (
+    "Décrivez une idée à simuler sur ce portefeuille fictif : un actif, un poids visé, "
+    "et si vous voulez le titre vendu pour la financer."
+)
+CHAT_EXAMPLES = (
+    "Et si je mettais 25 % dans TSLA ?",
+    "Ajoute 10 % de BTC en vendant XIU.TO",
+    "Et si j'ajoutais du Tesla ?",
+)
+CHAT_MANUAL_CHANGE = "Paramètres modifiés : {idea}"
+CHAT_CHOICE = "Choix : {choice}"
+CHAT_PROFILE_CHANGED = "Profil actif : {name}. L'idée en cours est reprise pour ce profil."
+CHAT_PROFILE_CHOSEN = "Profil actif : {name}."
+CHAT_MODE_CHANGED = "Source des données : {mode}."
+CHAT_UNDERSTOOD = "Idée simulée : {idea}."
+CHAT_PREVIOUS = "Idée précédente : {idea}."
+CHAT_COMPACT = "{idea} ({name})"
+CHAT_GUARD_STATUS = {
+    "none": "Garde-fou Bedrock : demande permise.",
+    "not_run": "Garde-fou Bedrock : contrôle non exécuté (mode hors ligne ou garde-fou non configuré).",
+}
+CHAT_REFUSED = "Je ne peux pas répondre à cette demande. Sujet refusé : {topics}."
+CHAT_REFUSED_BY = {
+    "guardrail": "Refus du garde-fou Amazon Bedrock.",
+    "local": (
+        "Refus du contrôle local du code (règles fixes, actives même hors ligne). "
+        "Rappel : l'outil ne passe aucun ordre et ne prédit aucun rendement."
+    ),
+}
+CHAT_REFUSED_HELP = (
+    "Je peux seulement simuler une idée sur ce portefeuille fictif et décrire le passé, "
+    "par exemple : \"Et si je mettais 10 % dans NVDA ?\""
+)
+CHAT_CLARIFY = {
+    "not_an_idea": "Je simule une idée précise : un actif de l'univers et un poids visé, par exemple \"15 % dans NVDA\".",
+    "unknown_asset": "Je ne reconnais pas l'actif ({unknown}) dans l'univers étudié. Lequel voulez-vous simuler ?",
+    "several_assets": "Vous citez plusieurs actifs ({tickers}). Je simule une idée à la fois : lequel ?",
+    "missing_weight": "Quel poids visé pour {tickers} ? Choisissez une valeur ou précisez-la.",
+    "several_weights": "Vous citez plusieurs poids. Lequel voulez-vous simuler ?",
+    "weight_out_of_range": "Le poids visé doit être un nombre entier de 1 % à 100 %.",
+    "missing_target": "Vous citez le titre vendu ({funding}), mais quel actif voulez-vous ajouter ?",
+    "several_funding": "Un seul titre peut financer l'idée. Lequel ?",
+    "funding_same_as_asset": "Le titre vendu ne peut pas être l'actif ajouté.",
+    "funding_not_held": "{funding} n'est pas détenu dans ce portefeuille : il ne peut pas financer l'idée.",
+}
+CHAT_CLARIFY_MANUAL = "Vous pouvez aussi passer par les réglages manuels."
+CHAT_KEY_POINTS = "Points clés (cliquez sur un chiffre pour sa preuve)"
+CHAT_SHOW_DETAILS = "Voir le détail : faits, hypothèses, simulation, sources, trace"
+CHAT_TAB_DETAILS = "Faits, hypothèses, simulation"
+CHAT_TAB_TEXT = "Explication complète"
+CHAT_TAB_SOURCES = "Sources et limites"
+CHAT_TAB_TRACE = "Trace"
+CHAT_SOURCES = "Sources citées"
+CHAT_LIMITS = "Limites et incertitudes"
+
+# --- En-tête et barre latérale ---------------------------------------------------
+HEADER_MODE = "Mode"
+HEADER_PROFILE = "Profil"
+HEADER_IDEA = "Idée"
+HEADER_NONE = "aucun"
+HEADER_NO_IDEA = "aucune"
+
 SIDEBAR_MODE_LABEL = "Source des données"
+SIDEBAR_MODE_HELP = (
+    "Hors ligne : données réelles, sans agent. Amazon Bedrock : agents et garde-fou "
+    "(lancés seulement sur demande, quotas partagés). Données d'essai : chiffres inventés."
+)
 SIDEBAR_ACTIVE_PROFILE = "Profil actif"
 SIDEBAR_NO_PROFILE = "Aucun profil choisi."
-SIDEBAR_LEVEL = "Niveau d'explication"
-SIDEBAR_BEDROCK = "Configuration Bedrock"
-SIDEBAR_BEDROCK_MODELS = "Modèles configurés"
-SIDEBAR_BEDROCK_GUARDRAIL = "Garde-fou configuré"
-SIDEBAR_BEDROCK_TRACES = "Compartiment des traces configuré"
-SIDEBAR_BEDROCK_FALLBACK = (
-    "Configuration incomplète : le pipeline revient au mode hors ligne et la trace l'indique."
-)
+SIDEBAR_LEVEL = "Niveau"
+SIDEBAR_BEDROCK = "État de Bedrock"
+SIDEBAR_BEDROCK_MODELS = "Modèles"
+SIDEBAR_BEDROCK_GUARDRAIL = "Garde-fou"
+SIDEBAR_BEDROCK_TRACES = "Traces S3"
+SIDEBAR_BEDROCK_FALLBACK = "Configuration incomplète : repli hors ligne, signalé dans la trace."
 YES = "oui"
 NO = "non"
 
 MODE_LABELS = {
-    "offline": "Hors ligne (données réelles, sans Bedrock)",
-    "bedrock": "Amazon Bedrock (agents)",
-    "fixture": "Données d'essai (fixtures)",
+    "offline": "Hors ligne",
+    "bedrock": "Amazon Bedrock",
+    "fixture": "Données d'essai",
 }
 
-# --- Statuts ----------------------------------------------------------------
+# --- Statuts et zones ------------------------------------------------------------
 STATUS_LABELS = {
     "compliant": "Conforme",
     "tension": "Tension",
@@ -69,6 +152,18 @@ STATUS_COLORS = {
     "missing_info": "gray",
 }
 STATUS_ORDER = ("conflict", "tension", "missing_info", "compliant")
+
+# Trois zones visuellement distinctes (US-12) : faits, hypothèses, simulations.
+ZONE_LABELS = {
+    "facts": "Faits historiques",
+    "assumptions": "Hypothèses de l'équipe",
+    "simulation": "Simulation",
+}
+ZONE_HELP = {
+    "facts": "Mesures calculées sur des données passées. Elles décrivent, elles ne prédisent pas.",
+    "assumptions": "Seuils réglables choisis par l'équipe : ni une norme, ni un conseil.",
+    "simulation": "Portefeuille fictif modifié par l'idée. Effet historique, pas une prévision.",
+}
 
 RISK_LABELS = {
     "low": "Faible",
@@ -121,35 +216,35 @@ SECTOR_LABELS = {
     "Crypto asset": "Cryptoactif",
 }
 
-# --- Profil -----------------------------------------------------------------
-CUSTOM_EXPANDER = "Construire un profil fictif (cases et curseurs)"
-CUSTOM_REMINDER = (
-    "Profil fictif : aucune donnée personnelle n'est demandée ni conservée "
-    "(ni nom, ni revenu, ni compte)."
-)
+# --- Profil ---------------------------------------------------------------------
+FICTIONAL_BADGE = "Fictif"
+PERSONA_AGE = "{age} ans"
+PERSONA_RISK = "Risque"
+PERSONA_HORIZON = "Horizon"
+PERSONA_OBJECTIVE = "Objectif"
+PERSONA_EXPERIENCE = "Expérience"
+PERSONA_CAPITAL = "Capital fictif"
+CHOOSE_PROFILE = "Choisir"
+SELECTED_PROFILE = "Profil choisi"
+
+CUSTOM_REMINDER = "Aucune donnée personnelle : ni nom, ni revenu, ni compte."
 CUSTOM_OBJECTIVE = "Objectif"
-CUSTOM_HORIZON = "Horizon de placement (années)"
+CUSTOM_HORIZON = "Horizon (années)"
 CUSTOM_RISK = "Tolérance au risque"
 CUSTOM_EXPERIENCE = "Expérience"
 CUSTOM_ESG = "Préférence ESG"
 CUSTOM_CRYPTO = "Cryptoactifs permis"
-CUSTOM_OWN_CAP = "Fixer mon propre plafond par titre"
-CUSTOM_OWN_CAP_HELP = "Sans plafond choisi, l'hypothèse de l'équipe pour la tolérance au risque s'applique."
+CUSTOM_OWN_CAP = "Fixer mon plafond par titre"
+CUSTOM_OWN_CAP_HELP = "Sinon, le plafond supposé par l'équipe pour ce niveau de risque s'applique."
 CUSTOM_CAP = "Plafond par titre (%)"
 CUSTOM_CAPITAL = "Capital fictif (CAD)"
-CUSTOM_CAPITAL_HELP = "Montant inventé, utilisé seulement pour exprimer les résultats en dollars."
-CUSTOM_PORTFOLIO = "Portefeuille fictif de départ"
-CUSTOM_RULES_TITLE = "Règles produites par vos réponses"
-CUSTOM_RULES_NOTICE = (
-    "Chaque seuil est une hypothèse de l'équipe, réglable, et non une norme ni un conseil."
-)
-CUSTOM_USE = "Utiliser ce profil fictif"
-CUSTOM_UPDATE = "Mettre à jour le profil construit"
+CUSTOM_CAPITAL_HELP = "Montant inventé, sert seulement à exprimer les pertes historiques en dollars."
+CUSTOM_PORTFOLIO = "Portefeuille de départ"
+CUSTOM_RULES_TITLE = "Règles produites"
+CUSTOM_USE = "Utiliser ce profil"
+CUSTOM_UPDATE = "Mettre à jour le profil"
 CUSTOM_ACTIVE = "Profil construit actif."
-CUSTOM_DRAFT_CHANGED = (
-    "Le formulaire a changé depuis la dernière activation : cliquez sur "
-    "\"Mettre à jour le profil construit\" pour appliquer ces réponses."
-)
+CUSTOM_DRAFT_CHANGED = "Réponses modifiées : cliquez sur \"Mettre à jour le profil\" pour les appliquer."
 CUSTOM_DISPLAY_NAME = "Profil construit"
 
 # Liste fermée : pas de texte libre dans le MVP (US-02). À remplacer par la
@@ -171,20 +266,6 @@ RULE_BELOW = "en dessous de {value}"
 RULE_EXCLUDED = "toute position"
 RULE_NONE = "aucun"
 
-FICTIONAL_BADGE = "Profil fictif"
-PERSONA_AGE = "{age} ans"
-PERSONA_RISK = "Tolérance au risque"
-PERSONA_HORIZON = "Horizon"
-PERSONA_OBJECTIVE = "Objectif"
-PERSONA_EXPERIENCE = "Expérience"
-PERSONA_CAPITAL = "Capital fictif"
-CHOOSE_PROFILE = "Choisir ce profil"
-SELECTED_PROFILE = "Profil choisi"
-NO_PROFILE_SELECTED = "Choisissez un profil fictif pour commencer."
-PROFILE_NOT_IN_MODE = (
-    "Le profil choisi n'existe pas dans ce mode de données. Choisissez un autre profil."
-)
-
 # --- Preuves (clic sur un chiffre, US-11) -------------------------------------
 PROOF_HELP = "Cliquer pour voir d'où vient ce chiffre."
 PROOF_ID = "Preuve"
@@ -198,23 +279,24 @@ PROOF_DATA_AS_OF = "Données arrêtées au"
 PROOF_CURRENCY = "Devise"
 PROOF_TRANSFORMATION = "Calcul"
 PROOF_OBSERVATIONS = "Observations"
-PROOF_QUALIFIER = "Qualificatif (par seuil, calculé par le code)"
+PROOF_QUALIFIER = "Qualificatif (seuil fixé par le code)"
 PROOF_LIMITS = "Limites rattachées"
 PROOF_NONE = "aucune"
 QUALIFIER_LABELS = {"low": "faible", "moderate": "modéré", "high": "élevé"}
 
 # --- Radiographie (US-03) ----------------------------------------------------
-XRAY_INTRO = "État du portefeuille fictif avant toute idée. Cliquez sur un chiffre pour le vérifier."
-XRAY_PERIOD = "Période de calcul : du {start} au {end}, rendements quotidiens en {currency}."
-XRAY_DRAWDOWN_DATES = "Perte maximale : du sommet du {start} au creux du {end}."
-XRAY_TOP_ASSET = "Plus gros poids : {ticker}"
-XRAY_RULES = "Statut par règle du profil"
-XRAY_POSITIONS = "Poids par position"
-XRAY_CLASSES = "Poids par classe d'actifs"
-XRAY_SECTORS = "Poids par secteur"
+XRAY_PERIOD = "Du {start} au {end}, rendements quotidiens en {currency}."
+XRAY_DRAWDOWN_DATES = "Sommet le {start}, creux le {end}"
+XRAY_TOP_ASSET = "{ticker}"
+XRAY_RULES = "Règles du profil"
+XRAY_POSITIONS = "Positions"
+XRAY_CLASSES = "Classes d'actifs"
+XRAY_SECTORS = "Secteurs"
+XRAY_COMPOSITION = "Composition détaillée"
+XRAY_METHOD = "Méthode et hypothèses"
 XRAY_HYPOTHESIS = (
-    "Hypothèses de l'équipe : portefeuille fictif, poids fixes rééquilibrés chaque jour, "
-    "seuils réglables. Ce sont des descriptions du passé, pas des prévisions."
+    "Portefeuille fictif, poids fixes rééquilibrés chaque jour, seuils réglables. "
+    "Ce sont des descriptions du passé, pas des prévisions."
 )
 XRAY_SPINNER = "Calcul de la radiographie..."
 
@@ -231,9 +313,7 @@ XRAY_METRICS = (
     "currency_exposure.USD",
     "largest_correlated_group_weight",
 )
-XRAY_CORRELATION = (
-    "Groupe corrélé : période du {start} au {end}, {count} jours communs, en {currency}."
-)
+XRAY_CORRELATION = "Groupe corrélé : du {start} au {end}, {count} jours communs, en {currency}."
 # Sujet d'une preuve, pour distinguer avant, après et variantes.
 SUBJECT_LABELS = {
     "portfolio_before": "avant",
@@ -242,45 +322,35 @@ SUBJECT_LABELS = {
 SUBJECT_VARIANT = "variante {variant_id}"
 
 # --- Règles et gouvernance (US-06, US-07) -------------------------------------
-RULE_MEASURE = "Mesure"
-RULE_THRESHOLDS = "Seuils (hypothèses de l'équipe) : tension {warn}, conflit {limit}."
+RULE_THRESHOLDS = "Tension {warn}, conflit {limit}."
+RULE_THRESHOLDS_HELP = "Seuils : hypothèses de l'équipe, réglables, pas une norme."
 RULE_MARGIN_TO_TENSION = "Marge avant la tension : {margin}."
 RULE_MARGIN_TO_CONFLICT = "Marge avant le conflit : {margin}."
-RULE_BEYOND_LIMIT = "Au-delà de la limite de {margin}."
-RULE_COUNTERFACTUAL = (
-    "Simulation : conforme à cette règle avec un poids de {value} ou moins pour l'idée "
-    "(hypothèse de l'équipe, pas une recommandation)."
-)
-RULE_NO_COUNTERFACTUAL = "Aucun poids testé pour l'idée n'est conforme à cette règle."
+RULE_BEYOND_LIMIT = "Dépasse la limite de {margin}."
+RULE_COUNTERFACTUAL = "Conforme avec un poids de {value} ou moins pour l'idée (simulation)."
+RULE_NO_COUNTERFACTUAL = "Aucun poids testé pour l'idée n'est conforme."
 RULE_MISSING = "Information manquante : {reason}"
 RULE_NO_POSITION = "aucune position"
 
 # --- Idée (US-04) -------------------------------------------------------------
-IDEA_INTRO = (
-    "Choisissez une idée à simuler. L'outil ne recommande aucun actif : "
-    "il vérifie la cohérence de votre idée avec le profil."
-)
 IDEA_SUGGESTIONS = "Idées en un clic"
 IDEA_ASSET = "Actif"
-IDEA_WEIGHT = "Poids visé dans le portefeuille (%)"
-IDEA_FUNDING = "Source des fonds"
+IDEA_WEIGHT = "Poids visé (%)"
+IDEA_FUNDING = "Financement"
 IDEA_FUNDING_LABELS = {
-    "pro_rata": "Au prorata des positions existantes",
+    "pro_rata": "Au prorata",
     "from_ticker": "Depuis un titre détenu",
 }
-IDEA_FUNDING_TICKER = "Titre vendu pour financer l'idée"
+IDEA_FUNDING_TICKER = "Titre vendu"
 IDEA_NO_FUNDING_CANDIDATE = "Aucun autre titre détenu ne peut financer cette idée."
-IDEA_FUNDING_WEIGHT = "Poids actuel de {ticker} dans le portefeuille : {weight}."
-IDEA_SUBMIT = "Analyser cette idée"
-IDEA_CURRENT = "Idée analysée : {weight} dans {ticker}, financée {funding}."
+IDEA_FUNDING_WEIGHT = "Poids actuel de {ticker} : {weight}."
+IDEA_SUBMIT = "Simuler"
+IDEA_CURRENT = "{weight} dans {ticker}, financée {funding}"
 IDEA_FUNDING_SHORT = {
-    "pro_rata": "au prorata des positions existantes",
+    "pro_rata": "au prorata",
     "from_ticker": "depuis {ticker}",
 }
-IDEA_NONE_YET = "Aucune idée analysée pour l'instant."
-IDEA_FUNDING_RESET = (
-    "{ticker} n'est pas détenu dans ce portefeuille : l'idée est financée au prorata."
-)
+IDEA_FUNDING_RESET = "{ticker} n'est pas détenu ici : l'idée est financée au prorata."
 # Idées de démonstration, les mêmes pour tous les profils (aucune association profil-actif).
 IDEA_PRESETS = (
     {"label": "25 % dans TSLA", "ticker": "TSLA", "target_weight": 0.25},
@@ -291,61 +361,46 @@ IDEA_PRESETS = (
 )
 
 # --- Résultat (US-05 à US-08) ---------------------------------------------------
-RESULT_SPINNER = "Analyse de l'idée en cours..."
-RESULT_OVERALL = (
-    "Statut global après l'idée, par rapport aux règles du profil "
-    "(hypothèses de l'équipe) : {status}"
-)
-RESULT_COMPOSITION = "Composition après l'idée : positions, classes d'actifs, secteurs"
-RESULT_BEDROCK_PENDING = (
-    "En mode Amazon Bedrock, l'analyse fait appel aux agents : elle n'est lancée qu'à votre demande "
-    "(quotas partagés)."
-)
+RESULT_SPINNER = "Analyse de l'idée..."
+RESULT_BEDROCK_PENDING = "Mode Amazon Bedrock : les agents ne sont lancés que sur demande (quotas partagés)."
 RESULT_BEDROCK_RUN = "Analyser cette idée pour ce profil"
-ASSET_FACTS_TITLE = "Faits historiques sur {ticker}"
-ASSET_FACTS_NOTE = (
-    "Ces chiffres décrivent l'actif seul, sur la période observée : ils sont les mêmes pour "
-    "tous les profils. Seules les règles du profil changent."
-)
-ASSET_FACTS_METRICS = ("volatility_ann", "max_drawdown", "recovery_days")
-ASSET_FACTS_SPINNER = "Lecture des faits sur l'actif..."
-RESULT_OVERALL_BEFORE = "Avant l'idée : {status}"
-ZONE_SIMULATION = "Simulation sur un portefeuille fictif"
-ZONE_SIMULATION_NOTE = (
-    "La colonne Après est une simulation : elle décrit l'effet historique de l'idée, "
-    "pas ce qui arrivera."
-)
-ZONE_FACTS = "Faits historiques sur l'actif"
-ZONE_ASSUMPTIONS = "Hypothèses de l'équipe"
-ZONE_ASSUMPTIONS_NOTE = (
-    "Les seuils des règles sont des hypothèses de l'équipe, pas des normes ni un conseil."
-)
-RESULT_COMPARE = "Avant et après l'idée"
+RESULT_MODE_FALLBACK = "Bedrock non utilisé ({reason}) : mêmes outils et même gouvernance, en séquence scriptée."
+
+# Verdict en tête du résultat : le désaccord avec le profil est dit tout de suite.
+VERDICT_TITLE = "Après l'idée : {status}"
+VERDICT_BEFORE = "Avant l'idée : {status}"
+VERDICT_HEADLINES = {
+    "conflict": "Cette idée va à l'encontre du profil.",
+    "tension": "Cette idée met le profil sous tension.",
+    "missing_info": "Il manque une information pour conclure.",
+    "compliant": "Cette idée respecte les règles du profil.",
+}
+VERDICT_RULE = "{label} : {status}."
+VERDICT_FOOTNOTE = "Règles et seuils : hypothèses de l'équipe. Détail sous \"Voir le détail\"."
+
+TAB_COMPARE = "Avant / après"
+TAB_RULES = "Règles du profil"
+TAB_FACTS = "Faits sur {ticker}"
+TAB_VARIANTS = "Variantes"
+
 COLUMN_MEASURE = "Mesure"
 COLUMN_BEFORE = "Avant"
 COLUMN_AFTER = "Après"
 COLUMN_DELTA = "Écart"
-RESULT_AMOUNT_NOTE = (
-    "Les montants en dollars sont des pertes historiques observées sur la période, "
-    "appliquées au capital fictif. Ce ne sont pas des prévisions."
-)
-RESULT_RULES = "Règles du profil après l'idée"
-RESULT_MODE_FALLBACK = (
-    "Bedrock n'a pas été utilisé pour cette analyse ({reason}) : la séquence d'outils "
-    "scriptée a pris le relais, avec les mêmes outils et la même gouvernance."
-)
-# Mesures comparées avant et après, dans cet ordre.
+RESULT_AMOUNT_NOTE = "Montants : pertes historiques observées sur la période, appliquées au capital fictif."
+RESULT_COMPOSITION = "Composition après l'idée"
 # Libellés génériques des mesures qui ont des membres propres à chaque colonne ou qui peuvent manquer.
 METRIC_LABELS = {"largest_correlated_group_weight": "Poids du plus grand groupe corrélé"}
 COMPARE_METRICS = XRAY_METRICS
-VARIANTS_TITLE = "Variantes simulées"
-VARIANTS_NOTICE = (
-    "Simulation, pas une recommandation : chaque variante repasse par les mêmes outils "
-    "et la même gouvernance que votre idée."
-)
+
+ASSET_FACTS_NOTE = "Mêmes chiffres pour tous les profils : seules les règles changent."
+ASSET_FACTS_METRICS = ("volatility_ann", "max_drawdown", "recovery_days")
+ASSET_FACTS_SPINNER = "Lecture des faits sur l'actif..."
+
+VARIANTS_NOTICE = "Pas une recommandation : chaque variante repasse par les mêmes outils et la même gouvernance."
 VARIANTS_NONE = "Aucune variante simulée pour cette idée."
 VARIANT_HEADER = "{variant_id} : {reason}"
-VARIANT_IDEA = "Variante simulée : {weight} dans {ticker}, financée {funding}."
+VARIANT_RULES = "Règles pour cette variante"
 REASON_LABELS = {
     "reduce_weight": "réduire le poids",
     "change_funding_source": "changer la source des fonds",
@@ -354,26 +409,23 @@ REASON_LABELS = {
 
 # --- Explication (US-10) -------------------------------------------------------
 EXPLANATION_LEVEL = "Niveau d'explication"
-EXPLANATION_LEVEL_HELP = (
-    "Changer de niveau ne relance que l'explicateur : les chiffres et les statuts restent identiques."
-)
+EXPLANATION_LEVEL_HELP = "Seul le texte change : chiffres et statuts restent identiques."
 EXPLANATION_SPINNER = "Rédaction de l'explication..."
+EXPLANATION_RUN = "Rédiger l'explication (niveau {level})"
 EXPLANATION_ORIGIN = {
-    "llm": "Texte rédigé par l'agent explicateur (Bedrock), contrôlé par le validateur et le garde-fou.",
-    "template": "Texte du gabarit écrit par l'équipe (sans modèle). Les chiffres sont les mêmes.",
+    "llm": "Rédigé par l'agent explicateur",
+    "template": "Texte de repli (gabarit)",
 }
-EXPLANATION_EVIDENCE = "Preuves citées dans l'explication"
-EXPLANATION_FALLBACK = (
-    "L'agent explicateur n'a pas été utilisé ({reason}) : le texte affiché est celui du gabarit, "
-    "avec les mêmes chiffres."
-)
+EXPLANATION_ORIGIN_HELP = {
+    "llm": "Agent Bedrock, contrôlé par le validateur et le garde-fou.",
+    "template": "Gabarit écrit par l'équipe, sans modèle. Mêmes chiffres.",
+}
+EXPLANATION_EVIDENCE = "Preuves citées"
+EXPLANATION_FALLBACK = "Agent explicateur non utilisé ({reason}) : texte du gabarit, mêmes chiffres."
 
 # --- Trace (US-13) -------------------------------------------------------------
-TRACE_INTRO = (
-    "Étapes réelles de l'exécution, construites par le code. Le raisonnement interne "
-    "des modèles n'est jamais affiché."
-)
-TRACE_STEP = "Étape {step} : {name}"
+TRACE_INTRO = "Étapes réelles, construites par le code. Le raisonnement interne des modèles n'est jamais affiché."
+TRACE_STEP = "{step}. {name}"
 TRACE_STEP_NAMES = {
     "analysis": "Analyse",
     "governance": "Gouvernance",
@@ -404,12 +456,12 @@ COLUMN_STATUS = "Statut"
 COLUMN_EVIDENCE = "Preuves produites"
 TRACE_NO_PARAMS = "aucun"
 TRACE_BEFORE_AFTER = "Statut global : {before} avant, {after} après."
-TRACE_BRIEF = "Dossier {brief_id}, facteurs classés par le code : {factors}. Limites : {limits}."
-TRACE_EXPLANATION = "Niveau {level}, texte : {origin}, essai {attempt}, lu dans le cache : {cache}."
+TRACE_BRIEF = "Dossier {brief_id}. Facteurs classés par le code : {factors}. Limites : {limits}."
+TRACE_EXPLANATION = "Niveau {level}, texte : {origin}, essai {attempt}, cache : {cache}."
 TRACE_ORIGINS = {"llm": "agent explicateur", "template": "gabarit"}
 TRACE_VALIDATION_OK = "Texte accepté : {count} renvois vérifiés."
 TRACE_VALIDATION_KO = "Texte rejeté ({codes}), remplacé par le gabarit."
-TRACE_GUARDRAIL = "Action : {action}. Score d'ancrage : {grounding}. Score de pertinence : {relevance}."
+TRACE_GUARDRAIL = "Action : {action}. Ancrage : {grounding}. Pertinence : {relevance}."
 TRACE_GUARDRAIL_ACTIONS = {
     "none": "aucune intervention",
     "intervened": "intervention",
@@ -419,13 +471,11 @@ TRACE_STATUS_INTERVENTION = "intervention"
 TRACE_GUARDRAIL_DENIED = "Sujet refusé : {topics}."
 TRACE_GUARDRAIL_BELOW_THRESHOLD = "Ancrage sous le seuil : le texte du modèle n'est pas montré."
 TRACE_GUARDRAIL_ERROR = "Le contrôle d'ancrage a échoué ({error})."
-TRACE_GUARDRAIL_REPLACED = "Le texte du modèle a été remplacé par le gabarit."
+TRACE_GUARDRAIL_REPLACED = "Texte du modèle remplacé par le gabarit."
 TRACE_SAVED = "Trace enregistrée sur S3 : {location}."
 TRACE_NOT_SAVED = "Trace non enregistrée sur S3 ({reason})."
 TRACE_EXPLAINER_SAW = "Ce que l'explicateur a vu"
-TRACE_EXPLAINER_SAW_HELP = (
-    "Le dossier d'explication transmis à l'explicateur, tel quel : c'est sa seule entrée."
-)
+TRACE_EXPLAINER_SAW_HELP = "Le dossier transmis à l'explicateur, tel quel : sa seule entrée."
 TRACE_GUARDRAIL_NOT_RUN = "Contrôle d'ancrage non exécuté : {reason}."
 TOOL_LABELS = {
     "analyze_portfolio": "analyze_portfolio (radiographie)",
@@ -447,25 +497,21 @@ REASON_CODES_FR = {
 }
 
 # --- Garde-fou (US-14) -----------------------------------------------------------
-GUARDRAIL_INTRO = (
-    "Requêtes prédéfinies, sans texte libre. Le garde-fou Amazon Bedrock refuse le conseil "
-    "personnalisé, les ordres de transaction et les prédictions de rendement."
+GUARDRAIL_DETAILS = "Ce que le garde-fou refuse"
+GUARDRAIL_DETAILS_TEXT = (
+    "Le garde-fou Amazon Bedrock refuse le conseil personnalisé, les ordres de transaction "
+    "et les prédictions de rendement. Aucun texte libre : seules ces requêtes sont testables."
 )
-GUARDRAIL_OFFLINE = (
-    "Le garde-fou n'est appelé qu'en mode Amazon Bedrock, avec un garde-fou configuré. "
-    "Dans ce mode, chaque test affiche \"contrôle non exécuté\"."
-)
-GUARDRAIL_ALLOWED = "Requêtes qui doivent passer"
-GUARDRAIL_DENIED = "Requêtes qui doivent être refusées"
+GUARDRAIL_OFFLINE = "Le garde-fou n'est appelé qu'en mode Amazon Bedrock. Ici, chaque test affiche \"contrôle non exécuté\"."
+GUARDRAIL_ALLOWED = "Doivent passer"
+GUARDRAIL_DENIED = "Doivent être refusées"
 GUARDRAIL_TEST = "Tester"
 GUARDRAIL_SPINNER = "Interrogation du garde-fou..."
-GUARDRAIL_HISTORY = "Résultats des tests"
-GUARDRAIL_CLEAR = "Effacer les résultats"
-GUARDRAIL_RESULT_DENIED = "Refusée par le garde-fou. Sujet : {topics}."
-GUARDRAIL_RESULT_ALLOWED = "Permise par le garde-fou."
-GUARDRAIL_RESULT_NOT_RUN = (
-    "Contrôle non exécuté : passez en mode Amazon Bedrock avec un garde-fou configuré."
-)
+GUARDRAIL_HISTORY = "Résultats"
+GUARDRAIL_CLEAR = "Effacer"
+GUARDRAIL_RESULT_DENIED = "Refusée. Sujet : {topics}."
+GUARDRAIL_RESULT_ALLOWED = "Permise."
+GUARDRAIL_RESULT_NOT_RUN = "Contrôle non exécuté : passez en mode Amazon Bedrock avec un garde-fou configuré."
 GUARDRAIL_EXPECTED = {"allowed": "Attendu : permise.", "denied": "Attendu : refusée."}
 GUARDRAIL_UNEXPECTED = "Résultat différent de l'attendu : à signaler à l'équipe du garde-fou."
 GUARDRAIL_NO_TOPIC = "non précisé"
@@ -490,12 +536,9 @@ SOURCES_COLUMNS = {
     "limitations": "Limites",
     "terms_of_use": "Conditions d'utilisation",
 }
-SOURCES_NOTE = "Textes repris de data/raw/sources_metadata.csv, rédigés en anglais par les organisateurs."
-METHOD_TITLE = "Méthode et limites"
-METHOD_INTRO = (
-    "Les limites ci-dessous sont des textes fixes de l'équipe, affichés par le code. "
-    "Elles s'appliquent à tous les chiffres."
-)
+SOURCES_NOTE = "Repris de data/raw/sources_metadata.csv (textes des organisateurs, en anglais)."
+METHOD_TITLE = "Limites"
+METHOD_INTRO = "Textes fixes de l'équipe, valables pour tous les chiffres."
 UNIVERSE_TITLE = "Univers des actifs"
 UNIVERSE_COLUMNS = {
     "ticker": "Symbole",
@@ -506,34 +549,19 @@ UNIVERSE_COLUMNS = {
 }
 
 # --- Messages ------------------------------------------------------------------
-MSG_PROFILES_NOT_READY = (
-    "Les profils ne sont pas disponibles dans ce mode "
-    "(fichier des personas ou module profiles introuvable). Utilisez le mode Données d'essai."
-)
-MSG_PROFILE_BUILDER_NOT_READY = (
-    "La construction de profil n'est pas disponible (module profiles.py du flux B absent)."
-)
-MSG_PIPELINE_NOT_READY = (
-    "Le pipeline d'analyse n'est pas disponible (module du flux C introuvable). "
-    "Utilisez le mode Données d'essai."
-)
-MSG_UNIVERSE_NOT_READY = "L'univers des actifs n'est pas disponible (module data_loading introuvable)."
-MSG_REFERENCE_NOT_READY = "Les textes fixes ne sont pas disponibles (module reference_texts introuvable)."
-MSG_GUARDRAIL_PROMPTS_MISSING = "Les requêtes prédéfinies du garde-fou sont introuvables."
-MSG_FIXTURE_NO_ASSET_FACTS = "Faits sur l'actif non disponibles en mode Données d'essai."
-MSG_ASSET_FACTS_FAILED = "Faits sur {ticker} non disponibles : {reason}"
-MSG_XRAY_FAILED = "La radiographie n'a pas abouti : {reason}"
-MSG_ANALYSIS_REFUSED = "L'idée ne peut pas être analysée : {reason}"
-MSG_EXPLANATION_REFUSED = "L'explication ne peut pas être produite : {reason}"
-MSG_FIXTURE_PROFILE_MISSING = (
-    "Aucune donnée d'essai pour ce profil. En mode Données d'essai, seuls les profils "
-    "ayant une fixture d'analyse sont disponibles."
-)
-MSG_FIXTURE_IDEA_ONLY = (
-    "En mode Données d'essai, seule l'idée \"25 % dans TSLA\", financée au prorata, est disponible."
-)
+MSG_PROFILES_NOT_READY = "Profils indisponibles dans ce mode. Essayez le mode Données d'essai."
+MSG_PROFILE_BUILDER_NOT_READY = "Construction de profil indisponible (module profiles absent)."
+MSG_PIPELINE_NOT_READY = "Pipeline d'analyse indisponible. Essayez le mode Données d'essai."
+MSG_UNIVERSE_NOT_READY = "Univers des actifs indisponible (module data_loading absent)."
+MSG_REFERENCE_NOT_READY = "Textes fixes indisponibles (module reference_texts absent)."
+MSG_GUARDRAIL_PROMPTS_MISSING = "Requêtes prédéfinies du garde-fou introuvables."
+MSG_FIXTURE_NO_ASSET_FACTS = "Faits sur l'actif indisponibles en mode Données d'essai."
+MSG_ASSET_FACTS_FAILED = "Faits sur {ticker} indisponibles : {reason}"
+MSG_XRAY_FAILED = "Radiographie impossible : {reason}"
+MSG_ANALYSIS_REFUSED = "Idée non analysable : {reason}"
+MSG_EXPLANATION_REFUSED = "Explication impossible : {reason}"
+MSG_FIXTURE_PROFILE_MISSING = "Aucune donnée d'essai pour ce profil (seuls les profils avec fixture sont disponibles)."
+MSG_FIXTURE_IDEA_ONLY = "En mode Données d'essai, seule l'idée \"25 % dans TSLA\", au prorata, est disponible."
+MSG_PREVIEW_MISSING = "Aperçu des niveaux indisponible (traces de démonstration absentes)."
 RETRY = "Réessayer"
-MSG_UNEXPECTED_ERROR = (
-    "Une erreur est survenue ({error_type}). "
-    "La page reste utilisable : changez de mode ou réessayez."
-)
+MSG_UNEXPECTED_ERROR = "Une erreur est survenue ({error_type}). La page reste utilisable : réessayez ou changez de mode."

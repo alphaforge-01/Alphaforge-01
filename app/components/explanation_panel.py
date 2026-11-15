@@ -14,21 +14,6 @@ import ui_texts as texts
 from formatting import escape_dollars
 from components.evidence import ProofContext, display, render_proof
 
-LEVEL_WIDGET_KEY = "level_choice"
-
-
-def _sync_level() -> None:
-    st.session_state.level = st.session_state[LEVEL_WIDGET_KEY]
-
-
-def render_level_choice() -> str:
-    """Bascule novice/pro. Le niveau vit dans `st.session_state.level`."""
-    st.session_state[LEVEL_WIDGET_KEY] = st.session_state.level
-    st.radio(texts.EXPLANATION_LEVEL, list(texts.LEVEL_LABELS), key=LEVEL_WIDGET_KEY,
-             format_func=texts.LEVEL_LABELS.get, horizontal=True, on_change=_sync_level,
-             help=texts.EXPLANATION_LEVEL_HELP)
-    return st.session_state.level
-
 
 def _without_title(markdown: str) -> str:
     """Retire le titre H1 du texte rendu : la section a déjà son titre."""
@@ -50,7 +35,7 @@ def render_cited_evidence(explanation: Mapping[str, Any], result: Mapping[str, A
     cited = [ref for ref in explanation["validation"].get("checked_references", []) if ref in evidence]
     if not cited:
         return
-    st.markdown(f"**{texts.EXPLANATION_EVIDENCE}**")
+    st.caption(texts.EXPLANATION_EVIDENCE)
     columns = st.columns(3)
     for position, evidence_id in enumerate(cited):
         entry = evidence[evidence_id]
@@ -69,10 +54,15 @@ def render_fallback_note(explanation: Mapping[str, Any]) -> None:
         st.info(texts.EXPLANATION_FALLBACK.format(reason=texts.REASON_CODES_FR.get(reason, reason)))
 
 
-def render_explanation(explanation: Mapping[str, Any], result: Mapping[str, Any], ctx: ProofContext) -> None:
+def render_origin(explanation: Mapping[str, Any]) -> None:
+    """Origine du texte : agent explicateur ou gabarit, avec le badge "texte de repli" (US-10)."""
     origin = explanation["output"].get("origin", "template")
     render_fallback_note(explanation)
-    st.caption(texts.EXPLANATION_ORIGIN.get(origin, origin))
+    st.badge(texts.EXPLANATION_ORIGIN.get(origin, origin), color="violet" if origin == "llm" else "gray",
+             help=texts.EXPLANATION_ORIGIN_HELP.get(origin))
+
+
+def render_explanation(explanation: Mapping[str, Any], result: Mapping[str, Any], ctx: ProofContext) -> None:
     with st.container(border=True):
         st.markdown(escape_dollars(_without_title(explanation["rendered_markdown"])))
     render_cited_evidence(explanation, result, ctx)

@@ -82,16 +82,17 @@ def render_idea_panel(universe: List[Dict[str, Any]], portfolio: Mapping[str, An
 
     `current_weights` : ticker -> poids actuel affiché (display_value du registre).
     """
-    st.caption(texts.IDEA_INTRO)
     tickers = [asset["ticker"] for asset in universe]
     names = {asset["ticker"]: asset["name"] for asset in universe}
 
-    st.markdown(f"**{texts.IDEA_SUGGESTIONS}**")
+    st.caption(texts.IDEA_SUGGESTIONS)
     presets = [preset for preset in texts.IDEA_PRESETS if preset["ticker"] in names]
-    for column, preset in zip(st.columns(len(presets) or 1), presets):
-        with column:
-            st.button(preset["label"], key=f"idea_preset_{preset['ticker']}_{round(preset['target_weight'] * 100)}", width="stretch",
-                      on_click=on_submit, args=(make_idea(preset["ticker"], preset["target_weight"]),))
+    with st.container(horizontal=True):
+        for preset in presets:
+            preset_idea = make_idea(preset["ticker"], preset["target_weight"])
+            st.button(preset["label"], key=f"idea_preset_{preset['ticker']}_{round(preset['target_weight'] * 100)}",
+                      type="primary" if preset_idea == idea else "secondary",
+                      on_click=on_submit, args=(preset_idea,))
 
     _init_widgets(idea, tickers)
     left, middle, right = st.columns([3, 3, 4])
@@ -116,5 +117,6 @@ def render_idea_panel(universe: List[Dict[str, Any]], portfolio: Mapping[str, An
             else:
                 st.info(texts.IDEA_NO_FUNDING_CANDIDATE)
     can_submit = funding == "pro_rata" or funding_ticker is not None
+    # Un curseur ne lance rien : seule la validation explicite simule (quotas Bedrock partagés).
     st.button(texts.IDEA_SUBMIT, key="idea_submit", type="primary", disabled=not can_submit,
               on_click=_submit_from_widgets, args=(on_submit,))
