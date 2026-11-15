@@ -35,6 +35,14 @@ def _render_verdict(result: Mapping[str, Any]) -> None:
         st.info(texts.GUARDRAIL_RESULT_NOT_RUN)
 
 
+def _contradicts_expected(prompt: Mapping[str, Any], result: Mapping[str, Any]) -> bool:
+    """Vrai si le garde-fou a répondu l'inverse de ce que la requête prédéfinie attend."""
+    action = result.get("action")
+    if action not in ("none", "intervened"):
+        return False
+    return (prompt.get("expected") == "allowed") != (action == "none")
+
+
 def _render_prompt_list(title: str, prompts: List[Dict[str, Any]]) -> None:
     st.markdown(f"**{title}**")
     for prompt in prompts:
@@ -74,4 +82,6 @@ def render_guardrail_panel(mode: str, prompts: List[Dict[str, Any]],
                 st.write(item["prompt"]["text"])
             with st.chat_message("assistant"):
                 _render_verdict(item["result"])
+                if _contradicts_expected(item["prompt"], item["result"]):
+                    st.warning(texts.GUARDRAIL_UNEXPECTED)
                 st.caption(texts.GUARDRAIL_EXPECTED.get(item["prompt"].get("expected"), ""))

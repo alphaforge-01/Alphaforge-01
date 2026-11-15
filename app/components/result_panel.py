@@ -1,6 +1,7 @@
 """Résultat d'une idée : avant/après, règles, contrefactuel, variantes (US-05 à US-09)."""
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Dict, Mapping, Optional
 
 import streamlit as st
@@ -62,6 +63,7 @@ def render_comparison(result: Mapping[str, Any], ctx: ProofContext, names: Mappi
 
 def render_asset_facts(facts: Mapping[str, Any], ticker: str, ctx: ProofContext) -> None:
     """Chiffres de l'actif seul : identiques pour tous les profils (US-09)."""
+    ctx = replace(ctx, show_id=False)  # registre propre aux faits de l'actif
     st.subheader(texts.ASSET_FACTS_TITLE.format(ticker=ticker))
     index = index_by_key(facts["evidence"])
     metrics = texts.ASSET_FACTS_METRICS
@@ -106,14 +108,25 @@ def render_variants(result: Mapping[str, Any], rules_by_id: Mapping[str, Dict[st
 
 def render_result(result: Mapping[str, Any], rules_by_id: Mapping[str, Dict[str, Any]],
                   ctx: ProofContext, names: Mapping[str, str],
-                  asset_facts: Optional[Mapping[str, Any]] = None) -> None:
+                  asset_facts: Optional[Mapping[str, Any]] = None, threshold_notice: str = "") -> None:
     st.caption(describe_idea(result["idea"]))
     render_mode_note(result)
     render_overall(result)
-    render_comparison(result, ctx, names)
+    # Zones distinctes (US-12) : simulation, faits sur l'actif, hypothèses de l'équipe.
+    with st.container(border=True):
+        st.markdown(f"**{texts.ZONE_SIMULATION}**")
+        st.caption(texts.ZONE_SIMULATION_NOTE)
+        render_comparison(result, ctx, names)
     if asset_facts is not None:
-        render_asset_facts(asset_facts, result["idea"]["ticker"], ctx)
-    st.subheader(texts.RESULT_RULES)
-    render_checks(result["governance_after"]["checks"], result["evidence"], "portfolio_after",
-                  rules_by_id, ctx, key_prefix="result_rule", show_counterfactual=True)
-    render_variants(result, rules_by_id, ctx)
+        with st.container(border=True):
+            st.markdown(f"**{texts.ZONE_FACTS}**")
+            render_asset_facts(asset_facts, result["idea"]["ticker"], ctx)
+    with st.container(border=True):
+        st.markdown(f"**{texts.ZONE_ASSUMPTIONS}**")
+        st.caption(threshold_notice or texts.ZONE_ASSUMPTIONS_NOTE)
+        st.subheader(texts.RESULT_RULES)
+        render_checks(result["governance_after"]["checks"], result["evidence"], "portfolio_after",
+                      rules_by_id, ctx, key_prefix="result_rule", show_counterfactual=True)
+    with st.container(border=True):
+        st.markdown(f"**{texts.ZONE_SIMULATION}**")
+        render_variants(result, rules_by_id, ctx)

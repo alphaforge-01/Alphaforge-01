@@ -19,6 +19,8 @@ from formatting import format_date
 class ProofContext:
     """Ce qu'il faut pour afficher une preuve : sources, limites et niveau de lecture."""
     level: str = "novice"
+    # Les numéros E1, E2... sont propres à un registre : ils ne sont montrés que pour celui du résultat.
+    show_id: bool = True
     sources: Dict[str, Dict[str, Any]] = field(default_factory=dict)   # fichier -> ligne de sources_metadata
     limits: Dict[str, Dict[str, Any]] = field(default_factory=dict)    # limit_id -> limite
 
@@ -53,7 +55,8 @@ def render_proof(entry: Dict[str, Any], ctx: ProofContext) -> None:
     st.markdown(f"**{entry.get('label_fr', '')}**")
     lines: List[str] = [
         f"- {texts.PROOF_VALUE} : {display(entry)}",
-        f"- {texts.PROOF_ID} : `{entry.get('evidence_id', '')}`",
+        (f"- {texts.PROOF_ID} : `{entry.get('evidence_id', '')}`" if ctx.show_id
+         else f"- {texts.PROOF_KEY} : `{entry.get('evidence_key', '')}`"),
         f"- {texts.PROOF_TOOL} : `{entry.get('tool_name', '')}`",
     ]
     if entry.get("period_start") and entry.get("period_end"):

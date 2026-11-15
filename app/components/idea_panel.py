@@ -67,6 +67,14 @@ def _init_widgets(idea: Optional[Mapping[str, Any]], tickers: List[str]) -> None
     st.session_state.setdefault(FUNDING_KEY, default["funding_source"])
 
 
+def _submit_from_widgets(on_submit: Callable[[Dict[str, Any]], None]) -> None:
+    """Lit les sélecteurs au moment du clic, pas ceux du rendu précédent."""
+    funding = st.session_state[FUNDING_KEY]
+    on_submit(make_idea(
+        st.session_state[ASSET_KEY], st.session_state[WEIGHT_KEY] / 100, funding,
+        st.session_state.get(FUNDING_TICKER_KEY) if funding == "from_ticker" else None))
+
+
 def render_idea_panel(universe: List[Dict[str, Any]], portfolio: Mapping[str, Any],
                       idea: Optional[Dict[str, Any]], on_submit: Callable[[Dict[str, Any]], None],
                       current_weights: Optional[Mapping[str, str]] = None) -> None:
@@ -91,7 +99,7 @@ def render_idea_panel(universe: List[Dict[str, Any]], portfolio: Mapping[str, An
         ticker = st.selectbox(texts.IDEA_ASSET, tickers, key=ASSET_KEY,
                               format_func=lambda t: f"{t}, {names.get(t, '')}")
     with middle:
-        weight_pct = st.slider(texts.IDEA_WEIGHT, min_value=1, max_value=100, step=1, key=WEIGHT_KEY)
+        st.slider(texts.IDEA_WEIGHT, min_value=1, max_value=100, step=1, key=WEIGHT_KEY)
     with right:
         funding = st.radio(texts.IDEA_FUNDING, list(texts.IDEA_FUNDING_LABELS), key=FUNDING_KEY,
                            format_func=texts.IDEA_FUNDING_LABELS.get, horizontal=True)
@@ -109,4 +117,4 @@ def render_idea_panel(universe: List[Dict[str, Any]], portfolio: Mapping[str, An
                 st.info(texts.IDEA_NO_FUNDING_CANDIDATE)
     can_submit = funding == "pro_rata" or funding_ticker is not None
     st.button(texts.IDEA_SUBMIT, key="idea_submit", type="primary", disabled=not can_submit,
-              on_click=on_submit, args=(make_idea(ticker, weight_pct / 100, funding, funding_ticker),))
+              on_click=_submit_from_widgets, args=(on_submit,))

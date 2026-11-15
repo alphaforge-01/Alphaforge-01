@@ -119,6 +119,8 @@ def resolve_level(profiles: Dict[str, Any]) -> None:
 
 def forget_failure(kind: str, cache_key: Tuple) -> None:
     st.session_state[f"{kind}_failures"].pop(cache_key, None)
+    if kind == "analysis":  # en mode bedrock, "Réessayer" relance sans second clic
+        st.session_state.analysis_request = True
 
 
 # --- Chargement avec mémoire des échecs ------------------------------------------
@@ -307,8 +309,9 @@ def render_analysis_tab(mode: str, personas: Optional[Dict[str, Any]], shown: Di
         lambda: data_source.get_xray(mode, profile, portfolio), texts.XRAY_SPINNER)
     if xray_data is not None:
         shown["xray"] = xray_data
-        guarded(lambda: xray.render_xray(
-            xray_data, rules_by_id, proof_context(xray_data["limits"]), names))
+        xray_ctx = proof_context(xray_data["limits"])
+        xray_ctx.show_id = False  # registre propre à la radiographie
+        guarded(lambda: xray.render_xray(xray_data, rules_by_id, xray_ctx, names))
 
     st.header(texts.SECTION_IDEA)
     if universe:
@@ -344,7 +347,8 @@ def render_analysis_tab(mode: str, personas: Optional[Dict[str, Any]], shown: Di
     asset_facts = cached_load(
         "asset", (mode, idea["ticker"]),
         lambda: data_source.get_asset_facts(mode, idea["ticker"], portfolio), texts.ASSET_FACTS_SPINNER)
-    guarded(lambda: result_panel.render_result(result, rules_by_id, ctx, names, asset_facts))
+    notice = safe_reference(lambda: data_source.get_threshold_notice(st.session_state.level or "novice"), "")
+    guarded(lambda: result_panel.render_result(result, rules_by_id, ctx, names, asset_facts, notice))
 
     st.header(texts.SECTION_EXPLANATION)
     level = explanation_panel.render_level_choice()
