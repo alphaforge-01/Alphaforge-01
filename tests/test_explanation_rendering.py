@@ -301,3 +301,138 @@ def test_each_rule_gets_its_own_counterfactual_line_with_its_own_value():
     text = render_markdown(render_template(brief), brief)
     assert "Concentration par actif : le plus grand poids testé conforme à cette règle est 22 %." in text
     assert "Volatilité annuelle : le plus grand poids testé conforme à cette règle est 12 %." in text
+
+
+# ---------- statut déjà dit à côté d'un renvoi [G..] : pas de répétition ----------
+
+STATUS_TEXT = {"conflict": "en conflit", "tension": "en tension", "compliant": "conforme",
+               "missing_info": "information manquante"}
+STATUS_COUNT = re.compile(r"\bconflits?\b|\btensions?\b|\bconformes?\b|information manquante|manque d'information")
+G1_LABEL = "Concentration par actif"
+
+
+def brief_with_status(status, level="novice"):
+    """Dossier de la fixture dont le contrôle G1 prend le statut donné."""
+    brief = make_brief(level)
+    check = brief["checks"][0]
+    check["status"] = status
+    if status == "missing_info":
+        check.update(value=None, margin=None, missing_reason="Valeur indisponible.")
+    return brief
+
+
+def summary_line(text, brief):
+    """Résumé rendu, sur une seule ligne, pour un texte de modèle donné."""
+    markdown = render_markdown(output_with(level=brief["level"], summary=text), brief)
+    return markdown.split("## Résumé\n\n")[1].split("\n")[0]
+
+
+SENTENCES = {
+    "conflict": ["La règle [G1] est en conflit avec le profil.", "Un conflit apparaît sur [G1]."],
+    "tension": ["La règle [G1] est en tension.", "Il y a une tension sur [G1]."],
+    "compliant": ["La règle [G1] reste conforme.", "[G1] : conforme au profil."],
+    "missing_info": ["[G1] : information manquante.", "Pour [G1], le contrôle manque d'information.",
+                     "Pour [G1], l'information manquante empêche tout verdict."],
+}
+NEUTRAL = ["Contrôle : [G1].", "Voir [G1] pour le détail.", "Points à regarder : [G1]."]
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+@pytest.mark.parametrize("status", sorted(SENTENCES))
+def test_status_already_in_the_sentence_is_not_repeated(status, level):
+    for sentence in SENTENCES[status]:
+        line = summary_line(sentence, brief_with_status(status, level))
+        assert f"**{G1_LABEL}**" in line, sentence                 # le nom de la règle est conservé
+        assert f"({STATUS_TEXT[status]})" not in line, sentence    # pas de statut entre parenthèses
+        assert len(STATUS_COUNT.findall(line.lower())) == 1, (sentence, line)
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+@pytest.mark.parametrize("status", sorted(SENTENCES))
+def test_status_is_kept_when_the_text_does_not_say_it(status, level):
+    for sentence in NEUTRAL:
+        line = summary_line(sentence, brief_with_status(status, level))
+        assert f"**{G1_LABEL}** ({STATUS_TEXT[status]})" in line, (status, sentence)
+
+
+@pytest.mark.parametrize("status,wrong_word", [
+    ("compliant", "tension"), ("tension", "conflit"), ("conflict", "tension"), ("missing_info", "conflit"),
+])
+def test_another_status_word_never_removes_the_real_status(status, wrong_word):
+    line = summary_line(f"La règle [G1] est en {wrong_word}.", brief_with_status(status))
+    assert f"({STATUS_TEXT[status]})" in line
+
+
+def test_negated_conformity_does_not_count_as_compliant():
+    brief = brief_with_status("compliant")
+    for sentence in ("Contrôles non conformes : [G1].", "La règle [G1] n'est pas conforme."):
+        assert "(conforme)" in summary_line(sentence, brief), sentence
+
+
+def test_each_reference_is_judged_on_its_own_neighbourhood():
+    brief = make_brief()                      # G1 en conflit, G2 en tension, G3 en tension
+    assert summary_line("[G1] et [G2] sont en tension.", brief) == (
+        f"**{G1_LABEL}** (en conflit) et **Volatilité annuelle** sont en tension.")
+    assert summary_line("[G2] est en tension, [G1] aussi.", brief) == (
+        f"**Volatilité annuelle** est en tension, **{G1_LABEL}** (en conflit) aussi.")
+
+
+def test_status_said_in_another_sentence_does_not_count():
+    line = summary_line("Le verdict est un conflit. Voir [G1].", make_brief())
+    assert f"**{G1_LABEL}** (en conflit)" in line
+
+
+def test_accents_and_case_are_ignored_when_looking_for_the_status():
+    assert "(information manquante)" not in summary_line("Pour [G1], INFORMATION MANQUANTE.",
+                                                         brief_with_status("missing_info"))
+    assert "(conforme)" not in summary_line("[G1] est CONFORME.", brief_with_status("compliant"))
+
+
+def test_other_references_are_untouched():
+    line = summary_line("[G99] en conflit, preuve [E1] et terme [T1].", make_brief())
+    assert "[référence inconnue : G99]" in line and "25 %" in line and "**Volatilité**" in line
+
+
+def test_governance_verdict_stays_in_the_details_table_whatever_the_text():
+    for status in sorted(SENTENCES):
+        brief = brief_with_status(status)
+        text = render_markdown(output_with(summary=SENTENCES[status][0]), brief)
+        row = next(line for line in text.splitlines() if line.startswith(f"| {G1_LABEL}"))
+        assert STATUS_TEXT[status] in row
+
+
+def test_substitution_does_not_change_the_checks_or_the_registry():
+    brief = brief_with_status("conflict")
+    before = copy.deepcopy(brief)
+    summary_line(SENTENCES["conflict"][0], brief)
+    assert brief == before
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+@pytest.mark.parametrize("status", sorted(SENTENCES))
+def test_template_text_shows_each_status_exactly_once_per_reference(status, level):
+    """Le gabarit ne dit pas le statut à côté du renvoi : le rendu l'ajoute une seule fois, sans doublon."""
+    brief = brief_with_status(status, level)
+    text = render_markdown(render_template(brief), brief)
+    assert not re.search(r"\(([^()]+)\)\s*\(\1\)", text)
+    assert not re.search(r"(en conflit|en tension)[^.\n]{0,20}\(\1\)", text)
+    if status != "compliant":
+        assert f"**{G1_LABEL}** ({STATUS_TEXT[status]})" in text
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+def test_model_like_output_is_readable_without_repeated_statuses(level):
+    brief = make_brief(level)
+    output = output_with(
+        level=level,
+        summary="La règle [G1] est en conflit avec le profil, et [G2] est en tension.",
+        factors=[{"check_id": "G1", "text": "Le poids [E1] met [G1] en conflit."},
+                 {"check_id": "G2", "text": "La volatilité [E2] place [G2] en tension."}],
+        counterfactual="Pour [G1], le plus grand poids testé conforme est donné ci-dessous.")
+    text = render_markdown(output, brief)
+    assert "**Concentration par actif** est en conflit" in text and "**Volatilité annuelle** est en tension" in text
+    assert "met **Concentration par actif** en conflit" in text and "place **Volatilité annuelle** en tension" in text
+    assert "**Concentration par actif** (en conflit)" in text.split("## Ce qui ferait changer le verdict")[1]
+    assert not re.search(r"(en conflit|en tension)[^.\n]{0,40}\((en conflit|en tension)\)", text)
+    assert not re.search(r"\((en conflit|en tension)\)[^.\n]{0,15}(en conflit|en tension)", text)
+    assert not REFERENCE_PATTERN.search(text)

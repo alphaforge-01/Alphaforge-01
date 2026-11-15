@@ -3,7 +3,9 @@
 `render_markdown(output, brief)` remplace les renvois du texte par les valeurs
 vérifiables du dossier :
 - `[E3]` : valeur affichée de la preuve (`display_value` du registre) ;
-- `[G1]` : libellé de la règle et statut déterminé par la gouvernance ;
+- `[G1]` : libellé de la règle et statut déterminé par la gouvernance, sauf si le texte
+  dit déjà ce statut juste à côté du renvoi (voir `_status_already_stated`) : le statut
+  n'est alors pas répété ;
 - `[T2]` : terme du glossaire.
 
 Il ajoute, sans aucun texte de modèle, les éléments factuels : idée simulée,
@@ -32,6 +34,19 @@ STATUS_FR = {
     "conflict": "en conflit",
     "missing_info": "information manquante",
 }
+# Façons de dire chaque statut dans un texte (comparaison sans accents ni casse). "non conforme"
+# et "pas conforme" ne comptent pas comme "conforme". Un statut n'est jamais retiré à cause du
+# mot d'un autre statut : seul le statut propre à la règle citée compte.
+_STATUS_WORDS = {
+    "compliant": re.compile(r"(?<!non )(?<!pas )\bconform\w*"),
+    "tension": re.compile(r"\btensions?\b"),
+    "conflict": re.compile(r"\bconflits?\b"),
+    "missing_info": re.compile(r"\binformations? manquantes?\b|\bmanque d'information"),
+}
+_FOLD = str.maketrans("éèêëàâäîïôöùûüç’", "eeeeaaaiioouuuc'")
+_SENTENCE_END = ".;!?\n"
+STATUS_WINDOW_BEFORE = 30
+STATUS_WINDOW_AFTER = 50
 FUNDING_FR = {"pro_rata": "au prorata des positions existantes"}
 MISSING_FR = "information manquante"
 NOT_DEFINED_FR = "non défini"
@@ -83,7 +98,7 @@ class _Registry:
         if key not in bucket:
             bucket.append(key)
 
-    def resolve(self, ref: str) -> str:
+    def resolve(self, ref: str, show_status: bool = True) -> str:
         kind = ref[0]
         if kind == "E" and ref in self.evidence:
             entry = self.evidence[ref]
@@ -94,6 +109,8 @@ class _Registry:
             return str(shown)
         if kind == "G" and ref in self.checks:
             check = self.checks[ref]
+            if not show_status:
+                return f"**{check['label_fr']}**"
             return f"**{check['label_fr']}** ({STATUS_FR[check['status']]})"
         if kind == "T" and ref in self.glossary:
             self._remember(self.cited_terms, ref)
@@ -101,7 +118,38 @@ class _Registry:
         return f"[référence inconnue : {ref}]"
 
     def substitute(self, text: str) -> str:
-        return REFERENCE_PATTERN.sub(lambda m: self.resolve(m.group(1)), text or "")
+        """Remplace les renvois ; le statut d'un `[G..]` n'est pas répété s'il est déjà dit à côté."""
+        text = text or ""
+
+        def replace(match: "re.Match[str]") -> str:
+            ref = match.group(1)
+            check = self.checks.get(ref) if ref[0] == "G" else None
+            if check is not None and _status_already_stated(text, match.start(), match.end(), check["status"]):
+                return self.resolve(ref, show_status=False)
+            return self.resolve(ref)
+
+        return REFERENCE_PATTERN.sub(replace, text)
+
+
+def _status_already_stated(text: str, start: int, end: int, status: str) -> bool:
+    """Vrai si le texte dit déjà `status` tout près du renvoi `[G..]` situé entre `start` et `end`.
+
+    On regarde seulement le voisinage immédiat : quelques mots avant et après le renvoi, sans
+    franchir la fin de la phrase ni un autre renvoi. Ainsi "[G1] et [G2] sont en conflit" ne
+    retire pas le statut de [G1], dont le voisinage ne le dit pas.
+    """
+    pattern = _STATUS_WORDS.get(status)
+    if pattern is None:
+        return False
+    folded = text.lower().translate(_FOLD)
+    before = folded[max(0, start - STATUS_WINDOW_BEFORE):start]
+    after = folded[end:end + STATUS_WINDOW_AFTER]
+    last = max(before.rfind(ch) for ch in _SENTENCE_END + "]")
+    before = before[last + 1:]
+    cut = [after.find(ch) for ch in _SENTENCE_END + "[" if after.find(ch) >= 0]
+    if cut:
+        after = after[:min(cut)]
+    return bool(pattern.search(before) or pattern.search(after))
 
 
 def _idea_line(idea: Mapping[str, Any]) -> str:
