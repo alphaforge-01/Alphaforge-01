@@ -292,3 +292,46 @@ def test_summarize_assessment_matches_contract():
     assert result["grounding_score"] == 0.82 and result["relevance_score"] == 0.9
     empty = sg.summarize_assessment({"action": "NONE", "assessments": []})
     assert empty["action"] == "none" and empty["denied_topics"] == []
+
+
+# ---- niveau de classification des sujets ----
+
+def test_classic_tier_is_the_default_and_adds_no_cross_region_config():
+    config = sg.build_guardrail_config()
+    assert "tierConfig" not in config["topicPolicyConfig"]
+    assert "crossRegionConfig" not in config
+    assert "CLASSIC" in sg.describe_config(config)
+
+
+def test_standard_tier_sets_the_topic_tier_and_the_cross_region_profile():
+    config = sg.build_guardrail_config(tier="standard")
+    assert config["topicPolicyConfig"]["tierConfig"] == {"tierName": "STANDARD"}
+    assert config["crossRegionConfig"] == {"guardrailProfileIdentifier": sg.DEFAULT_GUARDRAIL_PROFILE}
+    text = sg.describe_config(config)
+    assert "STANDARD" in text and sg.DEFAULT_GUARDRAIL_PROFILE in text
+    assert sg.validate_config(config) == []
+
+
+def test_standard_tier_accepts_a_custom_profile():
+    config = sg.build_guardrail_config(tier="standard", profile="eu.guardrail.v1:0")
+    assert config["crossRegionConfig"]["guardrailProfileIdentifier"] == "eu.guardrail.v1:0"
+
+
+def test_standard_config_matches_the_installed_boto3_model():
+    import boto3
+    client = boto3.client("bedrock", region_name="us-east-1", aws_access_key_id="x", aws_secret_access_key="x")
+    shape = client.meta.service_model.operation_model("CreateGuardrail").input_shape
+    config = sg.build_guardrail_config(tier="standard")
+    assert set(config) <= set(shape.members)
+    assert set(config["topicPolicyConfig"]) <= set(shape.members["topicPolicyConfig"].members)
+    assert config["topicPolicyConfig"]["tierConfig"]["tierName"] in \
+        shape.members["topicPolicyConfig"].members["tierConfig"].members["tierName"].enum
+
+
+def test_simulation_with_standard_tier_makes_no_aws_call(capsys):
+    def forbidden(region):
+        raise AssertionError("aucun client AWS en simulation")
+
+    code = sg.main(["--tier", "standard"], client_factory=forbidden, environ={})
+    assert code == sg.EXIT_OK
+    assert "STANDARD" in capsys.readouterr().out
