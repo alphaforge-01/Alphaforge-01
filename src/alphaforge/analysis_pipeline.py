@@ -39,6 +39,10 @@ from .tool_specs import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 VALID_MODES = ("offline", "bedrock")
+# Sous ce score d'ancrage, le texte du modele est remplace par le gabarit : un ancrage aussi bas a signale, a
+# l'essai reel, une erreur de sens que le validateur ne peut pas voir (mesure rattachee a la mauvaise chose).
+# Entre ce plancher et le seuil du garde-fou, le texte reste affiche avec la mention "ancrage faible".
+GROUNDING_FLOOR = 0.3
 _SEVERITY = {"conflict": 0, "tension": 1, "missing_info": 2, "compliant": 3}
 
 
@@ -479,7 +483,9 @@ def explain(
         # juge severement par le controle, et la fidelite est deja garantie par le validateur (renvois existants,
         # aucun nombre invente). Un ancrage faible est donc signale dans la trace, sans ecarter le texte.
         guard_details["grounding_weak"] = True
-    verified = guardrail["action"] == "none"
+    score = guardrail["grounding_score"]
+    below_floor = guardrail["action"] == "none" and score is not None and score < GROUNDING_FLOOR
+    verified = guardrail["action"] == "none" and not below_floor
     if output["origin"] == "llm" and not verified:
         # Le texte du modele n'est affiche que si le garde-fou l'a verifie et ne l'a pas refuse : un sujet interdit
         # (intervention), une erreur ou un controle impossible (taille) donnent le gabarit construit par le code.
@@ -488,7 +494,10 @@ def explain(
         validation = deps.validate(output, brief)
         markdown = deps.render_markdown(output, brief)
         trace[0]["status"] = "fallback"
-        trace[0]["details"]["fallback_reason"] = "garde_fou_indisponible" if unavailable else "garde_fou_sortie"
+        trace[0]["details"]["fallback_reason"] = (
+            "garde_fou_indisponible" if unavailable else "ancrage_insuffisant" if below_floor else "garde_fou_sortie")
+        if below_floor:
+            guard_details["grounding_floor"] = GROUNDING_FLOOR
         guard_details["replaced_by_template"] = True
         if guardrail["denied_topics"]:
             guard_details["denied_topics"] = guardrail["denied_topics"]

@@ -90,8 +90,9 @@ def test_pipeline_trace_never_contains_model_free_text():
 class Guard:
     """Client dont le garde-fou rend le resultat demande."""
 
-    def __init__(self, action="none", flags=None, error=None, config=WITH_GUARDRAIL):
+    def __init__(self, action="none", flags=None, error=None, config=WITH_GUARDRAIL, score=0.9):
         self.config = config
+        self.score = score
         self.action = action
         self.last_grounding_flags = flags or {}
         self.error = error
@@ -102,7 +103,7 @@ class Guard:
         if self.error:
             raise self.error
         return {"check": "output_grounding", "action": self.action, "denied_topics": [],
-                "grounding_score": 0.2, "relevance_score": 0.9, "mode": "detect"}
+                "grounding_score": self.score, "relevance_score": 0.9, "mode": "detect"}
 
 
 def llm_runner(deps, result, marker="TEXTE-MODELE"):
@@ -183,7 +184,7 @@ def test_redact_text_keeps_regular_text_and_hashes():
 def test_weak_grounding_is_flagged_but_the_text_is_kept_and_cached():
     """Plan de sprint : ancrage en detection. Un score faible est signale dans la trace, sans ecarter le texte."""
     cache = ExplanationCache()
-    guard = Guard(action="none", flags={"below_threshold": True, "filters": ["GROUNDING"]})
+    guard = Guard(action="none", flags={"below_threshold": True, "filters": ["GROUNDING"]}, score=0.4)
     explanation = explained(guard, cache=cache)
     assert explanation["output"]["origin"] == "llm" and "TEXTE-MODELE" in explanation["rendered_markdown"]
     details = explanation["trace"][2]["details"]
@@ -214,3 +215,33 @@ def test_resolved_text_falls_back_to_raw_text_when_too_long_or_unresolvable():
     output["limits_context"] = "x" * (GROUNDING_ANSWER_MAX_CHARS + 10)
     assert _model_text(output, brief) == _model_text(output)          # trop long une fois remplace : texte brut
     assert _model_text(output, {"evidence": "casse"}) == _model_text(output)   # dossier inutilisable : texte brut
+
+
+# ---- plancher d'ancrage : un score tres bas a signale une erreur de sens reelle ----
+
+def test_grounding_below_the_floor_replaces_the_text_and_is_not_cached():
+    from alphaforge.analysis_pipeline import GROUNDING_FLOOR
+    cache = ExplanationCache()
+    guard = Guard(action="none", flags={"below_threshold": True, "filters": ["GROUNDING"]}, score=0.12)
+    explanation = explained(guard, cache=cache)
+    assert 0.12 < GROUNDING_FLOOR
+    assert explanation["output"]["origin"] == "template" and "TEXTE-MODELE" not in explanation["rendered_markdown"]
+    assert explanation["trace"][0]["status"] == "fallback"
+    assert explanation["trace"][0]["details"]["fallback_reason"] == "ancrage_insuffisant"
+    details = explanation["trace"][2]["details"]
+    assert details["replaced_by_template"] is True and details["grounding_floor"] == GROUNDING_FLOOR
+    assert details["grounding_score"] == 0.12 and len(cache) == 0
+
+
+@pytest.mark.parametrize("score", [0.3, 0.35, 0.49])
+def test_grounding_between_the_floor_and_the_threshold_keeps_the_text_flagged(score):
+    guard = Guard(action="none", flags={"below_threshold": True, "filters": ["GROUNDING"]}, score=score)
+    explanation = explained(guard)
+    assert explanation["output"]["origin"] == "llm"
+    assert explanation["trace"][2]["details"]["grounding_weak"] is True
+    assert explanation["trace"][0]["status"] == "ok"
+
+
+def test_missing_score_is_not_treated_as_below_the_floor():
+    explanation = explained(Guard(action="none", score=None))
+    assert explanation["output"]["origin"] == "llm"

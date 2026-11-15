@@ -133,11 +133,11 @@ def test_first_attempt_success():
     client = ScriptedClient([reply(json.dumps(good_slots()), extra_blocks=[{"reasoningContent": {"x": 1}}])])
     output = explain_with_llm(client, MODEL, BRIEF, accept)
     assert output["origin"] == "llm" and output["attempt"] == 1
-    assert output["model_id"] == MODEL and output["prompt_version"] == "explainer_v3"
+    assert output["model_id"] == MODEL and output["prompt_version"] == "explainer_v4"
     assert len(client.calls) == 1
     call = client.calls[0]
     assert call["tool_config"] is None and "toolConfig" not in call["kwargs"]
-    assert call["system"] == load_prompt("explainer_v3") and call["system"]
+    assert call["system"] == load_prompt("explainer_v4") and call["system"]
     assert call["inference_config"] == INFERENCE_CONFIG
     user_text = call["messages"][0]["content"][0]["text"]
     assert call["messages"][0]["role"] == "user"
@@ -228,7 +228,7 @@ def test_describe_rejections_is_bounded_and_masks_secrets():
 
 
 def test_prompt_v2_states_the_validator_rules():
-    prompt = load_prompt("explainer_v3")
+    prompt = load_prompt("explainer_v4")
     for needle in ("REGLE 1", "REGLE 2", "REGLE 3", "REGLE 4", "REGLE 5", "max_chars_per_slot", "[LM1]", "il faut"):
         assert needle in prompt
     assert chr(0x2014) not in prompt   # regle 1 : aucun tiret cadratin dans le prompt
@@ -270,8 +270,8 @@ def test_trace_records_the_slot_of_each_rejection_without_any_model_text():
     assert "MARQUEUR-SECRET" not in json.dumps(explanation["trace"])
 
 
-def test_prompt_v3_forbids_naming_variants_by_identifier():
-    prompt = load_prompt("explainer_v3")
+def test_prompt_v4_forbids_naming_variants_by_identifier():
+    prompt = load_prompt("explainer_v4")
     assert "REGLE 6" in prompt and "V1" in prompt and "UNE seule phrase" in prompt
 
 
@@ -303,7 +303,7 @@ def test_guardrail_checks_only_the_model_sentences_not_the_long_rendered_text():
 
     def runner(client, model_id, brief, validate):
         output = deps.render_template(brief)
-        output.update({"origin": "llm", "attempt": 1, "model_id": model_id, "prompt_version": "explainer_v3",
+        output.update({"origin": "llm", "attempt": 1, "model_id": model_id, "prompt_version": "explainer_v4",
                        "summary": "PHRASE-DU-MODELE [G1]."})
         return output
 
@@ -313,3 +313,9 @@ def test_guardrail_checks_only_the_model_sentences_not_the_long_rendered_text():
     assert len(received["answer"]) < 5000
     assert explanation["output"]["origin"] == "llm"                     # verifie, donc conserve
     assert explanation["trace"][2]["details"]["checked_chars"] == len(received["answer"])
+
+
+def test_prompt_v4_states_the_scope_of_measures_and_forbids_additions():
+    prompt = load_prompt("explainer_v4")
+    assert "REGLE 7" in prompt and "PORTEFEUILLE ENTIER" in prompt and "de la position" in prompt
+    assert "REGLE 8" in prompt and "rien d'ajoute" in prompt
