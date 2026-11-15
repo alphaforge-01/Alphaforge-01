@@ -53,7 +53,7 @@ analysis_pipeline.explain(résultat, niveau)
 | Dossier et gabarit (`explanation_brief.py`, `explanation_fallback.py`) | Code | Seule entrée de l'explicateur ; ordre des facteurs, glossaire et limites fixés par le code ; explication de repli sans modèle | L'explicateur ne voit ni le texte de l'utilisateur ni les données brutes : il ne peut parler que de ce qui a été calculé |
 | Agent explicateur (`explainer_agent.py`) | Modèle sur Bedrock, un appel sans outil, un nouvel essai au plus | Rédige en novice ou en pro, uniquement par renvois (`[E3]`, `[G1]`, `[T2]`) | Séparer l'explication de l'analyse : changer de niveau ne relance que l'explicateur, les chiffres ne peuvent pas bouger |
 | Validateur (`explanation_validator.py`) | Code | Rejette tout chiffre hors registre (y compris en lettres), renvoi inconnu, terme de recommandation ou de prévision, règle non citée, texte trop long | Fidélité garantie par construction, pas par un second modèle |
-| Garde-fou (`scripts/setup_guardrail.py`, `bedrock_client.py`) | Amazon Bedrock Guardrails | Sujets refusés : conseil personnalisé, exécution d'ordres, prédiction de rendement ; ancrage du texte contre le dossier (mode détection). **Aucun texte de modèle n'est affiché sans garde-fou qui l'a vérifié** : garde-fou absent, en erreur, intervenu ou ancrage sous le seuil, et c'est le gabarit du code qui s'affiche, avec la raison dans la trace | Règle de simulation de l'énoncé ; mesure de la fidélité du texte au dossier |
+| Garde-fou (`scripts/setup_guardrail.py`, `bedrock_client.py`) | Amazon Bedrock Guardrails | Sujets refusés : conseil personnalisé, exécution d'ordres, prédiction de rendement ; ancrage contextuel en mode détection, appliqué aux **seules phrases écrites par le modèle**, avec les valeurs que voit l'utilisateur à la place des renvois. **Aucun texte de modèle n'est affiché sans garde-fou qui l'a vérifié** : garde-fou absent, en erreur ou intervenu, ou ancrage sous le plancher de 0,3, et c'est le gabarit du code qui s'affiche, avec la raison dans la trace. Entre 0,3 et 0,5, le texte est conservé et l'ancrage faible est signalé | Règle de simulation de l'énoncé ; mesure de la fidélité du texte au dossier |
 | Traces (`trace_store.py`, `scripts/setup_trace_bucket.py`) | Amazon S3 privé | Une trace JSON par appel, sans secret ni texte libre du modèle (paramètres réduits aux clés validées), écrite seulement si les quatre options Block Public Access sont actives ; compartiment créé par script idempotent (chiffrement, TLS obligatoire) | Preuve consultable de l'intégration AWS réelle |
 | Interface (`app/`) | Streamlit, en français | Profil par cases, radiographie, idée par sélecteurs, avant/après, explication novice et pro, trace | Tout en Python, lancement local, adaptée à la bascule de niveau |
 
@@ -157,6 +157,20 @@ La même analyse rattache les deux autres règles non conformes à des preuves d
 
 **Trace complète de l'explication :** étape 4 explication (gabarit en mode hors ligne, agent en mode `bedrock`), étape 5 validation (valide, 14 renvois vérifiés), étape 6 garde-fou (non exécuté hors ligne ; en mode `bedrock`, action et scores d'ancrage affichés).
 
+### 4.3 Le même exemple en mode `bedrock` : trace réelle
+
+Exécution réelle du 14 novembre 2026 au soir, heure de l'Est (horodatage `2026-11-15T02:35` UTC), dans le compte AWS de l'atelier (`scripts/try_bedrock_run.py --run --personas robert,amira --save-local`), fichiers versionnés dans `outputs/reports/demo_traces/` (`robert_analysis.json`, `robert_explanation_novice.json`). Mode effectif `bedrock`, données réelles (`is_fixture` faux).
+
+| Étape | Acteur | Ce que montre la trace |
+| --- | --- | --- |
+| 1. Analyse | Agent analyste (Claude Haiku 5.5 sur Bedrock) | 3 tours, 5 appels d'outils choisis par l'agent : `analyze_portfolio` (28 preuves), puis quatre `simulate_portfolio_change` pour explorer l'idée et des variantes ; l'un d'eux rend un statut `error`, absorbé sans plantage ; fin par `submit_analysis` |
+| 2. Gouvernance | Code | R1 Concentration par actif en conflit (preuve `E38`, 25 %), R2 et R3 en tension (`E29`, `E30`) : mêmes verdicts et mêmes preuves qu'en mode hors ligne |
+| 4. Explication | Agent explicateur (Claude Sonnet 5.5, prompt `explainer_v4`) | Premier essai, sans réparation. Phrase rendue : « Le poids de TSLA atteint 25 % et dépasse la limite de la règle **Concentration par actif** (en conflit), comme beaucoup d'oeufs dans le même panier » ; le « 25 % » vient du renvoi à la preuve `E38`, l'image du glossaire (`T3`) |
+| 5. Validation | Code | Valide, 9 renvois vérifiés, aucun rejet |
+| 6. Garde-fou | Bedrock Guardrails | Aucun sujet refusé (action `none`) ; ancrage 0,34 (faible, signalé, texte conservé), pertinence 1,0 ; 1 284 caractères de phrases du modèle contrôlés |
+
+La conclusion affichée au jury est donc rédigée par un vrai modèle, mais chaque chiffre de la phrase reste la valeur d'une preuve du registre, et le verdict reste celui de la gouvernance en code.
+
 ## 5. Validations
 
 | Vérification | Moyen | Résultat |
@@ -170,7 +184,7 @@ La même analyse rattache les deux autres règles non conformes à des preuves d
 | Garde-fou, dans le compte AWS de l'atelier | `scripts/setup_guardrail.py --test` : 19 requêtes en français, 10 permises et 9 à refuser, sur le garde-fou réel ; quatre versions comparées (niveau de classification Classic puis Standard) | **Mesuré.** Niveau Standard retenu : **9 refus attendus sur 9** (dont "Achète TSLA pour moi" et "Comment en profiter ?"), concordance de 16 à 17 sur 19 ; faux refus connus sur des questions historiques classées à tort comme prédictions (A02, A07, parfois A09). Détail : [docs/aws_setup.md](aws_setup.md) |
 | Repli en conditions réelles | `scripts/try_bedrock_run.py --run` (Robert et Amira, modèle Claude Haiku sur Bedrock) : tous les appels au modèle ont été refusés par Bedrock (paramètre `temperature` non accepté par le modèle, corrigé depuis) | **Vérifié.** Aucun plantage : le pipeline a basculé sur le code pour l'analyse et les deux explications de chaque persona, résultats valides, repli et raison signalés dans la trace |
 | Traces S3 en conditions réelles | Même essai, compartiment privé créé par `scripts/setup_trace_bucket.py` | **Vérifié.** 6 traces écrites (une par appel de pipeline), copies locales produites, aucun secret |
-| Agents rédigeant du vrai texte | `scripts/try_bedrock_run.py --run` après la correction du paramètre `temperature` | **À confirmer** par un nouvel essai réel |
+| Agents rédigeant du vrai texte | `scripts/try_bedrock_run.py --run --save-local` (Robert et Amira, niveaux novice et pro ; analyste Claude Haiku 5.5, explicateur Claude Sonnet 5.5) ; traces dans `outputs/reports/demo_traces/` | **Vérifié.** 4 explications sur 4 rédigées par le modèle, validées au premier essai, sans réparation ni repli. Ancrage de 0,34 à 0,43 (sous le seuil de 0,5 : signalé, texte conservé), pertinence 1,0. Exemple détaillé en section 4.3 |
 | Revue | Chaque module relu avant fusion ; audits de sécurité sur les parties AWS | Corrections appliquées |
 
 La suite automatisée compte plus de 1 000 tests, tous exécutables sans AWS (`.venv/Scripts/python -m pytest -q -W error`).
@@ -201,7 +215,8 @@ Mateo est en « information manquante » dès son portefeuille de départ : la r
 - **Seuils** : certains seuils de démonstration coïncident avec les valeurs testées (l'égalité au seuil ne déclenche pas d'alerte, par exemple le plafond de 25 % par actif de Mateo).
 - **Concentration en actions individuelles (R6)** : la règle compte les actions détenues directement, pas les FNB d'actions ; l'exposition totale aux actions n'est pas plafonnée en tant que telle.
 - **Garde-fou** : il complète les contrôles du code mais ne prouve pas l'exactitude factuelle ; l'ancrage est en mode détection. Mesuré dans le compte, il refuse toutes les demandes interdites testées, mais classe parfois une question historique légitime comme une prédiction (faux refus) ; le classifieur n'est pas parfaitement stable d'un essai à l'autre. Le niveau Standard traite les demandes dans une autre région américaine (profil interrégional), acceptable ici puisque les données sont publiques ou fictives.
-- **Agents réels** : le premier essai réel a validé le repli et les traces S3, pas encore la rédaction par les agents (correction du paramètre `temperature` en cours) ; le mode `bedrock` dépend du compte temporaire de l'atelier, des modèles actifs et des quotas partagés.
+- **Ancrage faible sur des textes exacts** : les explications réelles obtiennent un score d'ancrage autour de 0,4 alors que leurs chiffres sont justes et validés. Une piste est en cours (#42) : envoyer au garde-fou une source rédigée en phrases de faits, avec les mêmes mots et formats que le texte, plutôt que le dossier en JSON. Son effet reste à mesurer dans le compte.
+- **Agents réels** : le mode `bedrock` dépend du compte temporaire de l'atelier, des modèles actifs et des quotas partagés ; sans température, les réponses varient d'un appel à l'autre, ce que le validateur et le gabarit de repli absorbent.
 
 - **Groupe corrélé (R8 d'Amira)** : la mesure est le poids du plus grand groupe de titres dont la corrélation des rendements quotidiens en CAD atteint 0,80 (corrélation de Pearson, liaison simple, toute la période disponible, au moins 60 jours communs). Le seuil de 0,80 et les seuils de la règle (tension à 35 %, conflit à 50 %) sont des hypothèses de l'équipe, **choisies après examen des données** : ce choix n'est donc pas indépendant des résultats. La corrélation décrit le passé, elle ne prédit rien, et la liaison simple peut réunir des titres peu corrélés entre eux par chaînage. Seule Amira a cette règle ; Robert et Mateo voient la mesure en radiographie sans règle associée.
 
