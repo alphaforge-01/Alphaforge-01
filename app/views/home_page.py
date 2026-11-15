@@ -1,7 +1,7 @@
 """Accueil : niveau d'explication avec aperçu réel, puis choix d'un profil du datathon (US-01, US-10)."""
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import streamlit as st
 
@@ -9,46 +9,44 @@ import data_source
 import navigation
 import session
 import ui_texts as texts
-from components import profile_panel, style
+from components import profile_panel
+from formatting import escape_dollars
 
-HOME_LEVEL_KEY = "home_level"
-
-
-def _set_level_from_toggle() -> None:
-    """Interrupteur : éteint = Novice, allumé = Pro. Le niveau vit dans st.session_state.level."""
-    st.session_state.level = "pro" if st.session_state[HOME_LEVEL_KEY] else "novice"
+def _choose_level(level: str) -> None:
+    """Bouton Novice ou Pro : le niveau vit dans st.session_state.level."""
+    st.session_state.level = level
     st.session_state.level_chosen = True
 
 
-def _bubble_item(level: str, preview: Dict[str, Any], active: str) -> Dict[str, Any]:
-    return {
-        "label": texts.LEVEL_LABELS[level],
-        "title": texts.HOME_PREVIEW_TITLE.format(level=texts.LEVEL_LABELS[level]),
-        "description": texts.HOME_LEVEL_DESCRIPTIONS[level],
-        "example": preview.get(level) or texts.NOT_AVAILABLE,
-        "source": texts.HOME_PREVIEW_SOURCE.format(
+def _level_help(level: str, preview: Optional[Dict[str, Any]]) -> str:
+    """Info-bulle du bouton : description du niveau et, si disponible, un passage réel de l'agent."""
+    parts = [texts.HOME_LEVEL_DESCRIPTIONS[level]]
+    if preview:
+        parts.append(f"**{texts.HOME_PREVIEW_TITLE.format(level=texts.LEVEL_LABELS[level])}**")
+        parts.append(escape_dollars(preview.get(level) or texts.NOT_AVAILABLE))
+        parts.append("*" + texts.HOME_PREVIEW_SOURCE.format(
             persona=preview["persona"].capitalize(), model=preview.get("model_id") or texts.NOT_AVAILABLE,
-            source=preview[f"{level}_source"]),
-        "active": level == active,
-    }
+            source=preview[f"{level}_source"]) + "*")
+    return "\n\n".join(parts)
 
 
 def render_level_preview() -> None:
-    """Interrupteur Novice / Pro centré ; au survol d'un niveau, une bulle montre un passage réel."""
+    """Deux boutons centrés, Novice et Pro ; le survol d'un bouton montre un passage réel à ce niveau."""
     st.subheader(texts.HOME_LEVEL_TITLE, anchor=False)
     st.caption(texts.HOME_LEVEL_HOVER_HINT)
     preview = session.safe_reference(
         lambda: data_source.get_level_preview(st.session_state.profile_id or ""), None)
-    active = st.session_state.level if st.session_state.level in texts.LEVEL_LABELS else "novice"
-    st.session_state[HOME_LEVEL_KEY] = active == "pro"
-    with st.container(horizontal=True, horizontal_alignment="center", vertical_alignment="center",
-                      gap="small", key="home-level-row"):
-        if preview:
-            style.level_bubble(_bubble_item("novice", preview, active), "left")
-        st.toggle(texts.SIDEBAR_LEVEL, key=HOME_LEVEL_KEY, on_change=_set_level_from_toggle,
-                  help=texts.EXPLANATION_LEVEL_HELP, label_visibility="collapsed")
-        if preview:
-            style.level_bubble(_bubble_item("pro", preview, active), "right")
+    # Aucun niveau choisi : aucun bouton mis en avant, le profil choisi ensuite fixera le sien.
+    active = st.session_state.level if st.session_state.level in texts.LEVEL_LABELS else None
+    with st.container(horizontal=True, horizontal_alignment="center", gap="small", key="home-level-row"):
+        for level in texts.LEVEL_LABELS:
+            chosen = level == active
+            st.button(texts.LEVEL_LABELS[level], key=f"home_level_{level}", help=_level_help(level, preview),
+                      type="primary" if chosen else "secondary",
+                      icon=":material/check:" if chosen else None,
+                      on_click=_choose_level, args=(level,))
+    if active is None:
+        st.caption(texts.HOME_LEVEL_DEFAULT)
 
 
 def render() -> None:
