@@ -322,3 +322,38 @@ def test_prompt_v4_states_the_scope_of_measures_and_forbids_additions():
     prompt = load_prompt("explainer_v4")
     assert "REGLE 7" in prompt and "PORTEFEUILLE ENTIER" in prompt and "de la position" in prompt
     assert "REGLE 8" in prompt and "rien d'ajoute" in prompt
+
+
+# ---- liens, images et HTML refuses dans le texte du modele (audit final) ----
+
+@pytest.mark.parametrize("unsafe", [
+    "voir ![x](https://exemple.test/p.png)", "[cliquez](https://exemple.test)", "https://exemple.test/x",
+    "http://exemple.test", "www.exemple.test", "texte <script>x</script>", "<img src=x>", "a [b](c)",
+])
+@pytest.mark.parametrize("slot", ["summary", "counterfactual", "variants", "limits_context", "factor"])
+def test_parse_rejects_links_images_and_html_in_every_slot(unsafe, slot):
+    slots = good_slots()
+    if slot == "factor":
+        slots["factors"][0]["text"] = unsafe
+    else:
+        slots[slot] = unsafe
+    output, problem = parse(json.dumps(slots))
+    assert output is None and "lien, une image ou du HTML" in problem
+
+
+@pytest.mark.parametrize("fine", [
+    "La perte maximale (observee) reste sous la limite [G1].", "Moins de 5 % ; a < b se lit 'inferieur'.",
+    "Le poids [E2] atteint la limite : voir [T1].", "Texte avec des parentheses (comme ceci) et un tiret - simple.",
+])
+def test_parse_keeps_ordinary_text_with_brackets_and_parentheses(fine):
+    output, problem = parse(json.dumps(good_slots(summary=fine)))
+    assert problem is None and output["summary"] == fine
+
+
+def test_a_reply_with_a_link_is_retried_and_the_second_reply_is_kept():
+    bad = json.dumps(good_slots(summary="voir [ici](https://exemple.test)"))
+    client = ScriptedClient([reply(bad), reply(json.dumps(good_slots()))])
+    output = explain_with_llm(client, MODEL, BRIEF, accept)
+    assert len(client.calls) == 2 and output["attempt"] == 2 and "https" not in output["summary"]
+    feedback = client.calls[1]["messages"][-1]["content"][0]["text"]
+    assert "lien, une image ou du HTML" in feedback
