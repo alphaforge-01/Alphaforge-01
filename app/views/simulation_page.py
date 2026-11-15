@@ -15,10 +15,16 @@ import data_source
 import navigation
 import session
 import ui_texts as texts
-from components import conversation, idea_panel, xray
+from components import conversation, idea_panel, portfolio_chart, xray
 from components.persistence import kept_toggle
 
 SHOW_XRAY_KEY = "show_xray"
+
+
+def render_chart(active: session.Active) -> None:
+    """Composition du portefeuille de départ, dès le choix du profil (code déterministe, aucun agent)."""
+    xray_data = session.load_xray(active)
+    portfolio_chart.render_portfolio_chart(xray_data, active.names, session.display_name(active.profile))
 
 
 def render_xray(active: session.Active) -> None:
@@ -89,6 +95,7 @@ def render() -> None:
     active = session.require_profile()
     if active is None:
         return
+    session.guarded(lambda: render_chart(active))
     session.guarded(lambda: render_xray(active))
     session.guarded(lambda: render_manual(active))
     history = st.session_state.chat_history
