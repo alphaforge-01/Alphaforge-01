@@ -255,8 +255,10 @@ def test_explain_bedrock_valid_llm_text_is_kept_and_grounding_reflected():
     assert explanation["guardrail"]["grounding_score"] == 0.82
     kind, source, query, answer = client.calls[0]
     from alphaforge.analysis_pipeline import _model_text
-    # le garde-fou recoit les phrases du modele (limite de 5000 caracteres), pas le texte rendu complet
-    assert answer == _model_text(explanation["output"], explanation["brief"])
+    # le garde-fou recoit les phrases du modele (limite de 5000 caracteres), pas le texte rendu complet,
+    # ni le contrefactuel ecrit par le code
+    assert answer == _model_text(explanation["output"], explanation["brief"], ["counterfactual"])
+    assert step6["details"]["skipped_slots"] == ["counterfactual"]
     # la source est le dossier en phrases francaises, pas son JSON (docs/grounding_diagnosis.md)
     from alphaforge.grounding_source import build_grounding_source
     assert source == build_grounding_source(explanation["brief"]) and "brief_id" not in source
@@ -571,3 +573,37 @@ def test_counterfactual_slot_is_always_written_by_the_code_and_passes_validation
     assert explanation["output"]["counterfactual"] == seen["template"]
     assert "Le detail est donne" not in seen["answer"]
     assert explanation["trace"][0]["details"]["slots_written_by_code"] == ["counterfactual"]
+    # la phrase du gabarit qui la remplace n'est pas controlee non plus : elle ne vient pas du modele et renvoie a
+    # un affichage ("ci-dessous") absent de la source d'ancrage
+    assert seen["template"] and seen["template"] not in seen["answer"]
+    assert explanation["trace"][2]["details"]["skipped_slots"] == ["counterfactual"]
+
+
+def test_checked_text_keeps_every_model_slot_and_drops_only_code_slots():
+    from alphaforge.analysis_pipeline import _model_text, code_written_slots
+    from alphaforge.fixture_collaborators import fixture_deps
+
+    deps = fixture_deps()
+    result = run("robert")
+    brief = deps.build_brief(result, "novice")
+    output = {**deps.render_template(brief), "origin": "llm",
+              "summary": "Resume du modele.", "variants": "Variante du modele.", "limits_context": "Limites du modele.",
+              "counterfactual": "Contrefactuel du code, donne ci-dessous."}
+    output["factors"] = [{**factor, "text": f"Facteur {index} du modele."}
+                         for index, factor in enumerate(output["factors"])]
+    assert code_written_slots(output) == ["counterfactual"]
+    assert code_written_slots({**output, "origin": "template"}) == []
+    text = _model_text(output, brief, code_written_slots(output))
+    assert "Contrefactuel du code" not in text
+    for expected in ("Resume du modele.", "Variante du modele.", "Limites du modele.", "Facteur 0 du modele."):
+        assert expected in text
+    # un emplacement repare par le gabarit est aussi ecrit par le code
+    slots = code_written_slots(output, ["factors[0]", "counterfactual"])
+    assert slots == ["counterfactual", "factors[0]"]
+    assert "Facteur 0 du modele." not in _model_text(output, brief, slots)
+    # sans liste, rien n'est retire (gabarit, diagnostic)
+    assert "Contrefactuel du code" in _model_text(output, brief)
+    # si tout est ecrit par le code, le controle porte sur le texte entier plutot que sur un texte vide
+    every = ["summary", "counterfactual", "variants", "limits_context",
+             *(f"factors[{i}]" for i in range(len(output["factors"])))]
+    assert _model_text(output, brief, every) == _model_text(output, brief)

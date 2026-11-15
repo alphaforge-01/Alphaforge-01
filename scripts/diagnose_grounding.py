@@ -7,7 +7,8 @@ source. Ce script compare deux sources pour le même texte :
   (src/alphaforge/grounding_source.py), sans aucun fait ajouté.
 
 Texte contrôlé : les emplacements de l'explication, renvois remplacés par les valeurs
-affichées, exactement comme dans le pipeline (`_model_text`). Par défaut, ce texte vient
+affichées, exactement comme dans le pipeline (`_model_text`) ; pour le texte de l'explicateur,
+le contrefactuel, écrit par le code, est retiré comme à l'étape 6. Par défaut, ce texte vient
 du gabarit du code, fidèle par construction : son score est le plafond atteignable avec
 une source donnée. Si même le gabarit est mal ancré, la cause est la source, pas le modèle.
 
@@ -51,7 +52,7 @@ from typing import Any, Dict, List, Optional
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from alphaforge.analysis_pipeline import _model_text, run_analysis  # noqa: E402
+from alphaforge.analysis_pipeline import _model_text, code_written_slots, run_analysis  # noqa: E402
 from alphaforge.bedrock_client import (  # noqa: E402
     GROUNDING_ANSWER_MAX_CHARS, GROUNDING_SOURCE_MAX_CHARS, BedrockClient, BedrockConfig, BedrockError,
     redact_text,
@@ -150,7 +151,8 @@ def llm_text(client: BedrockClient, config: BedrockConfig, case: Dict[str, Any])
     if not case["validate"](output, case["brief"])["is_valid"]:
         print("    texte de l'explicateur rejeté par le validateur : cas ignoré")
         return None
-    return _model_text(output, case["brief"])
+    # Comme l'étape 6 du pipeline : le contrefactuel est écrit par le code, il ne fait pas partie du texte contrôlé.
+    return _model_text(output, case["brief"], code_written_slots(output))
 
 
 def main(argv: Optional[List[str]] = None) -> int:

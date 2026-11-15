@@ -475,7 +475,8 @@ def explain(
     elif output["origin"] == "llm" and not from_cache:
         # L'emplacement du contrefactuel est ecrit par le code, jamais par le modele : sa phrase decrit un affichage
         # du code (poids detailles dessous), absent du dossier, et le controle d'ancrage la juge non fondee (mesure
-        # sur Amira : texte entier a 0,11, puis 0,58 sans cet emplacement). Celle du gabarit est fondee par construction.
+        # sur Amira : texte entier a 0,11, puis 0,58 sans cet emplacement). La phrase du gabarit qui la remplace
+        # renvoie elle aussi a cet affichage : elle est donc retiree du texte controle a l'etape 6 (_model_text).
         output = {**output, "counterfactual": deps.render_template(brief)["counterfactual"]}
     details: dict[str, Any] = {
         "level": level, "origin": output["origin"], "attempt": output["attempt"], "brief_id": brief["brief_id"],
@@ -536,14 +537,16 @@ def explain(
     if effective_mode == "bedrock" and config.has_guardrail:
         try:
             bedrock_client = client or BedrockClient(config)
-            checked_text = _model_text(output, brief)
+            # Seules les phrases du modele sont controlees : les emplacements ecrits par le code en sont retires.
+            skipped_slots = code_written_slots(output, repaired_slots)
+            checked_text = _model_text(output, brief, skipped_slots)
             source_text, source_kind = _grounding_source(brief)
             guardrail = bedrock_client.check_output_grounding(source_text, GROUNDING_QUERY, checked_text)
             guard_status = "ok" if guardrail["action"] != "not_run" else "skipped"
             guard_details = {
                 "action": guardrail["action"], "grounding_score": guardrail["grounding_score"],
                 "relevance_score": guardrail["relevance_score"], "mode": guardrail["mode"],
-                "checked_chars": len(checked_text),
+                "checked_chars": len(checked_text), "skipped_slots": skipped_slots,
                 # Forme et taille de la source comparee (jamais son texte) : "sentences" ou "json".
                 "source_kind": source_kind, "source_chars": len(source_text),
             }
@@ -718,7 +721,16 @@ def _grounding_source(brief: dict[str, Any]) -> tuple[str, str]:
     return json.dumps(brief, ensure_ascii=False), "json"
 
 
-def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None) -> str:
+def code_written_slots(output: dict[str, Any], repaired_slots: list[str] | None = None) -> list[str]:
+    """Emplacements d'une sortie du modele qui ont ete ecrits par le code : le contrefactuel, et les emplacements
+    repares par le gabarit. Aucun pour une sortie du gabarit, verifiee en entier comme avant."""
+    if output.get("origin") != "llm":
+        return []
+    return list(dict.fromkeys(["counterfactual", *(repaired_slots or [])]))
+
+
+def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None,
+                skip_slots: list[str] | tuple[str, ...] = ()) -> str:
     """Les phrases ecrites par le modele : l'objet que le garde-fou doit verifier.
 
     Le texte rendu complet (tableaux, preuves) depasse la limite de 5000 caracteres du controle d'ancrage,
@@ -726,9 +738,21 @@ def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None) -> 
     Si le dossier est fourni, les renvois ([E3], [G1]...) sont remplaces par les memes valeurs que celles que
     voit l'utilisateur : sans cela, le garde-fou lit des reperes opaques et ne peut pas les rattacher au dossier
     (scores d'ancrage mesures de 0,16 a 0,47). Repli sur le texte brut si le remplacement est impossible ou trop long.
+
+    ``skip_slots`` retire les emplacements ecrits par le code (voir ``code_written_slots``) : ils ne viennent pas
+    du modele. Le contrefactuel du code renvoie a un affichage ("donne ci-dessous", "valeur ci-dessous") absent du
+    dossier, sans le poids lui-meme, et ajoute des phrases que la source ne contient pas ("Respecter une regle
+    n'implique pas de respecter les autres") : le garder faisait juger non fonde un texte du modele fidele.
+    Si tout le texte est ecrit par le code, rien n'est retire : le controle porte alors sur le texte entier.
     """
-    parts = [output["summary"], *(factor["text"] for factor in output["factors"]),
-             output["counterfactual"], output["variants"], output["limits_context"]]
+    skipped = set(skip_slots)
+    factor_texts = [factor["text"] for index, factor in enumerate(output["factors"])
+                    if f"factors[{index}]" not in skipped]
+    slots = {name: (output[name] if name not in skipped else "")
+             for name in ("summary", "counterfactual", "variants", "limits_context")}
+    parts = [slots["summary"], *factor_texts, slots["counterfactual"], slots["variants"], slots["limits_context"]]
+    if skipped and not any(part for part in parts):
+        return _model_text(output, brief)
     raw = "\n".join(part for part in parts if part)
     if brief is None:
         return raw
