@@ -21,6 +21,10 @@ PROMPT_VERSION = PROMPT_NAME
 # Pas de temperature : les modeles Claude recents la refusent (ValidationException, constate sur le compte).
 INFERENCE_CONFIG = {"maxTokens": 2500}
 _STRING_SLOTS = ("summary", "counterfactual", "variants", "limits_context")
+# Lien, image ou HTML dans le texte du modele : l'interface rend le Markdown, donc un lien ou une image distante
+# serait affiche ou chargee. Le texte d'une explication est du texte simple. Constate a l'audit : le validateur
+# accepte ces formes, d'ou ce rejet en amont qui declenche la nouvelle tentative.
+_UNSAFE_MARKDOWN = re.compile(r"https?://|www\.|\]\(|!\[|<[A-Za-z/!]", re.IGNORECASE)
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
 
 
@@ -44,6 +48,9 @@ def parse_output(text: str, brief: ExplanationBrief, *, model_id: str, attempt: 
             isinstance(f, dict) and isinstance(f.get("check_id"), str) and isinstance(f.get("text"), str)
             for f in factors):
         return None, "Emplacement factors invalide : liste de {check_id, text}."
+    texts = [raw[slot] for slot in _STRING_SLOTS] + [f["text"] for f in factors]
+    if any(_UNSAFE_MARKDOWN.search(text) for text in texts):
+        return None, "Le texte contient un lien, une image ou du HTML : ecris du texte simple, sans adresse ni balise."
     return ExplainerOutput(
         brief_id=brief["brief_id"], level=brief["level"], summary=raw["summary"],
         factors=[{"check_id": f["check_id"], "text": f["text"]} for f in factors],
