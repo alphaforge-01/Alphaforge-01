@@ -283,6 +283,9 @@ class ConversationResult(TypedDict):
     guardrail: GuardrailResult
     rendered_answer: str                # renvois remplacés par les valeurs du registre
     trace: list[TraceStep]              # réponse, validation, garde-fou
+    cited_evidence: NotRequired[list[str]]   # preuves citées par la réponse affichée (sections de l'interface)
+    cited_terms: NotRequired[list[str]]      # termes du glossaire cités
+    validation_skipped: NotRequired[str]     # raison si la validation n'a pas eu lieu : `validation` est alors neutre
 
 
 def _is_not_required(annotation: object) -> bool:

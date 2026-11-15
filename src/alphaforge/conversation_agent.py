@@ -107,11 +107,21 @@ def reply_with_llm(
     raise ConversationFailure(last_problem)
 
 
-def render_answer(reply: Mapping[str, Any], brief: Mapping[str, Any]) -> str:
-    """Renvois remplaces par ce que lit l'utilisateur (memes valeurs que l'explication)."""
+def render_answer_with_citations(reply: Mapping[str, Any], brief: Mapping[str, Any]) -> tuple[str, list[str], list[str]]:
+    """Renvois remplaces par ce que lit l'utilisateur, et preuves et termes reellement cites.
+
+    Les identifiants cites permettent a l'interface d'ecrire les sections "donnees utilisees" et "limites".
+    """
     from .explanation_rendering import _Registry   # meme remplacement que le rendu de l'explication
 
-    return _Registry(brief).substitute(str(reply.get("answer", "")))
+    registry = _Registry(brief)
+    text = registry.substitute(str(reply.get("answer", "")))
+    return text, list(registry.cited_evidence), list(registry.cited_terms)
+
+
+def render_answer(reply: Mapping[str, Any], brief: Mapping[str, Any]) -> str:
+    """Renvois remplaces par ce que lit l'utilisateur (memes valeurs que l'explication)."""
+    return render_answer_with_citations(reply, brief)[0]
 
 
 def grounding_source(brief: Mapping[str, Any]) -> tuple[str, str]:
@@ -127,8 +137,14 @@ def grounding_source(brief: Mapping[str, Any]) -> tuple[str, str]:
         if brief.get("idea"):
             lines = [gs.build_grounding_source(without_question)]
         else:
-            lines = list(gs._profile_sentences(brief.get("profile_context")))
-            for entry in brief.get("evidence") or []:
+            from .reference_texts import disclaimers
+
+            evidence = {e["evidence_id"]: e for e in brief.get("evidence") or []}
+            lines = [item["text"] for item in disclaimers(brief.get("level", "novice"))]
+            lines.extend(gs._profile_sentences(brief.get("profile_context")))
+            for check in brief.get("checks") or []:
+                lines.extend(gs._check_lines(check, {}, evidence))   # statuts citables par [G#]
+            for entry in evidence.values():
                 lines.extend(gs._evidence_lines(entry))
             lines.extend(f"Limite : {limit.get('text', '')}" for limit in brief.get("limits") or [])
             for term in brief.get("glossary") or []:

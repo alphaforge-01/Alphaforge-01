@@ -31,7 +31,7 @@ from .contracts import (
     GovernanceResult, GuardrailResult, InvestmentIdea, InvestorProfile, Level, Portfolio, PortfolioSnapshot,
     TraceStep, ValidationResult, Variant,
 )
-from .conversation_agent import MAX_QUESTION_CHARS, render_answer, reply_with_llm
+from .conversation_agent import MAX_QUESTION_CHARS, render_answer, render_answer_with_citations, reply_with_llm
 from .conversation_agent import grounding_source as conversation_grounding_source
 from .explainer_agent import PROMPT_VERSION as EXPLAINER_PROMPT_VERSION
 from .explanation_cache import ExplanationCache
@@ -816,6 +816,35 @@ def _code_reply(brief: dict[str, Any], fallback: Callable[..., Any] | None) -> C
                              model_id=None, prompt_version=None, attempt=0)
 
 
+def _check_code_reply(reply: ConversationReply, brief: dict[str, Any],
+                      validate: Callable[..., Any] | None) -> tuple[ValidationResult, str | None]:
+    """Validation d'une reponse du code. Rend (resultat, raison du saut ou None).
+
+    La phrase fixe et l'absence de validateur ne sont pas validees : le resultat est alors neutre, et la raison
+    est dite dans la trace et dans `validation_skipped`. Un validateur en erreur donne un rejet `validator_error`
+    (le texte du code reste affiche : il ne vient pas du modele).
+    """
+    if validate is None:
+        return ValidationResult(is_valid=True, rejections=[], checked_references=[]), "validateur_indisponible"
+    if reply["answer"] == CONVERSATION_UNAVAILABLE:
+        return ValidationResult(is_valid=True, rejections=[], checked_references=[]), "reponse_fixe"
+    try:
+        return validate(reply, brief), None
+    except Exception as error:
+        return ValidationResult(is_valid=False, checked_references=[], rejections=[
+            {"code": "validator_error", "slot": "answer", "excerpt": type(error).__name__}]), None
+
+
+def _to_code_reply(trace: list[TraceStep], reply: ConversationReply, reason: str, brief: dict[str, Any],
+                   fallback: Callable[..., Any] | None) -> ConversationReply:
+    """Remplace la reponse du modele par celle du code et le dit dans la trace (essai du modele conserve)."""
+    details = trace[0]["details"]
+    details.setdefault("llm_attempt", reply["attempt"])
+    details.update({"fallback_reason": reason, "origin": "template", "attempt": 0})
+    trace[0]["status"] = "fallback"
+    return _code_reply(brief, fallback)
+
+
 def answer_question(
     brief: ConversationBrief,
     mode: str = "offline",
@@ -832,7 +861,8 @@ def answer_question(
     jamais pour un refus, une salutation, une liste des positions, une definition du glossaire ou une idee.
     Le texte du modele n'est affiche que s'il passe le validateur et si le garde-fou rend un score sans
     intervenir ; un ancrage faible est signale, sans ecarter le texte (meme regle que l'explication).
-    La question n'est jamais ecrite dans la trace. Rien n'est enregistre sur S3.
+    La question va au modele (tronquee) et au garde-fou (requete du controle de pertinence), jamais dans la
+    trace ni dans la source d'ancrage. Rien n'est enregistre sur S3.
     """
     config = config or BedrockConfig.from_env()
     validate, fallback = _conversation_collaborators(validate, fallback)
@@ -856,7 +886,6 @@ def answer_question(
         except Exception as error:  # repli sur la reponse du code, jamais de plantage
             known = isinstance(error, (BedrockError, AgentFailure))
             reason = f"{type(error).__name__}: {redact_text(str(error))}" if known else type(error).__name__
-            reply = None
     if reply is None:
         reply = _code_reply(brief, fallback)
     details: dict[str, Any] = {
@@ -871,32 +900,30 @@ def answer_question(
 
     # Etape 2 : validation (code)
     started = time.perf_counter()
-    if validate is None:
-        validation = ValidationResult(is_valid=True, rejections=[], checked_references=[])
-        trace.append(_step(2, "validation", "code", "skipped", started, {"reason": "validateur_indisponible"}))
-    else:
+    status = "ok"
+    skipped: str | None = None
+    if reply["origin"] == "llm":
         try:
-            validation = validate(reply, brief)
+            validation = validate(reply, brief)   # type: ignore[misc]  (jamais None en mode bedrock)
         except Exception as error:  # validateur en erreur : la reponse du modele n'est pas affichee
-            validation = ValidationResult(
-                is_valid=False, rejections=[{"code": "validator_error", "slot": "answer", "excerpt": type(error).__name__}],
-                checked_references=[])
-        status = "ok"
-        if not validation["is_valid"] and reply["origin"] == "llm":
+            validation = ValidationResult(is_valid=False, checked_references=[], rejections=[
+                {"code": "validator_error", "slot": "answer", "excerpt": type(error).__name__}])
+        if not validation["is_valid"]:
             trace[0]["details"]["rejection_codes"] = [r.get("code") for r in validation["rejections"]]
             trace[0]["details"]["rejection_excerpts"] = _excerpts(validation["rejections"])
-            reply = _code_reply(brief, fallback)
-            try:
-                validation = validate(reply, brief)
-            except Exception:
-                validation = ValidationResult(is_valid=True, rejections=[], checked_references=[])
+            reply = _to_code_reply(trace, reply, "rejet_du_validateur", brief, fallback)
+            validation, skipped = _check_code_reply(reply, brief, validate)
             status = "fallback"
-            trace[0]["status"] = "fallback"
-            trace[0]["details"].update({"fallback_reason": "rejet_du_validateur", "origin": "template", "attempt": 0})
-        trace.append(_step(2, "validation", "code", status, started, {
-            "is_valid": validation["is_valid"], "checked_references": len(validation["checked_references"]),
-            "rejection_codes": [r.get("code") for r in validation["rejections"]],
-        }))
+    else:
+        validation, skipped = _check_code_reply(reply, brief, validate)
+    validation_details: dict[str, Any] = {
+        "is_valid": validation["is_valid"], "checked_references": len(validation["checked_references"]),
+        "rejection_codes": [r.get("code") for r in validation["rejections"]],
+    }
+    if skipped:
+        validation_details["skipped_reason"] = skipped
+    trace.append(_step(2, "validation", "code", "skipped" if skipped and status == "ok" else status,
+                       started, validation_details))
 
     # Etape 3 : garde-fou (ancrage de la reponse contre le dossier, sans la question dans la source)
     started = time.perf_counter()
@@ -921,8 +948,13 @@ def answer_question(
             }
             flags = getattr(bedrock_client, "last_grounding_flags", None)
             if isinstance(flags, dict) and flags.get("below_threshold"):
-                guard_details["grounding_below_threshold"] = flags.get("filters", [])
-                guard_details["grounding_weak"] = True
+                filters = list(flags.get("filters") or [])
+                # La requete est la vraie question : la pertinence faible se distingue de l'ancrage faible.
+                if "GROUNDING" in filters or not filters:
+                    guard_details["grounding_below_threshold"] = ["GROUNDING"]
+                    guard_details["grounding_weak"] = True
+                if "RELEVANCE" in filters:
+                    guard_details["relevance_weak"] = True
         except Exception as error:  # le controle est accessoire pour le code, obligatoire pour le modele
             guard_status = "error"
             guard_details = {"error": type(error).__name__}
@@ -932,19 +964,20 @@ def answer_question(
         guard_details.update({"grounding_weak": True, "grounding_very_weak": True, "grounding_floor": GROUNDING_FLOOR})
     if reply["origin"] == "llm" and not verified:
         unavailable = guardrail["action"] == "not_run" or (guardrail["action"] == "none" and score is None)
-        reply = _code_reply(brief, fallback)
-        if validate is not None:
-            try:
-                validation = validate(reply, brief)
-            except Exception:
-                validation = ValidationResult(is_valid=True, rejections=[], checked_references=[])
-        trace[0]["status"] = "fallback"
-        trace[0]["details"].update({
-            "fallback_reason": "garde_fou_indisponible" if unavailable else "garde_fou_sortie",
-            "origin": "template", "attempt": 0})
+        reply = _to_code_reply(trace, reply, "garde_fou_indisponible" if unavailable else "garde_fou_sortie",
+                               brief, fallback)
+        validation, skipped = _check_code_reply(reply, brief, validate)
         guard_details["replaced_by_template"] = True
         if guardrail["denied_topics"]:
             guard_details["denied_topics"] = guardrail["denied_topics"]
     trace.append(_step(3, "guardrail", "guardrail", guard_status, started, guard_details))
-    return ConversationResult(reply=reply, validation=validation, guardrail=guardrail,
-                              rendered_answer=render_answer(reply, brief), trace=trace)
+
+    try:
+        rendered, cited_evidence, cited_terms = render_answer_with_citations(reply, brief)
+    except Exception:  # dossier mal forme : le texte brut, jamais de plantage
+        rendered, cited_evidence, cited_terms = reply["answer"], [], []
+    result = ConversationResult(reply=reply, validation=validation, guardrail=guardrail, rendered_answer=rendered,
+                                trace=trace, cited_evidence=cited_evidence, cited_terms=cited_terms)
+    if skipped:
+        result["validation_skipped"] = skipped
+    return result

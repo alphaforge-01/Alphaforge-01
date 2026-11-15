@@ -274,3 +274,70 @@ def test_conversation_model_is_read_from_the_environment_with_a_fallback():
     env = {"ALPHAFORGE_ANALYST_MODEL_ID": "a", "ALPHAFORGE_EXPLAINER_MODEL_ID": "e"}
     assert BedrockConfig.from_env(env).conversation_model_id == "e"
     assert BedrockConfig.from_env({**env, "ALPHAFORGE_CONVERSATION_MODEL_ID": "c"}).conversation_model_id == "c"
+
+
+# ---- cas ajoutes apres la revue de code ----
+
+def _raising_validate(reply, brief):
+    raise RuntimeError("validateur casse")
+
+
+def test_a_validator_error_never_lets_the_model_text_through(brief):
+    client = FakeClient(['{"answer": "La regle [G1] est en conflit."}'])
+
+    def runner(c, model_id, b, validate):
+        return {"brief_id": "conv-test", "answer": "La regle [G1] est en conflit.", "origin": "llm",
+                "model_id": "m", "prompt_version": "conversation_v1", "attempt": 1}
+
+    result = answer_question(brief, "bedrock", validate=_raising_validate, fallback=code_fallback, client=client,
+                             config=CONFIG, runner=runner)
+    assert result["reply"]["origin"] == "template" and result["rendered_answer"] == "REPONSE-DU-CODE."
+    assert result["trace"][0]["details"]["rejection_codes"] == ["validator_error"]
+    # la reponse du code n'a pas pu etre validee non plus : le resultat le dit, sans pretendre un controle
+    assert result["validation"]["is_valid"] is False
+    assert result["validation"]["rejections"][0]["code"] == "validator_error"
+
+
+def test_the_guardrail_on_a_code_reply_after_a_rejection_keeps_the_first_reason(brief):
+    client = FakeClient(['{"answer": "INVALIDE un"}', '{"answer": "INVALIDE deux"}'], action="intervened", score=None)
+    result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
+                             config=CONFIG)
+    assert result["reply"]["origin"] == "template"
+    assert result["trace"][0]["details"]["fallback_reason"] == "rejet_du_validateur"
+    assert result["trace"][0]["details"]["llm_attempt"] == 2          # l'essai du modele reste mesurable
+    assert "replaced_by_template" not in result["trace"][2]["details"]
+
+
+def test_the_fixed_sentence_is_not_validated_and_says_so(brief):
+    result = answer_question(brief, "offline", validate=validate_ok, fallback=None)
+    assert result["validation_skipped"] == "reponse_fixe"
+    assert result["trace"][1]["status"] == "skipped"
+    assert result["trace"][1]["details"]["skipped_reason"] == "reponse_fixe"
+
+
+def test_low_relevance_is_reported_apart_from_weak_grounding(brief):
+    client = FakeClient(['{"answer": "La regle [G1] est en conflit."}'], score=0.8,
+                        flags={"below_threshold": True, "filters": ["RELEVANCE"]})
+    details = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
+                              config=CONFIG)["trace"][2]["details"]
+    assert details["relevance_weak"] is True
+    assert "grounding_weak" not in details and "grounding_below_threshold" not in details
+
+
+def test_cited_evidence_is_returned_for_the_interface_sections(brief):
+    evidence_id = _evidence_id(brief)
+    client = FakeClient([json.dumps({"answer": f"La mesure atteint [{evidence_id}]."})])
+    result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
+                             config=CONFIG)
+    assert result["cited_evidence"] == [evidence_id] and result["cited_terms"] == []
+
+
+def test_a_malformed_brief_never_breaks_the_final_render(brief):
+    broken = {**brief, "evidence": [{"label_fr": "sans identifiant"}]}
+    result = answer_question(broken, "offline", validate=validate_ok, fallback=code_fallback)
+    assert result["rendered_answer"] == "REPONSE-DU-CODE." and result["cited_evidence"] == []
+
+
+def test_grounding_source_without_idea_states_the_check_statuses(brief):
+    source, kind = ca.grounding_source({**brief, "idea": None, "answer_kind": "xray"})
+    assert kind == "sentences" and "Contrôle " in source and "fictif" in source   # statuts et avertissement
