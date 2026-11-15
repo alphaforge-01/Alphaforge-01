@@ -854,8 +854,12 @@ def answer_question(
     client: BedrockClient | None = None,
     config: BedrockConfig | None = None,
     runner: Callable[..., ConversationReply] | None = None,
+    request_check: GuardrailResult | None = None,
 ) -> ConversationResult:
     """Reponse a une question de profil ou un "pourquoi" : agent Bedrock sous controle, sinon le code.
+
+    ``request_check`` est le resultat de ``check_request`` sur la question (garde-fou d'entree). En mode bedrock,
+    le modele n'est appele que si ce controle a eu lieu et n'a rien refuse : sinon, reponse du code.
 
     A appeler apres le routage de la conversation (garde-fou d'entree, controle local, regles, interprete) :
     jamais pour un refus, une salutation, une liste des positions, une definition du glossaire ou une idee.
@@ -871,6 +875,10 @@ def answer_question(
         effective_mode, reason = "offline", "garde_fou_non_configure"   # regle 8 : aucun texte de modele sans garde-fou
     if effective_mode == "bedrock" and validate is None:
         effective_mode, reason = "offline", "validateur_indisponible"
+    if effective_mode == "bedrock" and (request_check is None or request_check.get("action") != "none"):
+        # Regle 8 : la question doit avoir passe le garde-fou d'entree avant d'atteindre le modele.
+        refused = request_check is not None and request_check.get("action") == "intervened"
+        effective_mode, reason = "offline", "demande_refusee" if refused else "controle_entree_absent"
     wanted_llm = mode == "bedrock"
 
     # Etape 1 : reponse (agent ou code)
@@ -909,8 +917,8 @@ def answer_question(
             validation = ValidationResult(is_valid=False, checked_references=[], rejections=[
                 {"code": "validator_error", "slot": "answer", "excerpt": type(error).__name__}])
         if not validation["is_valid"]:
+            # Codes seulement, jamais d'extrait : le modele peut citer la question, qui ne doit pas entrer dans la trace.
             trace[0]["details"]["rejection_codes"] = [r.get("code") for r in validation["rejections"]]
-            trace[0]["details"]["rejection_excerpts"] = _excerpts(validation["rejections"])
             reply = _to_code_reply(trace, reply, "rejet_du_validateur", brief, fallback)
             validation, skipped = _check_code_reply(reply, brief, validate)
             status = "fallback"
@@ -959,7 +967,7 @@ def answer_question(
             guard_status = "error"
             guard_details = {"error": type(error).__name__}
     score = guardrail["grounding_score"]
-    verified = guardrail["action"] == "none" and score is not None
+    verified = guardrail["action"] == "none" and score is not None and not guardrail["denied_topics"]
     if verified and score < GROUNDING_FLOOR:
         guard_details.update({"grounding_weak": True, "grounding_very_weak": True, "grounding_floor": GROUNDING_FLOOR})
     if reply["origin"] == "llm" and not verified:

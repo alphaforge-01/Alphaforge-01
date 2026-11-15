@@ -23,6 +23,10 @@ CONFIG = BedrockConfig(mode="bedrock", analyst_model_id="m", explainer_model_id=
                        guardrail_id="g-test", guardrail_version="1")
 
 
+PASSED = {"check": "request_topic", "action": "none", "denied_topics": [], "grounding_score": None,
+          "relevance_score": None, "mode": "block"}
+
+
 def _load(name):
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
@@ -65,7 +69,7 @@ def converse_response(text, stop="end_turn"):
 class FakeClient:
     """Client Bedrock simule : reponses Converse en file, resultat du garde-fou au choix."""
 
-    def __init__(self, texts=(), action="none", score=0.9, flags=None, config=CONFIG):
+    def __init__(self, texts=(), action="none", score=0.9, flags=None, config=CONFIG, request_check=PASSED):
         self.config = config
         self.texts = list(texts)
         self.calls = []
@@ -171,7 +175,7 @@ def test_bedrock_happy_path_substitutes_references_and_keeps_the_question_out_of
     shown = next(e["display_value"] for e in brief["evidence"] if e["evidence_id"] == evidence_id)
     client = FakeClient([json.dumps({"answer": f"La mesure atteint [{evidence_id}]."})])
     result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
-                             config=CONFIG)
+                             config=CONFIG, request_check=PASSED)
     assert result["reply"]["origin"] == "llm" and shown in result["rendered_answer"]
     assert client.calls[0]["model_id"] == "m-conv"
     guard = client.guard_calls[0]
@@ -184,7 +188,7 @@ def test_bedrock_happy_path_substitutes_references_and_keeps_the_question_out_of
 def test_a_reply_rejected_twice_is_replaced_by_the_code_reply(brief):
     client = FakeClient(['{"answer": "INVALIDE un"}', '{"answer": "INVALIDE deux"}'])
     result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
-                             config=CONFIG)
+                             config=CONFIG, request_check=PASSED)
     assert result["reply"]["origin"] == "template" and result["rendered_answer"] == "REPONSE-DU-CODE."
     step = result["trace"][0]
     assert step["status"] == "fallback" and step["details"]["fallback_reason"] == "rejet_du_validateur"
@@ -199,7 +203,7 @@ def test_a_reply_rejected_twice_is_replaced_by_the_code_reply(brief):
 def test_an_intervention_or_no_score_replaces_the_model_reply(brief, action, score, reason):
     client = FakeClient(['{"answer": "La regle [G1] est en conflit."}'], action=action, score=score)
     result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
-                             config=CONFIG)
+                             config=CONFIG, request_check=PASSED)
     assert result["reply"]["origin"] == "template"
     assert result["trace"][0]["details"]["fallback_reason"] == reason
     assert result["trace"][2]["details"]["replaced_by_template"] is True
@@ -209,7 +213,7 @@ def test_a_weak_grounding_keeps_the_model_reply_with_a_signal(brief):
     client = FakeClient(['{"answer": "La regle [G1] est en conflit."}'], score=0.12,
                         flags={"below_threshold": True, "filters": ["GROUNDING"]})
     result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
-                             config=CONFIG)
+                             config=CONFIG, request_check=PASSED)
     details = result["trace"][2]["details"]
     assert result["reply"]["origin"] == "llm"
     assert details["grounding_weak"] is True and details["grounding_very_weak"] is True
@@ -226,10 +230,10 @@ def test_without_guardrail_or_validator_no_model_text_is_produced(brief):
 
     no_guard = BedrockConfig(mode="bedrock", analyst_model_id="m", conversation_model_id="m")
     result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=FakeClient(),
-                             config=no_guard, runner=runner)
+                             config=no_guard, runner=runner, request_check=PASSED)
     assert result["trace"][0]["details"]["fallback_reason"] == "garde_fou_non_configure"
     result = answer_question(brief, "bedrock", validate=None, fallback=code_fallback, client=FakeClient(),
-                             config=CONFIG, runner=runner)
+                             config=CONFIG, runner=runner, request_check=PASSED)
     assert result["trace"][0]["details"]["fallback_reason"] == "validateur_indisponible"
     assert called == [] and result["reply"]["origin"] == "template"
 
@@ -239,7 +243,7 @@ def test_an_agent_error_falls_back_to_the_code_with_a_masked_reason(brief):
         raise BedrockError("ThrottlingException AKIA" + "Q" * 16)
 
     result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=FakeClient(),
-                             config=CONFIG, runner=runner)
+                             config=CONFIG, runner=runner, request_check=PASSED)
     reason = result["trace"][0]["details"]["fallback_reason"]
     assert result["reply"]["origin"] == "template" and reason.startswith("BedrockError")
     assert "AKIA" + "Q" * 16 not in reason
@@ -290,7 +294,7 @@ def test_a_validator_error_never_lets_the_model_text_through(brief):
                 "model_id": "m", "prompt_version": "conversation_v1", "attempt": 1}
 
     result = answer_question(brief, "bedrock", validate=_raising_validate, fallback=code_fallback, client=client,
-                             config=CONFIG, runner=runner)
+                             config=CONFIG, runner=runner, request_check=PASSED)
     assert result["reply"]["origin"] == "template" and result["rendered_answer"] == "REPONSE-DU-CODE."
     assert result["trace"][0]["details"]["rejection_codes"] == ["validator_error"]
     # la reponse du code n'a pas pu etre validee non plus : le resultat le dit, sans pretendre un controle
@@ -301,7 +305,7 @@ def test_a_validator_error_never_lets_the_model_text_through(brief):
 def test_the_guardrail_on_a_code_reply_after_a_rejection_keeps_the_first_reason(brief):
     client = FakeClient(['{"answer": "INVALIDE un"}', '{"answer": "INVALIDE deux"}'], action="intervened", score=None)
     result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
-                             config=CONFIG)
+                             config=CONFIG, request_check=PASSED)
     assert result["reply"]["origin"] == "template"
     assert result["trace"][0]["details"]["fallback_reason"] == "rejet_du_validateur"
     assert result["trace"][0]["details"]["llm_attempt"] == 2          # l'essai du modele reste mesurable
@@ -319,7 +323,7 @@ def test_low_relevance_is_reported_apart_from_weak_grounding(brief):
     client = FakeClient(['{"answer": "La regle [G1] est en conflit."}'], score=0.8,
                         flags={"below_threshold": True, "filters": ["RELEVANCE"]})
     details = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
-                              config=CONFIG)["trace"][2]["details"]
+                              config=CONFIG, request_check=PASSED)["trace"][2]["details"]
     assert details["relevance_weak"] is True
     assert "grounding_weak" not in details and "grounding_below_threshold" not in details
 
@@ -328,7 +332,7 @@ def test_cited_evidence_is_returned_for_the_interface_sections(brief):
     evidence_id = _evidence_id(brief)
     client = FakeClient([json.dumps({"answer": f"La mesure atteint [{evidence_id}]."})])
     result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
-                             config=CONFIG)
+                             config=CONFIG, request_check=PASSED)
     assert result["cited_evidence"] == [evidence_id] and result["cited_terms"] == []
 
 
@@ -341,3 +345,40 @@ def test_a_malformed_brief_never_breaks_the_final_render(brief):
 def test_grounding_source_without_idea_states_the_check_statuses(brief):
     source, kind = ca.grounding_source({**brief, "idea": None, "answer_kind": "xray"})
     assert kind == "sentences" and "Contrôle " in source and "fictif" in source   # statuts et avertissement
+
+
+# ---- cas ajoutes apres l'audit de securite ----
+
+def test_a_rejected_reply_quoting_the_question_never_reaches_the_trace(brief):
+    client = FakeClient(['{"answer": "INVALIDE MARQUEUR-QUESTION"}', '{"answer": "INVALIDE MARQUEUR-QUESTION"}'])
+    result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
+                             config=CONFIG, request_check=PASSED)
+    assert result["reply"]["origin"] == "template"
+    assert "MARQUEUR-QUESTION" not in json.dumps(result["trace"])
+    assert "rejection_excerpts" not in result["trace"][0]["details"]
+
+
+@pytest.mark.parametrize("check,reason", [
+    (None, "controle_entree_absent"),
+    ({**PASSED, "action": "not_run"}, "controle_entree_absent"),
+    ({**PASSED, "action": "intervened", "denied_topics": ["order_execution"]}, "demande_refusee"),
+])
+def test_the_model_is_never_called_without_a_passed_input_check(brief, check, reason):
+    client = FakeClient(['{"answer": "La regle [G1] est en conflit."}'])
+    result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
+                             config=CONFIG, request_check=check)
+    assert client.calls == [] and result["reply"]["origin"] == "template"
+    assert result["trace"][0]["details"]["fallback_reason"] == reason
+
+
+def test_a_detected_denied_topic_replaces_the_model_reply_even_without_intervention(brief):
+    class TopicClient(FakeClient):
+        def check_output_grounding(self, source, query, answer):
+            result = super().check_output_grounding(source, query, answer)
+            return {**result, "denied_topics": ["personalized_advice"]}
+
+    client = TopicClient(['{"answer": "La regle [G1] est en conflit."}'])
+    result = answer_question(brief, "bedrock", validate=validate_ok, fallback=code_fallback, client=client,
+                             config=CONFIG, request_check=PASSED)
+    assert result["reply"]["origin"] == "template"
+    assert result["trace"][2]["details"]["denied_topics"] == ["personalized_advice"]
