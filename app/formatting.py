@@ -1,18 +1,32 @@
-"""Mise en forme des paramètres au format français.
+"""Mise en forme au format français, sans aucun calcul financier.
 
-À utiliser seulement pour des paramètres : seuils des règles, poids choisi par
-l'utilisateur, capital fictif, horizon. Un chiffre calculé (métrique, poids après
-simulation, montant) s'affiche toujours avec le `display_value` du registre de
-preuves, jamais avec ces fonctions (docs/ui_spec.md, règle d'affichage 1).
+Deux usages seulement (docs/ui_spec.md, règles d'affichage 1 et 2) :
+- les paramètres : seuils des règles, poids choisi par l'utilisateur, capital
+  fictif, horizon, dates ;
+- les valeurs déjà calculées par la gouvernance du flux B qui n'ont pas de texte
+  prêt dans le contrat (marge d'une règle).
+Un chiffre du registre de preuves s'affiche toujours avec son `display_value`.
+Les pourcentages et les points utilisent les fonctions de l'explication
+(src/alphaforge/explanation_rendering.py), pour un format identique partout.
 """
 from __future__ import annotations
 
-from alphaforge.explanation_rendering import format_percent
+from datetime import date
+
+from alphaforge.explanation_rendering import format_percent, format_points
+
+MONTHS_FR = ("janv.", "févr.", "mars", "avr.", "mai", "juin",
+             "juil.", "août", "sept.", "oct.", "nov.", "déc.")
 
 
 def format_pct(fraction: float) -> str:
     """0.25 -> "25 %", 0.125 -> "12,5 %". Même règle que l'explication (src/alphaforge)."""
     return format_percent(fraction)
+
+
+def format_pts(fraction: float) -> str:
+    """0.074 -> "7,4 pts". Écart en points de pourcentage."""
+    return format_points(fraction)
 
 
 def format_cad(amount: float) -> str:
@@ -22,7 +36,17 @@ def format_cad(amount: float) -> str:
 
 
 def format_horizon(min_years: int, max_years: int) -> str:
-    """(3, 5) -> "3 à 5 ans", (10, 10) -> "10 ans"."""
+    """(3, 5) -> "3 à 5 ans", (10, 10) -> "10 ans", (1, 1) -> "1 an"."""
+    unit = "an" if max_years == 1 else "ans"
     if min_years == max_years:
-        return f"{min_years} ans"
-    return f"{min_years} à {max_years} ans"
+        return f"{min_years} {unit}"
+    return f"{min_years} à {max_years} {unit}"
+
+
+def format_date(iso_date: str) -> str:
+    """"2021-11-12" -> "12 nov. 2021". Une valeur illisible est rendue telle quelle."""
+    try:
+        day = date.fromisoformat(str(iso_date)[:10])
+    except ValueError:
+        return str(iso_date)
+    return f"{day.day} {MONTHS_FR[day.month - 1]} {day.year}"
