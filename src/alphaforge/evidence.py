@@ -85,6 +85,28 @@ EVIDENCE_METRICS: dict[str, dict[str, str]] = {
                               "transformation": "Part défensive après moins avant, en points de pourcentage."},
 }
 
+# Faits déclarés du profil fictif (outil get_profile_facts, sujet "profile") : recopiés, jamais calculés.
+PROFILE_TRANSFORMATION = ("Valeur déclarée dans le profil fictif, recopiée telle quelle : ni calculée, ni déduite. "
+                          "Les profils sont fictifs (data/external/investor_profiles.json ou profil construit par cases).")
+EVIDENCE_METRICS.update({
+    "profile_objective": {"unit": "text", "label_fr": "Objectif déclaré du profil fictif",
+                          "transformation": PROFILE_TRANSFORMATION},
+    "profile_horizon": {"unit": "text", "label_fr": "Horizon de placement déclaré",
+                        "transformation": PROFILE_TRANSFORMATION},
+    "profile_risk_tolerance": {"unit": "text", "label_fr": "Tolérance au risque déclarée",
+                               "transformation": PROFILE_TRANSFORMATION},
+    "profile_experience": {"unit": "text", "label_fr": "Expérience déclarée",
+                           "transformation": PROFILE_TRANSFORMATION},
+    "profile_esg_preference": {"unit": "text", "label_fr": "Préférence ESG déclarée",
+                               "transformation": PROFILE_TRANSFORMATION},
+    "profile_crypto_allowed": {"unit": "text", "label_fr": "Cryptoactifs permis par le profil",
+                               "transformation": PROFILE_TRANSFORMATION},
+    "profile_capital": {"unit": "cad", "label_fr": "Capital fictif du profil",
+                        "transformation": PROFILE_TRANSFORMATION},
+    "profile_loss_capacity": {"unit": "pct", "label_fr": "Perte supportable déclarée (capacité)",
+                              "transformation": PROFILE_TRANSFORMATION},
+})
+
 
 class EvidenceError(ValueError):
     """Preuve mal formée (unité, limite ou métrique inconnue)."""
