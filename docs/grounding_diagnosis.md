@@ -1,13 +1,19 @@
 # Diagnostic de l'ancrage de l'agent explicateur
 
-Statut : diagnostic hors ligne fait le 14 novembre 2026. Mesure sur le compte AWS à faire avec `scripts/diagnose_grounding.py --apply`. Branche : `fix/explainer-grounding`.
+Statut : diagnostic hors ligne fait le 14 novembre 2026, mesuré sur le compte AWS de l'atelier le 15 novembre 2026 vers 3 h UTC (section "Mesure sur le compte"). Branche : `fix/explainer-grounding`.
+
+## En bref
+
+1. **La cause du score bas est confirmée : c'est la source JSON.** Avec le même contenu écrit en phrases, le texte réel de l'explicateur passe de 0,42 et 0,15 à 0,83 et 0,73 (seuil du garde-fou : 0,5).
+2. **Mais le contrôle d'ancrage ne repère pas un verdict faux.** Un texte qui déclare toutes les règles conformes obtient presque le même score que le texte juste, avec les deux sources. Le score mesure surtout la proximité de vocabulaire et de sujet, pas la justesse des statuts.
+3. **Conséquence :** passer à la source en phrases évite de remplacer à tort le texte du modèle par le gabarit, mais le score ne doit pas être présenté comme une preuve d'exactitude ni servir à bloquer. La fidélité reste garantie par le code : renvois, validateur, statuts calculés par la gouvernance.
 
 ## Constat
 
 - Le contrôle d'ancrage de Bedrock Guardrails donne des scores autour de 0,4 pour le texte de l'explicateur (de 0,16 à 0,47 avant le remplacement des renvois, voir `docs/aws_setup.md`). Le seuil du garde-fou est 0,5 et le plancher du pipeline 0,3 : le texte est souvent signalé `grounding_weak`, parfois remplacé par le gabarit.
 - La langue seule n'explique pas ces scores : la documentation AWS classe le français "optimisé et pris en charge" pour l'ancrage contextuel, au niveau Classic comme au niveau Standard ([langues prises en charge](https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails-supported-languages.html)).
 
-## Cause principale probable : la forme de la source
+## Cause principale : la forme de la source
 
 L'étape 6 du pipeline (`analysis_pipeline.explain`) envoie comme source `json.dumps(brief)` : le dossier d'explication en JSON. Les faits y sont, mais sous une forme qu'un modèle d'implication textuelle relie mal à des phrases françaises :
 
@@ -34,28 +40,56 @@ La source en phrases (`src/alphaforge/grounding_source.py`) réécrit le même d
 - **Paraphrases du glossaire.** "amplitude des variations" pour une définition qui dit "ampleur des variations".
 - **Négations.** "Aucune règle n'est en tension ni en conflit" cite des statuts absents du dossier.
 
-## Mesure à faire sur le compte
+## Mesure sur le compte
 
-Dans le terminal qui contient les identifiants temporaires, après `aws sts get-caller-identity` :
+Conditions : compte de l'atelier (rôle `WSParticipantRole`), `us-east-1`, garde-fou `alphaforge-guardrail` version 5 (ancrage et pertinence au seuil 0,5, mode détection), requête fixe du pipeline. Idée : 25 % de TSLA au prorata. Le témoin est le même texte avec toutes les règles déclarées conformes. Coût : 32 appels `ApplyGuardrail` et 4 appels Converse.
+
+**Texte du gabarit (fidèle par construction)**
+
+| Cas | JSON, texte juste | JSON, témoin faux | Phrases, texte juste | Phrases, témoin faux |
+| --- | --- | --- | --- | --- |
+| Robert, novice | 0,52 | 0,63 | 0,85 | 0,82 |
+| Robert, pro | 0,61 | 0,47 | 0,63 | 0,28 |
+| Amira, novice | 0,46 | 0,47 | 0,79 | 0,79 |
+| Amira, pro | 0,54 | 0,54 | 0,46 | 0,47 |
+| Mateo, novice | 0,56 | 0,61 | 0,92 | 0,92 |
+| Mateo, pro | 0,58 | 0,58 | 0,88 | 0,88 |
+| Moyenne | 0,55 | | 0,76 | |
+
+Chez Mateo, le témoin change peu le sens (ses statuts sont "conforme" et "information manquante", les mots remplacés sont dans une négation) : ses lignes ne testent pas le témoin.
+
+**Texte réel de l'explicateur** (modèle `us.anthropic.claude-haiku-5-5`, prompt `explainer_v4`, sorties acceptées par le validateur)
+
+| Cas | JSON, texte juste | JSON, témoin faux | Phrases, texte juste | Phrases, témoin faux |
+| --- | --- | --- | --- | --- |
+| Robert, novice | 0,42 | 0,52 | 0,83 | 0,80 |
+| Robert, pro | 0,15 | 0,18 | 0,73 | 0,74 |
+
+Lecture :
+
+- Avec la source JSON, le texte du modèle reste sous le seuil, et à 0,15 il passe sous le plancher de 0,3 du pipeline : le texte serait remplacé par le gabarit alors qu'il est fidèle. Ces valeurs concordent avec celles déjà relevées par le flux C (0,16 à 0,47).
+- Avec la source en phrases, le gabarit gagne en moyenne 0,2 point de score, et le texte du modèle dépasse le seuil dans les deux cas.
+- Le témoin faux n'est nettement pénalisé que dans un cas sur six utiles (Robert, pro, gabarit, source en phrases : 0,28 contre 0,63). Avec la source JSON, il obtient même parfois un score plus haut que le texte juste.
+
+**Autre constat : réponses tronquées.** Avec ce modèle, la réponse contient un bloc de raisonnement (environ 5 500 caractères) avant le JSON. Au plafond actuel de 2 500 jetons de sortie (`INFERENCE_CONFIG` de `explainer_agent.py`), les deux premiers appels se sont arrêtés sur `max_tokens`, JSON incomplet. À 8 000 jetons, les deux appels ont abouti avec environ 2 100 jetons de sortie. Le modèle a été choisi d'après `tests/test_bedrock_hardening.py` : l'identifiant réellement configuré par le flux C reste à confirmer.
+
+Pour refaire la mesure avec des identifiants locaux, dans le terminal dédié, après `aws sts get-caller-identity` :
 
 ```bash
 python scripts/diagnose_grounding.py --apply                                  # au plus 24 appels ApplyGuardrail
 python scripts/diagnose_grounding.py --apply --explainer --personas robert    # vrai texte du modèle, 2 cas
 ```
 
-Le script mesure chaque texte contre les deux sources, plus un témoin négatif : le texte du gabarit où toutes les règles sont déclarées conformes.
+Le script mesure chaque texte contre les deux sources, plus le témoin négatif. Avec `--explainer`, il utilise le plafond de jetons du pipeline et peut donc rencontrer la troncature décrite ci-dessus.
 
-Hypothèses à confirmer :
+## Correctifs proposés (flux C, à valider par Godwin)
 
-1. Le gabarit obtient un score nettement plus haut avec la source en phrases qu'avec la source JSON, et le texte de l'explicateur suit la même tendance.
-2. Avec la source en phrases, le témoin négatif reste nettement sous le texte juste. Sinon, la source rend le contrôle indulgent et le correctif ne doit pas être appliqué.
-
-## Correctif proposé (flux C, à valider par Godwin)
-
-À l'étape 6 de `explain`, remplacer la source `json.dumps(brief, ensure_ascii=False)` par `build_grounding_source(brief)`. L'explicateur continue de recevoir le dossier JSON ; seule la source du contrôle change, et elle ne contient que le contenu du dossier. Recalibrer ensuite le seuil du garde-fou et le plancher de 0,3 sur les scores mesurés.
+1. **Source du contrôle.** À l'étape 6 de `explain`, remplacer `json.dumps(brief, ensure_ascii=False)` par `build_grounding_source(brief)`. L'explicateur continue de recevoir le dossier JSON ; seule la source du contrôle change, et elle ne contient que le contenu du dossier.
+2. **Rôle du score.** Garder le mode détection. Le plancher de 0,3 peut rester comme filet contre un texte hors sujet, mais le score ne doit ni bloquer ni être présenté comme une vérification des statuts : le témoin montre qu'il ne la fait pas.
+3. **Plafond de jetons de l'explicateur.** Le relever (par exemple 4 000) ou désactiver le raisonnement du modèle si l'API le permet, après avoir confirmé le modèle configuré.
 
 ## Limites de ce diagnostic
 
-- L'indicateur lexical ne remplace pas le score du garde-fou, qui juge le sens et non les mots.
-- Le texte mesuré hors ligne est celui du gabarit ; le texte du modèle peut paraphraser davantage.
-- Une source plus lisible peut aussi rendre le contrôle plus indulgent : c'est le rôle du témoin négatif. Il ne teste que l'inversion des statuts, pas un chiffre attribué à la mauvaise règle.
+- Petit échantillon : six cas pour le gabarit, deux pour le modèle, un seul essai chacun. Le classifieur du garde-fou n'est pas parfaitement stable d'un essai à l'autre (voir `docs/technical_documentation.md`).
+- L'indicateur lexical hors ligne n'est qu'un indice ; seuls les scores du compte comptent.
+- Le témoin ne teste que l'inversion des statuts, pas un chiffre attribué à la mauvaise règle.
