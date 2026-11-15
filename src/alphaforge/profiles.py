@@ -184,7 +184,13 @@ def _contradictions(answers: Dict[str, Any]) -> List[Dict[str, Any]]:
             "beginner_vs_high_risk", "warning", ["risk_tolerance", "experience"],
             "Tolérance au risque élevée avec une expérience débutante : "
             "vérifier que les pertes possibles sont bien comprises."))
-    if answers["esg_preference"] != "none":
+    if answers["esg_preference"] == "strong":
+        found.append(_issue(
+            "esg_evidence_unavailable", "info", ["esg_preference"],
+            "Exigence ESG forte : une règle d'exclusion ESG est ajoutée, mais aucune preuve ESG "
+            "n'est disponible. Son statut sera \"information manquante\" : un verdict financier "
+            "conforme ne vaut pas vérification ESG."))
+    elif answers["esg_preference"] != "none":
         found.append(_issue(
             "esg_not_evaluated", "info", ["esg_preference"],
             "La préférence ESG est enregistrée, mais aucune règle ESG n'est évaluée "
@@ -231,7 +237,11 @@ def _build_rules(answers: Dict[str, Any]) -> List[Rule]:
         rules.append(_rule("R5", "excluded_asset_class", {"asset_class": "crypto"}, "max",
                            None, 0.0, "bool", "Cryptoactifs exclus"))
     rules.append(_rule("R6", "max_asset_class_weight", {"asset_class": "equity"}, "max",
-                       *EQUITY_CLASS_THRESHOLDS[risk], "pct", "Concentration par catégorie"))
+                       *EQUITY_CLASS_THRESHOLDS[risk], "pct", "Concentration en actions individuelles"))
+    if answers["esg_preference"] == "strong":
+        # Aucune preuve ESG n'existe : la gouvernance rend `missing_info`, jamais `compliant`.
+        rules.append(_rule("R7", "esg_exclusion", {}, "max", None, 0.0, "bool",
+                           "Exclusion ESG (preuves requises)"))
     return rules
 
 

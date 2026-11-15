@@ -70,7 +70,7 @@ class EvidenceEntry(TypedDict):
     value: float | str | None
     unit: Literal["pct", "cad", "days", "ratio", "count", "text"]
     display_value: str
-    qualifier: Literal["low", "moderate", "high"] | None   # par seuil, calculé par le code
+    qualifier: Literal["low", "moderate", "high"] | None   # réservé : toujours None, aucun seuil global de risque ; les jugements viennent de la gouvernance, par profil
     period_start: str | None    # ISO
     period_end: str | None
     as_of: str

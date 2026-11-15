@@ -94,3 +94,20 @@ def test_pipeline_explain_result_stays_compatible_with_or_without_brief():
     assert check_keys(explanation, ExplanationResult) == []
     explanation["brief"] = deps.build_brief(analysis, "novice")
     assert check_keys(explanation, ExplanationResult) == []
+
+
+# ---------- evidence.qualifier : champ réservé, structure inchangée ----------
+def test_qualifier_field_is_reserved_and_structure_is_unchanged():
+    from alphaforge import contracts
+    from alphaforge.contracts import EvidenceEntry
+    assert "qualifier" in EvidenceEntry.__annotations__
+    line = next(l for l in Path(contracts.__file__).read_text(encoding="utf-8").splitlines()
+                if l.strip().startswith("qualifier:"))
+    annotation, comment = line.split("#", 1)
+    assert 'Literal["low", "moderate", "high"] | None' in annotation
+    assert "réservé" in comment and "toujours None" in comment and "gouvernance" in comment
+    assert "qualifier" in EvidenceEntry.__required_keys__          # clé toujours présente, valeur None
+def test_evidence_registry_always_sets_qualifier_to_none():
+    from alphaforge.evidence import make_entry
+    import inspect
+    assert "qualifier=None" in inspect.getsource(make_entry).replace(" ", "")
