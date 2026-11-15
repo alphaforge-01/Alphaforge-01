@@ -167,6 +167,31 @@ def _variant_sentence(variant: Mapping[str, Any], evidence: Mapping[str, Mapping
     return sentence
 
 
+def _profile_sentences(context: Optional[Mapping[str, Any]]) -> List[str]:
+    """Contexte du profil en phrases : l'explicateur peut s'y referer (prompt, regle 11), donc la source doit le contenir.
+
+    Sans ces phrases, toute mention de l'objectif ou de l'horizon serait jugee non fondee par le controle d'ancrage.
+    Seules les cles presentes dans le dossier sont ecrites, rien n'est complete.
+    """
+    if not context:
+        return []
+    lines: List[str] = []
+    if context.get("objective"):
+        lines.append(f"Contexte du profil fictif : l'objectif est « {context['objective']} ».")
+    low, high = context.get("horizon_years_min"), context.get("horizon_years_max")
+    if low is not None and high is not None:
+        lines.append(f"L'horizon d'investissement du profil va de {low} à {high} ans.")
+    for key, label in (("risk_tolerance_fr", "La tolérance au risque du profil est"),
+                       ("experience_fr", "L'expérience de l'investisseur est"),
+                       ("esg_preference_fr", "La préférence ESG du profil est")):
+        if context.get(key):
+            lines.append(f"{label} {context[key]}.")
+    if isinstance(context.get("crypto_allowed"), bool):
+        lines.append("Les cryptoactifs sont permis pour ce profil." if context["crypto_allowed"]
+                     else "Les cryptoactifs ne sont pas permis pour ce profil.")
+    return lines
+
+
 def build_grounding_source(brief: Mapping[str, Any]) -> str:
     """Le dossier d'explication en phrases françaises, pour la source du contrôle d'ancrage."""
     evidence: Dict[str, Mapping[str, Any]] = {e["evidence_id"]: e for e in brief.get("evidence", [])}
@@ -174,6 +199,7 @@ def build_grounding_source(brief: Mapping[str, Any]) -> str:
     checks = list(brief.get("checks", []))
     lines: List[str] = [item["text"] for item in disclaimers(brief.get("level", "novice"))]
     lines.append(_idea_sentence(brief["idea"]))
+    lines.extend(_profile_sentences(brief.get("profile_context")))
     if checks:
         lines.append(f"Verdict d'ensemble des règles du profil : {STATUS_FR[worst_status(c['status'] for c in checks)]}.")
     order = {f["check_id"]: f["rank"] for f in brief.get("ranked_factors", [])}
