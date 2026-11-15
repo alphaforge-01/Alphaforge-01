@@ -14,7 +14,9 @@ Regles tenues par ce module :
 """
 from __future__ import annotations
 
+import copy
 import json
+import re
 import time
 import uuid
 from datetime import datetime, timezone
@@ -326,6 +328,7 @@ def run_analysis(
     }))
 
     evidence = toolbox.evidence()
+    _scope_evidence_labels(evidence)
     limit_ids = sorted({lid for entry in evidence.values() for lid in entry.get("limit_ids", [])})
     submission = AnalystSubmission(
         understood_idea=idea,
@@ -434,9 +437,22 @@ def explain(
     started = time.perf_counter()
     validation = deps.validate(output, brief)
     status = "ok"
+    repaired_slots: list[str] = []
+    if not validation["is_valid"] and output["origin"] == "llm":
+        # Reparation par emplacement : seuls les emplacements rejetes viennent du code, le reste reste au modele.
+        candidate, slots = _repair_slots(output, deps.render_template(brief), validation["rejections"])
+        if candidate is not None:
+            recheck = deps.validate(candidate, brief)
+            if recheck["is_valid"]:
+                trace[0]["details"]["rejection_slots"] = [f"{r['slot']}:{r['code']}" for r in validation["rejections"]]
+                trace[0]["details"]["rejection_excerpts"] = _excerpts(validation["rejections"])
+                output, validation, repaired_slots = candidate, recheck, slots
+    if repaired_slots:
+        trace[0]["details"]["repaired_slots"] = repaired_slots
     if not validation["is_valid"]:
         rejected = [r["code"] for r in validation["rejections"]]
         rejected_slots = [f"{r['slot']}:{r['code']}" for r in validation["rejections"]]
+        trace[0]["details"]["rejection_excerpts"] = _excerpts(validation["rejections"])
         output = deps.render_template(brief)
         validation = deps.validate(output, brief)
         status = "fallback"
@@ -540,6 +556,80 @@ def persist_trace(
         return {"saved": False, "location": None, "reason": redact_text(str(error))}
     except Exception as error:  # la trace est accessoire : jamais de plantage pour elle
         return {"saved": False, "location": None, "reason": type(error).__name__}
+
+
+# Codes de rejet qu'on peut reparer en remplacant l'emplacement fautif par la version ecrite par le code.
+_REPAIRABLE_CODES = frozenset({
+    "number_outside_registry", "too_long", "forbidden_term", "unknown_reference", "missing_rule_citation"})
+_TEXT_SLOTS = ("summary", "counterfactual", "variants", "limits_context")
+MAX_REPAIRED_SLOTS = 3
+
+
+def _repair_slots(
+    output: dict[str, Any], template: dict[str, Any], rejections: list[dict[str, Any]],
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Remplace les seuls emplacements rejetes par ceux du gabarit, et garde le reste du texte du modele.
+
+    Rend (None, []) si un rejet n'est pas reparable (structure, emplacement manquant, trop d'emplacements) :
+    le pipeline utilise alors le gabarit complet. Un seul mauvais chiffre ne doit pas faire jeter toute l'explication.
+    """
+    slots: list[str] = []
+    for rejection in rejections:
+        slot = rejection.get("slot", "")
+        if rejection.get("code") not in _REPAIRABLE_CODES:
+            return None, []
+        if slot not in _TEXT_SLOTS and not re.fullmatch(r"factors\[\d+\]", slot):
+            return None, []
+        if slot not in slots:
+            slots.append(slot)
+    if not slots or len(slots) > MAX_REPAIRED_SLOTS:
+        return None, []
+    repaired = copy.deepcopy(output)
+    for slot in slots:
+        if slot in _TEXT_SLOTS:
+            repaired[slot] = template[slot]
+            continue
+        index = int(slot[len("factors["):-1])
+        factors = repaired.get("factors") or []
+        if index >= len(factors):
+            return None, []
+        replacement = next(
+            (f for f in template.get("factors", []) if f.get("check_id") == factors[index].get("check_id")), None)
+        if replacement is None:
+            return None, []
+        factors[index] = copy.deepcopy(replacement)
+    return repaired, slots
+
+
+_SCOPE_SUFFIX = (
+    ("portfolio_before", " (portefeuille avant l'ajout)"),
+    ("portfolio_after", " (portefeuille après l'ajout)"),
+    ("variant:", " (variante simulée)"),
+    ("explored:", " (simulation explorée)"),
+)
+
+
+def _scope_evidence_labels(evidence: dict[str, Any]) -> None:
+    """Ajoute son perimetre au libelle de chaque preuve.
+
+    Plusieurs preuves portent le meme libelle ("Perte maximale historique") et ne se distinguent que par leur
+    sujet interne : avant, apres, variante. Le libelle seul ne le disait pas, et le modele pouvait prendre la
+    mauvaise ligne ou attribuer la mesure a la mauvaise chose. Le perimetre aide aussi l'utilisateur qui
+    ouvre une preuve.
+    """
+    for entry in evidence.values():
+        subject = str(entry.get("subject", ""))
+        for prefix, suffix in _SCOPE_SUFFIX:
+            if subject.startswith(prefix):
+                label = str(entry.get("label_fr", ""))
+                if suffix not in label:
+                    entry["label_fr"] = label + suffix
+                break
+
+
+def _excerpts(rejections: list[dict[str, Any]], limit: int = 8) -> list[str]:
+    """Courts extraits des rejets (40 caracteres, masques) : montrent ce qui a ete rejete, pour le diagnostic."""
+    return [redact_text(f"{r.get('slot')}:{r.get('code')}:{str(r.get('excerpt', ''))[:40]}") for r in rejections[:limit]]
 
 
 def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None) -> str:

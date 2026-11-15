@@ -95,7 +95,8 @@ def test_parse_text_around_object():
 ])
 def test_parse_error_messages(text, message):
     output, problem = parse(text)
-    assert output is None and problem == message
+    # le message JSON invalide porte maintenant la cause et la position : on verifie son debut
+    assert output is None and (problem == message or (message == "JSON invalide." and problem.startswith("JSON invalide (")))
 
 
 def test_parse_array_without_braces_is_not_found():
@@ -267,7 +268,9 @@ def test_trace_records_the_slot_of_each_rejection_without_any_model_text():
                           explainer_runner=runner)
     details = explanation["trace"][0]["details"]
     assert details["rejection_slots"] == ["summary:forbidden_term"]
-    assert "MARQUEUR-SECRET" not in json.dumps(explanation["trace"])
+    # seul le court extrait du validateur est conserve pour le diagnostic, jamais la phrase complete du modele
+    assert "Il faut vendre MARQUEUR-SECRET maintenant." not in json.dumps(explanation["trace"])
+    assert details["rejection_excerpts"] == ["summary:forbidden_term:MARQUEUR-SECRET"]
 
 
 def test_prompt_v4_forbids_naming_variants_by_identifier():

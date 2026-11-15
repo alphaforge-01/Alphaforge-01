@@ -19,7 +19,7 @@ from .tool_specs import ExplainerFailure
 PROMPT_NAME = "explainer_v4"
 PROMPT_VERSION = PROMPT_NAME
 # Pas de temperature : les modeles Claude recents la refusent (ValidationException, constate sur le compte).
-INFERENCE_CONFIG = {"maxTokens": 1500}
+INFERENCE_CONFIG = {"maxTokens": 2500}
 _STRING_SLOTS = ("summary", "counterfactual", "variants", "limits_context")
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
 
@@ -31,9 +31,11 @@ def parse_output(text: str, brief: ExplanationBrief, *, model_id: str, attempt: 
     if start < 0 or end <= start:
         return None, "Aucun objet JSON trouve dans la reponse."
     try:
-        raw = json.loads(cleaned[start:end + 1])
-    except ValueError:
-        return None, "JSON invalide."
+        # strict=False : un retour a la ligne dans un texte est une erreur frequente des modeles, sans gravite
+        raw = json.loads(cleaned[start:end + 1], strict=False)
+    except ValueError as error:
+        detail = f" ({getattr(error, 'msg', 'erreur')}, ligne {getattr(error, 'lineno', '?')}, colonne {getattr(error, 'colno', '?')})"
+        return None, "JSON invalide" + detail + "."
     for slot in _STRING_SLOTS:
         if not isinstance(raw.get(slot), str):
             return None, f"Emplacement manquant ou invalide : {slot}."
@@ -92,7 +94,11 @@ def explain_with_llm(
     for attempt in (1, 2):
         response = client.converse(model_id, messages, system=system, inference_config=INFERENCE_CONFIG)
         text = extract_text(response)
-        output, problem = parse_output(text, brief, model_id=model_id, attempt=attempt)
+        if response.get("stopReason") == "max_tokens":
+            # Reponse tronquee : le JSON serait incomplet. Message exact pour la nouvelle tentative.
+            output, problem = None, "Reponse tronquee (max_tokens) : raccourcis chaque emplacement."
+        else:
+            output, problem = parse_output(text, brief, model_id=model_id, attempt=attempt)
         if output is not None:
             try:
                 verdict = validate(output, brief)
