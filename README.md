@@ -88,7 +88,9 @@ Résultat hors ligne de référence (verdict après la demande, données jusqu'a
 | --- | --- | --- | --- | --- |
 | Robert | conflit | conflit | tension | conforme |
 | Amira | tension | tension | tension | conforme |
-| Mateo | conforme | conflit | conforme | conforme |
+| Mateo | information manquante | conflit | information manquante | information manquante |
+
+Mateo est en « information manquante » dès son portefeuille de départ : sa règle d'exclusion ESG (R7) exige des preuves ESG, qui ne sont pas encore intégrées. Le système refuse donc de le déclarer conforme plutôt que de passer l'ESG sous silence. Avec 20 % de BTC-USD, le conflit sur les cryptoactifs exclus l'emporte.
 
 Les données de départ ne sont **pas** retéléchargées : `scripts/build_dataset.py` reconstruirait `data/raw/` depuis Yahoo Finance, la Banque du Canada et la FRED, mais `adj_close` est rétro-ajusté à chaque téléchargement et les résultats changeraient. Ne le relancer que volontairement.
 
@@ -172,6 +174,7 @@ tests/            Tests automatisés (aucun appel AWS)
 - **Biais du survivant** : l'univers de 31 actifs a été choisi en 2026 parmi des noms importants aujourd'hui.
 - **Historique court** : cinq ans, un seul épisode de baisse marquée (2022). La volatilité est un indicateur de risque parmi d'autres.
 - **Seuils des règles** : hypothèses de l'équipe, pas des normes réglementaires.
-- **ESG** : aucune donnée ESG n'est intégrée ; un verdict « conforme » ne dit rien des préférences ESG.
+- **ESG** : aucune donnée ESG n'est intégrée. Pour un profil à forte préférence ESG (Mateo), la règle d'exclusion ESG rend « information manquante » au lieu d'un faux « conforme ». Pour les autres profils, un verdict « conforme » ne dit rien de l'ESG.
+- **Concentration en actions individuelles (R6)** : la règle compte les actions détenues directement, pas les FNB d'actions.
 - **Données publiques gratuites**, non certifiées ; valeurs FRED révisées.
 - Le garde-fou Bedrock complète les contrôles du code mais ne prouve pas l'exactitude factuelle.

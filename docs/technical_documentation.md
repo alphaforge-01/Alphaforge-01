@@ -18,7 +18,7 @@ Les trois personas de l'énoncé testent trois comportements, couverts par le m�
 | --- | --- | --- |
 | Robert (risque faible à modéré, 3 à 5 ans) | Contester une demande incohérente avec le profil | 25 % de TSLA : **conflit** sur la concentration, contrefactuel « conforme à 20 % ou moins », variante simulée à 17 % conforme |
 | Amira (risque élevé, 15 ans et plus) | « Risque élevé » ne veut pas dire « tout est permis » | 25 % de TSLA, 20 % de BTC-USD ou 20 % de NVDA : **tension** sur la perte maximale historique |
-| Mateo (modéré, forte préférence ESG) | Intégrer autre chose que le rendement et le risque | Cryptoactifs exclus : **conflit** dès 20 % de BTC-USD. Limite assumée : aucune donnée ESG n'est encore intégrée (section 6) |
+| Mateo (modéré, forte préférence ESG) | Intégrer autre chose que le rendement et le risque | Règle d'exclusion ESG (R7) : sans preuve ESG, le verdict est **information manquante**, jamais « conforme », dès le portefeuille de départ ; cryptoactifs exclus : **conflit** avec 20 % de BTC-USD. Les preuves ESG restent à intégrer (section 6) |
 
 ## 2. Architecture, méthodes et technologies
 
@@ -155,7 +155,7 @@ La même analyse rattache les deux autres règles non conformes à des preuves d
 
 **Variante simulée** (proposée par l'analyste, recalculée par les mêmes outils) : `V1`, réduction du poids visé à 17 %, verdict **conforme** (trace : second appel `simulate_portfolio_change` avec `target_weight: 0.17`, preuves `E64` à `E98`).
 
-**Trace complète de l'explication :** étape 4 explication (gabarit en mode hors ligne, agent en mode `bedrock`), étape 5 validation (valide, 13 renvois vérifiés), étape 6 garde-fou (non exécuté hors ligne ; en mode `bedrock`, action et scores d'ancrage affichés).
+**Trace complète de l'explication :** étape 4 explication (gabarit en mode hors ligne, agent en mode `bedrock`), étape 5 validation (valide, 14 renvois vérifiés), étape 6 garde-fou (non exécuté hors ligne ; en mode `bedrock`, action et scores d'ancrage affichés).
 
 ## 5. Validations
 
@@ -179,7 +179,9 @@ Résultat de référence de `run_scenarios.py` (verdict après la demande) :
 | --- | --- | --- | --- | --- |
 | Robert | conflit | conflit | tension | conforme |
 | Amira | tension | tension | tension | conforme |
-| Mateo | conforme | conflit | conforme | conforme |
+| Mateo | information manquante | conflit | information manquante | information manquante |
+
+Mateo est en « information manquante » dès son portefeuille de départ : la règle R7 (exclusion ESG) ne peut pas être vérifiée sans preuve ESG, et le statut global est le pire statut des règles. Toutes ses autres règles (R1 à R6) sont conformes pour TSLA 25 %, NVDA 20 % et XOM 10 % ; avec BTC-USD 20 %, le conflit sur les cryptoactifs exclus l'emporte.
 
 ## 6. Limites et améliorations
 
@@ -193,14 +195,15 @@ Résultat de référence de `run_scenarios.py` (verdict après la demande) :
 
 ### 6.2 Limites du prototype
 
-- **ESG non intégré** : un verdict « conforme » ne dit rien des préférences ESG de Mateo. Avec 25 % de TSLA ou 10 % de XOM, Mateo ressort conforme ; une règle d'exclusion ESG rendrait « information manquante » tant que les preuves ESG n'existent pas.
-- **Seuils** : certains seuils de démonstration coïncident avec les valeurs testées (l'égalité au seuil ne déclenche pas d'alerte) ; la règle de concentration par catégorie ne compte que les actions individuelles, pas les FNB d'actions.
+- **ESG non intégré** : aucune preuve ESG n'existe encore. Pour Mateo, la règle d'exclusion ESG (R7) rend donc « information manquante » : le système refuse de conclure plutôt que de déclarer conforme une idée qu'il ne peut pas vérifier. Pour les autres profils, un verdict « conforme » ne dit rien de l'ESG.
+- **Seuils** : certains seuils de démonstration coïncident avec les valeurs testées (l'égalité au seuil ne déclenche pas d'alerte, par exemple le plafond de 25 % par actif de Mateo).
+- **Concentration en actions individuelles (R6)** : la règle compte les actions détenues directement, pas les FNB d'actions ; l'exposition totale aux actions n'est pas plafonnée en tant que telle.
 - **Garde-fou** : il complète les contrôles du code mais ne prouve pas l'exactitude factuelle ; l'ancrage est en mode détection.
 - **Agents réels** : les essais de bout en bout de cette documentation sont en mode hors ligne ; le mode `bedrock` dépend du compte temporaire de l'atelier, des modèles actifs et des quotas partagés.
 
 ### 6.3 Améliorations envisagées
 
-- Preuves ESG datées et sourcées (par exemple World Benchmarking Alliance, sous licence CC BY 4.0) et règle d'exclusion ESG pour Mateo.
+- Preuves ESG datées et sourcées (par exemple World Benchmarking Alliance, sous licence CC BY 4.0, qui couvre XOM et CNQ.TO) pour que la règle d'exclusion ESG de Mateo puisse rendre un verdict au lieu d'« information manquante ».
 - Diversification par corrélations (« fausse diversification » d'Amira) et composition des FNB chez les émetteurs.
 - Saisie en texte libre du profil et de l'idée, avec règles proposées par l'agent puis confirmées par l'utilisateur.
 - Rejeu à une date passée (le paramètre `as_of` et sa vérification existent déjà).
