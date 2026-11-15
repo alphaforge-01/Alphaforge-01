@@ -189,6 +189,16 @@ def _reject(rejections: List[Rejection], code: str, slot: str, excerpt: str) -> 
         rejections.append(item)
 
 
+def has_unsafe_markup(text: str) -> bool:
+    """Vrai si le texte contient une URL, un lien ou une image Markdown, ou une balise HTML.
+
+    Même règle que la validation des explications, réutilisable avant de transmettre un texte
+    venu d'un profil à l'explicateur (`explanation_brief.build_profile_context`).
+    """
+    normalized = unicodedata.normalize("NFKC", text).translate(_ZERO_WIDTH)
+    return any(pattern.search(normalized) for pattern in _UNSAFE_MARKUP)
+
+
 def _check_unsafe_markup(slot: str, text: str, rejections: List[Rejection]) -> None:
     """Rejette URL, lien, image Markdown et HTML (code `forbidden_term`, contrat inchangé)."""
     normalized = unicodedata.normalize("NFKC", text).translate(_ZERO_WIDTH)

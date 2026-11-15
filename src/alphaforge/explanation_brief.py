@@ -10,7 +10,9 @@ code, sans modèle, et ne contient que ce qui a été calculé :
 - `limits` : limites obligatoires du catalogue `reference/limits.json` (toujours
   présentes, texte fixe du niveau), puis les limites du résultat ;
 - `glossary` : termes fermés du glossaire utiles aux règles présentes, au niveau ;
-- `variants` : motif (code fermé), statut global et preuves de chaque variante.
+- `variants` : motif (code fermé), statut global et preuves de chaque variante ;
+- `profile_context` (facultatif) : objectif, horizon, tolérance au risque, expérience, préférence
+  ESG et cryptoactifs du profil fictif, copiés du profil sans rien déduire.
 
 Ne rien inventer : une preuve ou une limite référencée mais absente du registre
 est une erreur (`ValueError`), jamais une valeur par défaut. Le texte libre de
@@ -25,12 +27,21 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
-from alphaforge.contracts import AnalysisResult, ExplanationBrief, Level, check_keys
+from alphaforge.contracts import AnalysisResult, ExplanationBrief, Level, ProfileContext, check_keys
+from alphaforge.explanation_validator import has_unsafe_markup
 from alphaforge.governance import STATUS_SEVERITY, rule_metric
 from alphaforge.reference_texts import merge_mandatory_limits, mandatory_limits
 
 LEVELS = ("novice", "pro")
 MAX_CHARS_PER_SLOT = 400
+MAX_OBJECTIVE_CHARS = 120
+
+# Traduction des valeurs fermées du profil (`contracts.InvestorProfile`). Aucune interprétation :
+# "faible à modérée" dit seulement `low_moderate`. Une valeur hors table n'a pas de libellé et
+# n'est pas transmise.
+RISK_TOLERANCE_FR = {"low": "faible", "low_moderate": "faible à modérée", "moderate": "modérée", "high": "élevée"}
+EXPERIENCE_FR = {"beginner": "débutant", "intermediate": "intermédiaire", "advanced": "avancé"}
+ESG_PREFERENCE_FR = {"none": "aucune", "moderate": "modérée", "strong": "forte"}
 GLOSSARY_PATH = Path(__file__).resolve().parent / "reference" / "glossary.json"
 
 
@@ -164,6 +175,49 @@ def _fingerprint(content: Mapping[str, Any]) -> str:
     return "brief-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
+def _is_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _safe_objective(value: Any) -> Optional[str]:
+    """Objectif du profil s'il est un texte court d'une ligne, sans lien ni balise ; sinon `None`.
+
+    C'est le seul texte libre du profil que lit l'explicateur : il est borné et filtré, jamais réécrit.
+    """
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text or len(text) > MAX_OBJECTIVE_CHARS or not text.isprintable() or has_unsafe_markup(text):
+        return None
+    return text
+
+
+def build_profile_context(profile: Mapping[str, Any]) -> Optional[ProfileContext]:
+    """Contexte du profil pour l'explicateur : seulement ce que le profil contient, sinon rien.
+
+    Chaque clé est copiée du profil si sa valeur est valide ; une valeur absente ou invalide
+    omet la clé (rien n'est déduit ni complété). Ni nom, ni capital, ni règles (déjà dans
+    `profile_rules`), ni seuil. Rend `None` si aucune clé n'est exploitable.
+    """
+    if not isinstance(profile, Mapping):
+        return None
+    context: Dict[str, Any] = {}
+    objective = _safe_objective(profile.get("objective"))
+    if objective is not None:
+        context["objective"] = objective
+    low, high = profile.get("horizon_years_min"), profile.get("horizon_years_max")
+    if _is_int(low) and _is_int(high) and 0 <= low <= high:
+        context["horizon_years_min"], context["horizon_years_max"] = low, high
+    for key, labels in (("risk_tolerance", RISK_TOLERANCE_FR), ("experience", EXPERIENCE_FR),
+                        ("esg_preference", ESG_PREFERENCE_FR)):
+        value = profile.get(key)
+        if isinstance(value, str) and value in labels:
+            context[key], context[f"{key}_fr"] = value, labels[value]
+    if isinstance(profile.get("crypto_allowed"), bool):
+        context["crypto_allowed"] = profile["crypto_allowed"]
+    return context or None  # type: ignore[return-value]
+
+
 def build_brief(result: AnalysisResult, level: Level,
                 glossary_catalog: Optional[Sequence[Mapping[str, Any]]] = None) -> ExplanationBrief:
     """Construit le dossier d'explication d'un `AnalysisResult` pour un niveau.
@@ -222,6 +276,9 @@ def build_brief(result: AnalysisResult, level: Level,
         "glossary": glossary,
         "max_chars_per_slot": MAX_CHARS_PER_SLOT,
     }
+    profile_context = build_profile_context(result["profile"])
+    if profile_context is not None:
+        content["profile_context"] = profile_context
     brief: Dict[str, Any] = {"brief_id": _fingerprint(content)}
     brief.update(content)
     return brief  # type: ignore[return-value]

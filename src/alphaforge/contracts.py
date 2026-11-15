@@ -173,6 +173,25 @@ class AnalysisResult(TypedDict):
     submission: AnalystSubmission
     trace: list[TraceStep]      # étapes 1 à 3
 
+class ProfileContext(TypedDict, total=False):
+    """Contexte du profil fictif lu par l'explicateur (ajout facultatif, voir `ExplanationBrief`).
+
+    Chaque clé est copiée du `InvestorProfile` du résultat, jamais déduite : une clé dont la valeur
+    est absente ou invalide dans le profil est omise. Les libellés `*_fr` traduisent les valeurs
+    fermées du profil (table fixe de `explanation_brief.py`). Ni nom, ni capital, ni seuil.
+    """
+    objective: str                  # objectif du profil, tel quel (une ligne, sans balise)
+    horizon_years_min: int
+    horizon_years_max: int
+    risk_tolerance: str             # valeur de `InvestorProfile.risk_tolerance`
+    risk_tolerance_fr: str          # "faible", "faible à modérée", "modérée", "élevée"
+    experience: str
+    experience_fr: str              # "débutant", "intermédiaire", "avancé"
+    esg_preference: str
+    esg_preference_fr: str          # "aucune", "modérée", "forte"
+    crypto_allowed: bool
+
+
 class ExplanationBrief(TypedDict):      # seule entrée de l'explicateur
     brief_id: str               # empreinte du contenu, sert de clé de cache
     run_id: str
@@ -186,6 +205,7 @@ class ExplanationBrief(TypedDict):      # seule entrée de l'explicateur
     limits: list[dict]          # {limit_id, text} pour le niveau
     glossary: list[dict]        # {term_id "T1", term, definition, analogy}
     max_chars_per_slot: int
+    profile_context: NotRequired[ProfileContext]   # facultatif : horizon, objectif, préférences du profil fictif
 
 class ExplainerOutput(TypedDict):
     brief_id: str

@@ -8,7 +8,8 @@ vérifiables du dossier :
   n'est alors pas répété ;
 - `[T2]` : terme du glossaire.
 
-Il ajoute, sans aucun texte de modèle, les éléments factuels : idée simulée,
+Il ajoute, sans aucun texte de modèle, les éléments factuels : idée simulée, contexte déclaré
+du profil (`profile_context`, section absente si le dossier n'en a pas),
 détail des contrôles (valeur, seuils, marge), poids de conformité du
 contrefactuel, limites, preuves citées avec source, période, devise et
 transformation, glossaire des termes cités, et les avertissements fixes par niveau
@@ -22,6 +23,7 @@ import re
 from typing import Any, List, Mapping, Optional
 
 from alphaforge.contracts import ExplainerOutput, ExplanationBrief
+from alphaforge.explanation_validator import has_unsafe_markup
 from alphaforge.reference_texts import (
     disclaimers, merge_mandatory_limits, threshold_assumption,
 )
@@ -302,6 +304,57 @@ def _evidence_lines(brief: Mapping[str, Any], level: str, reg: _Registry) -> Lis
     return lines
 
 
+PROFILE_CONTEXT_TITLE = "## Contexte déclaré du profil fictif"
+PROFILE_CONTEXT_NOTICE = {
+    "novice": "Ce que le profil fictif déclare, recopié tel quel. Ce n'est ni une conclusion de l'analyse "
+              "ni une recommandation.",
+    "pro": "Champ `profile_context` du dossier, recopié sans interprétation : valeurs déclarées du profil "
+           "fictif, ni conclusion de l'analyse ni recommandation.",
+}
+
+
+def _years(value: int) -> str:
+    return f"{value} an" if value <= 1 else f"{value} ans"
+
+
+def _is_text(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip()) and value.isprintable()
+
+
+def _profile_context_lines(brief: Mapping[str, Any], level: str) -> List[str]:
+    """Section "Contexte déclaré du profil fictif", écrite par le code d'après `profile_context`.
+
+    Montre seulement ce que le dossier contient : objectif, horizon, tolérance au risque,
+    préférence ESG, cryptoactifs. Une clé absente ou invalide n'est pas affichée. Sans contexte
+    exploitable (dossier ancien, profil incomplet) : aucune ligne, pas de section vide.
+    L'expérience et l'identité ne sont pas affichées. Aucun chiffre n'est calculé : l'horizon
+    est celui du profil. Le texte de l'objectif repasse le filtre des liens et balises.
+    """
+    context = brief.get("profile_context")
+    if not isinstance(context, Mapping):
+        return []
+    items: List[str] = []
+    objective = context.get("objective")
+    if _is_text(objective) and not has_unsafe_markup(objective):
+        items.append(f"- Objectif : {objective.strip().rstrip('.')}.")
+    low, high = context.get("horizon_years_min"), context.get("horizon_years_max")
+    if all(isinstance(v, int) and not isinstance(v, bool) for v in (low, high)) and 0 <= low <= high:
+        horizon = _years(high) if low == high else f"de {low} à {_years(high)}"
+        items.append(f"- Horizon d'investissement : {horizon}.")
+    for key, label in (("risk_tolerance", "Tolérance au risque"), ("esg_preference", "Préférence ESG")):
+        text = context.get(f"{key}_fr")
+        if _is_text(text):
+            raw = context.get(key)
+            suffix = f" (`{raw}`)" if level == "pro" and _is_text(raw) else ""
+            items.append(f"- {label} : {text.strip()}{suffix}.")
+    if isinstance(context.get("crypto_allowed"), bool):
+        items.append(f"- Cryptoactifs : {'permis' if context['crypto_allowed'] else 'non permis'}.")
+    if not items:
+        return []
+    return [PROFILE_CONTEXT_TITLE, "", PROFILE_CONTEXT_NOTICE["pro" if level == "pro" else "novice"], "",
+            *items, ""]
+
+
 def render_markdown(output: ExplainerOutput, brief: ExplanationBrief) -> str:
     """Rend une explication en Markdown, renvois remplacés par les valeurs du dossier.
 
@@ -317,6 +370,7 @@ def render_markdown(output: ExplainerOutput, brief: ExplanationBrief) -> str:
     out.append("")
     if brief.get("idea"):
         out += [_idea_line(brief["idea"]), ""]
+    out += _profile_context_lines(brief, level)
 
     if output.get("summary"):
         out += ["## Résumé", "", sub(output["summary"]), ""]
