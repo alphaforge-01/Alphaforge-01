@@ -85,46 +85,47 @@ TOPIC_ORDER_EXECUTION = "order_execution"
 TOPIC_RETURN_PREDICTION = "return_prediction"
 
 DENIED_TOPICS: list[dict] = [
+    # Definitions courtes, a l'affirmatif, sans clause "non vise" : le classifieur de Bedrock traite mal les
+    # negations (premier essai : 1 faux refus et 4 refus manques sur 19 requetes). Le perimetre est borne par
+    # le temps (le futur, pas l'historique observe) et par la personne (la situation reelle de l'utilisateur,
+    # pas un profil fictif), de sorte que l'analyse d'une idee fictive n'entre pas dans ces sujets.
     {
         "name": TOPIC_PERSONALIZED_ADVICE,
         "definition": (
-            "Recommander à une personne réelle quoi acheter, vendre ou détenir "
-            "selon sa situation. Non visé : analyser l'historique d'une idée de "
-            "placement fictive ou expliquer les règles d'un profil fictif."
+            "Conseil d'investissement personnalisé : dire à l'utilisateur quoi acheter, "
+            "vendre ou garder selon sa propre situation, ses économies ou ses objectifs réels."
         ),
         "examples": [
             "Dis-moi quoi acheter avec mes économies.",
-            "Quelles actions devrais-je acheter cette semaine ?",
-            "Est-ce que je devrais vendre mes actions de banque maintenant ?",
+            "Compte tenu de ma situation, que devrais-je vendre ou acheter ?",
             "Quel placement me conseilles-tu pour ma retraite ?",
-            "Comment je peux en profiter, concrètement ?",
+            "Comment en profiter ?",
+            "Est-ce que je devrais vendre mes obligations pour acheter autre chose ?",
         ],
     },
     {
         "name": TOPIC_ORDER_EXECUTION,
         "definition": (
-            "Passer, transmettre ou programmer un ordre d'achat ou de vente, ou "
-            "se connecter à un compte de courtage. Non visé : simuler une idée "
-            "de placement dans un portefeuille fictif."
+            "Demande d'exécuter une opération financière pour l'utilisateur : acheter, vendre, "
+            "passer ou envoyer un ordre, ou agir sur son compte de courtage."
         ),
         "examples": [
-            "Achète des actions TSLA pour moi.",
-            "Passe un ordre de vente de 100 actions sur mon compte.",
+            "Achète TSLA pour moi.",
+            "Passe un ordre de vente sur mon compte.",
             "Connecte-toi à mon courtier et vends tout.",
-            "Place un ordre limite sur le Bitcoin à 50 000 $.",
+            "Envoie un ordre d'achat demain matin.",
             "Exécute ce rééquilibrage sur mon compte réel.",
         ],
     },
     {
         "name": TOPIC_RETURN_PREDICTION,
         "definition": (
-            "Prédire ou promettre le rendement ou le prix futur d'un titre ou "
-            "d'un portefeuille. Non visé : décrire rendements, volatilité ou "
-            "pertes observés sur une période passée d'une idée fictive."
+            "Prédiction ou promesse du prix ou du rendement futur d'un actif ou d'un "
+            "portefeuille : combien il vaudra, s'il va monter ou baisser, quel gain garanti."
         ),
         "examples": [
-            "Combien vaudra TSLA dans un an ?",
-            "Quel rendement vais-je obtenir l'année prochaine ?",
+            "Que va faire mon portefeuille l'an prochain ?",
+            "Combien vaudra cette action dans six mois ?",
             "Garantis-moi 10 % de rendement par an.",
             "Est-ce que le Bitcoin va monter le mois prochain ?",
             "Mon portefeuille va-t-il battre le marché en 2027 ?",

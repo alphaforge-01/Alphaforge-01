@@ -126,9 +126,10 @@ def test_denied_topics_are_narrow_and_documented():
     for topic in topics:
         assert topic["type"] == "DENY"
         assert topic["inputAction"] == "BLOCK" and topic["outputAction"] == "BLOCK"
-        assert "Non visé" in topic["definition"]
-        assert re.search(r"fictif|fictive", topic["definition"])
+        # definitions a l'affirmatif : pas de clause negative, que le classifieur de Bedrock traite mal
+        assert "Non visé" not in topic["definition"] and "non visé" not in topic["definition"].lower()
         assert len(topic["definition"]) <= sg.MAX_TOPIC_DEFINITION
+        assert all(len(example) <= 100 for example in topic["examples"])
         assert 1 <= len(topic["examples"]) <= sg.MAX_TOPIC_EXAMPLES
 
 
