@@ -21,6 +21,14 @@ Codes de rejet (fixés par `contracts.py`) :
   autre ordre que `ranked_factors` ;
 - `too_long` : texte plus long que `max_chars_per_slot`.
 
+Contrefactuel déclaré indisponible (P0-5) : quand le dossier contient un contrefactuel calculé (contrôle en
+tension ou en conflit dont `counterfactual` est présent, avec un poids conforme ou "aucun poids testé"), le code
+affiche ces poids sous l'emplacement `counterfactual`. Une proposition de cet emplacement qui les déclare
+"pas disponibles", "indisponibles", "non calculés", "impossibles à calculer", "absents des preuves" ou
+"aucun contrefactuel" est rejetée (`forbidden_term`, emplacement `counterfactual`). Aucun rejet si le
+contrefactuel est `None` (simulation indisponible ou peu fiable), ni pour "aucun poids testé n'est conforme",
+ni pour une proposition qui ne cite que des contrôles sans contrefactuel calculé.
+
 Protection contre les liens, images et balises (indépendante de celle de `explainer_agent.py`) :
 - rejetés : `http://`, `https://`, `www.`, schémas `javascript:`, `data:`, `file:`, `ftp:`,
   `mailto:`, `vbscript:` ; `![` et `](` (image, lien) ; définition de lien `[x]: ...` en début de ligne ;
@@ -207,6 +215,92 @@ def _check_unsafe_markup(slot: str, text: str, rejections: List[Rejection]) -> N
             _reject(rejections, "forbidden_term", slot, _excerpt(normalized, match.start(), match.end()))
 
 
+# Contrefactuel déclaré indisponible (P0-5). Le code affiche juste sous l'emplacement `counterfactual` le
+# plus grand poids testé conforme de chaque règle en tension ou en conflit : écrire que ces poids sont
+# "pas disponibles", "non calculés", "absents des preuves" contredit l'écran. Formes reconnues, sur le
+# texte sans accents ni majuscules, dans une même proposition (coupée aux . ! ? ; et retours à la ligne) :
+# l'objet ("poids", "contrefactuel") suivi de près d'un prédicat d'absence, ou une tournure d'absence qui
+# le vise. Les fenêtres courtes évitent de rejeter "un poids plus bas rendrait [G1] conforme, mais [G7]
+# reste en information manquante", phrase exacte quand un contrôle ESG n'a pas de preuve.
+_OBJ = r"(?:poids|contrefactuels?)"
+_GAP = r"(?:\s+[^\s.;!?]+){0,4}?"
+_GAP_SHORT = r"(?:\s+[^\s.;!?]+){0,3}?"
+_UNAVAILABLE_PARTICIPLE = (r"(?:disponibles?|calcule\w*|fournis?|fournies|connus?|connues|indiques?|indiquees|donnes?|"
+                           r"donnees|presents?|presentes|precises?|precisees|communiques?|communiquees|"
+                           r"determines?|determinees|affiches?|affichees|chiffres?|chiffrees|evalues?|evaluees)")
+_COUNTERFACTUAL_UNAVAILABLE = tuple(re.compile(pattern) for pattern in (
+    # "ces poids ne sont pas disponibles", "le contrefactuel n'est pas calculé", "poids non calculés"
+    _OBJ + _GAP + r"\s+(?:ne\s+|n')?(?:sont|est|etait|etaient|serait|seraient)\s+(?:pas|plus|non)\s+(?:encore\s+)?"
+    + _UNAVAILABLE_PARTICIPLE,
+    _OBJ + _GAP + r"\s+(?:n'(?:a|ont)|ne\s+(?:a|ont))\s+pas\s+(?:pu\s+)?(?:etre\s+|ete\s+)?" + _UNAVAILABLE_PARTICIPLE,
+    _OBJ + _GAP + r"\s+(?:non|pas)\s+" + _UNAVAILABLE_PARTICIPLE,
+    # "poids indisponibles", "contrefactuel absent", "poids manquants"
+    _OBJ + _GAP_SHORT + r"\s+(?:indisponibles?|inconnus?|inconnues|absents?|absentes|manquants?|manquantes|"
+    r"introuvables?)\b",
+    # "ne peuvent pas être calculés", "impossible à calculer"
+    _OBJ + _GAP + r"\s+ne\s+peu(?:t|vent)\s+pas\s+etre\s+(?:calcule\w*|determine\w*|connu\w*|fourni\w*|donne\w*)",
+    _OBJ + _GAP + r"\s+impossibles?\s+(?:a|de)\s+(?:calculer|determiner|connaitre|fournir|donner|chiffrer|evaluer)",
+    r"impossibles?\s+(?:a|de)\s+(?:calculer|determiner|connaitre|fournir|donner|chiffrer|evaluer)" + _GAP + r"\s+"
+    + _OBJ,
+    r"ne\s+(?:peut|peuvent|pouvons)\s+pas\s+(?:calculer|determiner|connaitre|fournir|donner|chiffrer)"
+    + _GAP_SHORT + r"\s+" + _OBJ,
+    # "ces poids ne figurent pas parmi les preuves"
+    _OBJ + _GAP + r"\s+(?:ne\s+|n')(?:figure|figurent|apparait|apparaissent|ressort|ressortent)\s+pas",
+    # "le dossier ne donne pas le poids", "n'indique pas de poids"
+    r"(?:ne|n')\s*(?:donne|donnent|fournit|fournissent|contient|contiennent|indique|indiquent|precise|precisent|"
+    r"presente|presentent|mentionne|mentionnent|liste|montre|montrent)\s+pas" + _GAP_SHORT + r"\s+" + _OBJ,
+    # "aucun contrefactuel", "pas de contrefactuel", "aucune information sur le poids"
+    r"(?:aucun|aucune|pas\s+de|sans)\s+contrefactuel",
+    r"(?:aucune?\s+(?:valeur|information|donnee|precision)|pas\s+d'information)" + _GAP_SHORT
+    + r"\s+(?:sur|de|du|pour|quant)\s+(?:au?x?\s+|le\s+|les\s+|ce\s+|ces\s+)?" + _OBJ,
+))
+_CLAUSE = re.compile(r"[^.!?;\n]+")
+_G_REFERENCE = re.compile(r"\[(G\d+)\]")
+
+
+def _has_computed_counterfactual(check: Mapping[str, Any]) -> bool:
+    """Vrai si le contrôle a un contrefactuel calculé que le code affiche sous l'emplacement `counterfactual`.
+
+    Mêmes conditions que `explanation_rendering._counterfactual_lines` : statut en tension ou en conflit et
+    contrefactuel présent. Un poids conforme trouvé (`compliant_at_or_below` numérique) comme "aucun poids
+    testé n'est conforme" (valeur `None`) sont des résultats calculés. Un contrefactuel `None` (simulation
+    indisponible ou peu fiable) n'en est pas un.
+    """
+    cf = check.get("counterfactual")
+    if check.get("status") not in ("tension", "conflict") or not isinstance(cf, Mapping):
+        return False
+    bound = cf.get("compliant_at_or_below", "absent")
+    if bound == "absent":
+        return False
+    return bound is None or (isinstance(bound, (int, float)) and not isinstance(bound, bool))
+
+
+def _check_counterfactual_availability(text: str, brief: Mapping[str, Any], rejections: List[Rejection]) -> None:
+    """Rejette (`forbidden_term`) un emplacement `counterfactual` qui déclare indisponible un contrefactuel calculé.
+
+    Une proposition qui cite des contrôles n'est rejetée que si l'un d'eux a un contrefactuel calculé : dire que
+    le poids d'un contrôle sans contrefactuel n'est pas disponible reste vrai. Une proposition sans renvoi
+    `[G..]` est rejetée dès qu'un contrefactuel calculé existe. Sans contrefactuel calculé (simulation
+    indisponible), rien n'est rejeté. Une sortie réparable : le pipeline remplace alors l'emplacement par le
+    texte du gabarit.
+    """
+    checks = [c for c in brief.get("checks") or [] if isinstance(c, Mapping)]
+    computed = {c.get("check_id") for c in checks if _has_computed_counterfactual(c)}
+    if not computed:
+        return
+    folded = _fold(text)
+    for clause in _CLAUSE.finditer(folded):
+        cited = set(_G_REFERENCE.findall(text[clause.start():clause.end()]))
+        if cited and not cited & computed:
+            continue                 # propositions sur des contrôles sans contrefactuel (ou renvoi inconnu)
+        for pattern in _COUNTERFACTUAL_UNAVAILABLE:
+            match = pattern.search(clause.group(0))
+            if match:
+                start = clause.start() + match.start()
+                _reject(rejections, "forbidden_term", "counterfactual", _excerpt(text, start, clause.start() + match.end()))
+                break
+
+
 def _check_text(slot: str, text: str, known: Set[str],
                 numbers: Set[str], dates: Set[str], allow_registry_numbers: bool,
                 max_chars: int, rejections: List[Rejection], checked: List[str],
@@ -323,6 +417,8 @@ def validate(output: ExplainerOutput, brief: ExplanationBrief,
     for slot, text in slots:
         _check_text(slot, text, known, numbers, dates, allow_registry_numbers, max_chars,
                     rejections, checked, cited)
+        if slot == "counterfactual":
+            _check_counterfactual_availability(text, brief, rejections)
 
     for check in brief.get("checks") or []:
         if check.get("status") in NEEDS_CITATION and check["check_id"] not in cited:
