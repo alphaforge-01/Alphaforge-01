@@ -229,6 +229,11 @@ XRAY_METRICS = (
     "defensive_share",
     "currency_exposure.CAD",
     "currency_exposure.USD",
+    "largest_correlated_group_weight",
+)
+XRAY_CORRELATION = (
+    "Groupe corrélé : période du {start} au {end}, {count} jours communs, en {currency}. "
+    "Description du passé, pas une prévision."
 )
 # Sujet d'une preuve, pour distinguer avant, après et variantes.
 SUBJECT_LABELS = {
@@ -282,6 +287,7 @@ IDEA_PRESETS = (
     {"label": "25 % dans TSLA", "ticker": "TSLA", "target_weight": 0.25},
     {"label": "15 % dans NVDA", "ticker": "NVDA", "target_weight": 0.15},
     {"label": "10 % dans BTC-USD", "ticker": "BTC-USD", "target_weight": 0.10},
+    {"label": "40 % dans BTC-USD", "ticker": "BTC-USD", "target_weight": 0.40},
     {"label": "15 % dans XOM", "ticker": "XOM", "target_weight": 0.15},
 )
 
