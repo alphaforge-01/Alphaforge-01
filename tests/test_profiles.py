@@ -77,8 +77,10 @@ def test_personas_are_fictional_and_assumptions():
         assert profile["is_fictional"] is True
         assert entry["portfolio"]["is_fictional"] is True
         assert entry["portfolio"]["base_currency"] == "CAD"
-        # Six règles financières ; Mateo (exigence ESG forte) a en plus R7, l'exclusion ESG.
-        assert len(profile["rules"]) == (7 if profile["esg_preference"] == "strong" else 6)
+        # Six règles financières ; Mateo (exigence ESG forte) a en plus R7, l'exclusion ESG ;
+        # Amira a en plus R7, le plafond par groupe corrélé (P2, US-18).
+        expected = {"robert": 6, "amira": 7, "mateo": 7}[profile["profile_id"]]
+        assert len(profile["rules"]) == expected
         assert all(r["is_assumption"] is True for r in profile["rules"])
         assert all(r["origin"] == "persona" for r in profile["rules"])
 
@@ -104,7 +106,11 @@ def test_robert_and_amira_rules_match_b0_fixtures():
     personas = load_personas()
     for pid in ("robert", "amira"):
         fixture = json.loads((FIXTURES / f"profile_{pid}.json").read_text(encoding="utf-8"))
-        assert personas[pid]["profile"]["rules"] == fixture["rules"]
+        # Les six règles de la fixture B0 restent identiques ; Amira en a une de plus (R7, P2).
+        assert personas[pid]["profile"]["rules"][:len(fixture["rules"])] == fixture["rules"]
+    assert len(personas["robert"]["profile"]["rules"]) == 6
+    extra = personas["amira"]["profile"]["rules"][6]
+    assert extra["rule_type"] == "max_correlated_group_weight" and extra["is_assumption"] is True
 
 
 def test_load_personas_returns_independent_copies():

@@ -29,6 +29,7 @@ import pandas as pd
 from alphaforge.calendar_alignment import daily_cad_returns, returns_base_date
 from alphaforge.contracts import InvestmentIdea, Portfolio, PortfolioSnapshot, Position
 from alphaforge.data_loading import AsOf, load_universe
+from alphaforge.diversification import correlated_group
 from alphaforge.metrics import ReturnMetrics, compute_return_metrics
 
 DEFENSIVE_ASSET_CLASSES = ("etf_bond", "etf_commodity")
@@ -125,7 +126,7 @@ def build_snapshot_with_metrics(
     """
     weights = portfolio_weights(portfolio)
     metrics = compute_return_metrics(_weighted_returns(weights, as_of), returns_base_date(as_of))
-    return _snapshot(weights, metrics, subject), metrics
+    return _snapshot(weights, metrics, subject, correlated_group(weights.to_dict(), as_of)), metrics
 
 
 def build_snapshot(portfolio: Portfolio, subject: str, as_of: AsOf = None) -> PortfolioSnapshot:
@@ -137,7 +138,8 @@ def build_snapshot(portfolio: Portfolio, subject: str, as_of: AsOf = None) -> Po
     return build_snapshot_with_metrics(portfolio, subject, as_of)[0]
 
 
-def _snapshot(weights: pd.Series, metrics: ReturnMetrics, subject: str) -> PortfolioSnapshot:
+def _snapshot(weights: pd.Series, metrics: ReturnMetrics, subject: str,
+              group: tuple[float | None, list[str]]) -> PortfolioSnapshot:
     by_class = _weights_by(weights, "asset_class")
     by_currency = _weights_by(weights, "currency")
     top_weight = round(float(weights.max()), WEIGHT_DECIMALS)
@@ -158,7 +160,8 @@ def _snapshot(weights: pd.Series, metrics: ReturnMetrics, subject: str) -> Portf
         currency_exposure={currency: float(by_currency.get(currency, 0.0)) for currency in REPORTED_CURRENCIES},
         defensive_share=round(float(sum(by_class.get(name, 0.0) for name in DEFENSIVE_ASSET_CLASSES)),
                               WEIGHT_DECIMALS),
-        largest_correlated_group_weight=None,  # P2 : diversification par corrélations
+        largest_correlated_group_weight=group[0],
+        correlated_group_members=group[1],
     )
 
 
