@@ -48,7 +48,7 @@ GROUNDING_ANSWER_MAX_CHARS = 5_000
 # Motifs de secrets a masquer dans tout texte qui sort de ce module.
 _REDACTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"bedrock-api-key-[A-Za-z0-9+/=_%.\-]+"), "[CLE_BEDROCK_MASQUEE]"),
-    (re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])"), "[CLE_AWS_MASQUEE]"),
+    (re.compile(r"(?<![A-Z0-9])(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])"), "[CLE_AWS_MASQUEE]"),
     (re.compile(r"(?i)\"?(SecretAccessKey|SessionToken|AccessKeyId)\"?\s*[:=]\s*\"?[^\s\",}]+\"?"), r"\1=[MASQUE]"),
     (re.compile(r"(?i)([?&](?:X-Amz-Signature|X-Amz-Security-Token|X-Amz-Credential|token|access_token|auth|key|apikey|api_key|signature|sig)=)[^&\s\"']+"),
      r"\1[MASQUE]"),

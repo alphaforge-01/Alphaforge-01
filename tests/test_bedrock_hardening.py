@@ -242,6 +242,10 @@ def test_grounding_between_the_floor_and_the_threshold_keeps_the_text_flagged(sc
     assert explanation["trace"][0]["status"] == "ok"
 
 
-def test_missing_score_is_not_treated_as_below_the_floor():
-    explanation = explained(Guard(action="none", score=None))
-    assert explanation["output"]["origin"] == "llm"
+def test_missing_score_means_the_text_was_not_verified_and_is_replaced():
+    """Un controle qui ne rend aucun score d'ancrage n'a rien verifie : on n'affiche pas le texte du modele."""
+    cache = ExplanationCache()
+    explanation = explained(Guard(action="none", score=None), cache=cache)
+    assert explanation["output"]["origin"] == "template" and "TEXTE-MODELE" not in explanation["rendered_markdown"]
+    assert explanation["trace"][0]["details"]["fallback_reason"] == "garde_fou_indisponible"
+    assert len(cache) == 0

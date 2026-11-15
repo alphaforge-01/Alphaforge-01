@@ -459,7 +459,7 @@ def explain(
         trace[0]["status"] = "fallback"
         trace[0]["details"]["fallback_reason"] = "rejet_du_validateur"
         trace[0]["details"]["rejection_codes"] = rejected
-        # Emplacement et code de chaque rejet, sans aucun extrait du texte du modele : sert au diagnostic.
+        # Emplacement et code de chaque rejet (les courts extraits sont dans rejection_excerpts) : diagnostic.
         trace[0]["details"]["rejection_slots"] = rejected_slots
     trace.append(_step(5, "validation", "code", status, started, {
         "is_valid": validation["is_valid"], "checked_references": len(validation["checked_references"]),
@@ -501,11 +501,12 @@ def explain(
         guard_details["grounding_weak"] = True
     score = guardrail["grounding_score"]
     below_floor = guardrail["action"] == "none" and score is not None and score < GROUNDING_FLOOR
-    verified = guardrail["action"] == "none" and not below_floor
+    # Un controle sans score d'ancrage n'a rien verifie : le texte du modele est alors traite comme non verifiable.
+    verified = guardrail["action"] == "none" and score is not None and score >= GROUNDING_FLOOR
     if output["origin"] == "llm" and not verified:
         # Le texte du modele n'est affiche que si le garde-fou l'a verifie et ne l'a pas refuse : un sujet interdit
         # (intervention), une erreur ou un controle impossible (taille) donnent le gabarit construit par le code.
-        unavailable = guardrail["action"] == "not_run"
+        unavailable = guardrail["action"] == "not_run" or (guardrail["action"] == "none" and score is None)
         output = deps.render_template(brief)
         validation = deps.validate(output, brief)
         markdown = deps.render_markdown(output, brief)
@@ -629,7 +630,9 @@ def _scope_evidence_labels(evidence: dict[str, Any]) -> None:
 
 def _excerpts(rejections: list[dict[str, Any]], limit: int = 8) -> list[str]:
     """Courts extraits des rejets (40 caracteres, masques) : montrent ce qui a ete rejete, pour le diagnostic."""
-    return [redact_text(f"{r.get('slot')}:{r.get('code')}:{str(r.get('excerpt', ''))[:40]}") for r in rejections[:limit]]
+    return [
+        f"{r.get('slot')}:{r.get('code')}:{redact_text(str(r.get('excerpt', '')))[:40]}" for r in rejections[:limit]
+    ]
 
 
 def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None) -> str:

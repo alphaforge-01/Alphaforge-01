@@ -65,10 +65,10 @@ _GUIDANCE = {
 def describe_rejections(rejections: list[dict[str, Any]], limit: int = 12) -> str:
     """Retour de correction pour le modele : emplacement, code et extrait de chaque rejet, puis une consigne par code."""
     lines = [
-        f"- {r.get('slot', '?')} : {r['code']} ({redact_text(str(r.get('excerpt', '')))[:60]})"
+        f"- {r.get('slot', '?')} : {r.get('code', '?')} ({redact_text(str(r.get('excerpt', '')))[:60]})"
         for r in rejections[:limit]
     ]
-    codes = list(dict.fromkeys(r["code"] for r in rejections))
+    codes = list(dict.fromkeys(r.get("code") for r in rejections if r.get("code")))
     advice = [f"{code} : {_GUIDANCE[code]}" for code in codes if code in _GUIDANCE]
     return "Rejets du validateur :\n" + "\n".join(lines) + ("\nConsignes : " + " ; ".join(advice) if advice else "")
 

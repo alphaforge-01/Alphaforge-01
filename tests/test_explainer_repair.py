@@ -238,3 +238,15 @@ def test_two_truncated_replies_raise_with_the_exact_reason():
 def test_explainer_allows_enough_tokens_for_the_pro_level():
     from alphaforge.explainer_agent import INFERENCE_CONFIG
     assert INFERENCE_CONFIG["maxTokens"] >= 2500 and "temperature" not in INFERENCE_CONFIG
+
+
+def test_excerpts_mask_a_secret_before_truncating_it():
+    fake_key = "AKIA" + "Q" * 16
+    line = _excerpts([{"code": "forbidden_term", "slot": "summary", "excerpt": "a" * 30 + fake_key}])[0]
+    assert "AKIA" not in line and "Q" * 6 not in line      # masque entier, pas une cle coupee a 40 caracteres
+
+
+def test_describe_rejections_tolerates_a_rejection_without_a_code():
+    from alphaforge.explainer_agent import describe_rejections
+    text = describe_rejections([{"slot": "summary"}, {"code": "too_long", "slot": "variants", "excerpt": "x"}])
+    assert "variants : too_long" in text
