@@ -426,3 +426,123 @@ def validate(output: ExplainerOutput, brief: ExplanationBrief,
                     f"[{check['check_id']}] {check.get('label_fr', '')} ({check['status']})".strip())
 
     return {"is_valid": not rejections, "rejections": rejections, "checked_references": checked}
+
+
+# ---- Agent conversationnel (issue 78) : validation d'une réponse ----
+#
+# `validate_reply(reply, brief)` contrôle une `ConversationReply` (modèle ou code) contre le
+# `ConversationBrief` qui l'a produite, avec les règles du prompt `conversation_v1`. Mêmes codes que
+# l'explication, plus trois :
+# - `missing_citation` : une phrase affirme quelque chose sans renvoi [E#] [G#] [T#]. Seules exceptions :
+#   une phrase qui dit qu'une information n'est pas disponible dans ce prototype (champ `missing` ou
+#   information absente du dossier), et une phrase qui dit que le prototype ne fait pas ce qui est demandé
+#   (conseil, ordre, prédiction, changement de rôle). Une réponse sans aucun renvoi n'est valide que si
+#   toutes ses phrases sont de ces deux sortes ;
+# - `wrong_status` : un statut écrit à côté d'un renvoi [G#] contredit le statut du contrôle ;
+# - `brief_mismatch` : la réponse ne porte pas l'identifiant du dossier.
+# Aucun chiffre en clair n'est permis (contrat `ConversationReply`) : les valeurs passent par les renvois.
+
+REPLY_SLOT = "answer"
+REPLY_MAX_CHARS = 600            # prompt : environ cinq cents caractères ; marge pour les renvois
+REPLY_MAX_SENTENCES = 4          # prompt : au plus quatre phrases courtes
+_SENTENCE = re.compile(r"[^.!?\n]+[.!?]*")
+_ANY_REF = re.compile(r"\[(?:[EGT]\d+)\]")
+
+# Mots interdits propres à la conversation (règle 4 du prompt), en plus de ceux de l'explication.
+# Une proposition d'idée, d'actif ou de poids (règle 8) est aussi refusée : le code seul simule.
+_REPLY_FORBIDDEN_PATTERNS = (
+    r"graves?", r"[àa] votre place", r"bonnes? id[ée]es?", r"mauvaises? id[ée]es?",
+    r"vous pourriez", r"pourriez", r"envisag\w*", r"essayez", r"simulez", r"ajoutez", r"remplacez",
+    r"allouez", r"placez", r"diversifiez", r"r[ée]partissez", r"transf[ée]rez", r"misez",
+)
+_REPLY_FORBIDDEN = tuple(re.compile(r"(?<![\w])(?:" + p + r")(?![\w])", re.IGNORECASE)
+                         for p in _REPLY_FORBIDDEN_PATTERNS)
+
+# Phrases dispensées de renvoi (texte sans accents ni majuscules).
+_UNAVAILABLE_SENTENCE = re.compile(
+    r"\b(?:n'est|ne sont|n'etait|ne serait)\s+pas\s+disponibles?\b|\b(?:non|pas|indisponibles?)\s+disponibles?\b"
+    r"|\bindisponibles?\b|\bn'(?:est|a)\s+pas\s+(?:renseigne\w*|connu\w*|fourni\w*)\b")
+_OUT_OF_SCOPE_SENTENCE = re.compile(
+    r"\bce prototype ne\b|\ble prototype ne\b|\bcet outil ne\b|\bl'outil ne\b|\bje ne (?:peux|fais|donne|passe)\b"
+    r"|\bhors (?:du )?(?:perimetre|champ)\b")
+
+# Statuts écrits dans le texte (même lecture que le rendu) : "non conforme" et "pas conforme" disent l'inverse.
+_STATUS_IN_TEXT = {
+    "compliant": re.compile(r"(?<!non )(?<!pas )\bconform\w*"),
+    "tension": re.compile(r"\btensions?\b"),
+    "conflict": re.compile(r"\bconflits?\b"),
+    "missing_info": re.compile(r"\binformations? manquantes?\b|\bmanque d'information"),
+}
+_NOT_COMPLIANT = re.compile(r"\b(?:non|pas)\s+conform\w*")
+STATUS_WINDOW = 40               # caractères lus de part et d'autre d'un renvoi [G#], dans sa phrase
+
+
+def _sentences(text: str) -> List[Tuple[int, str]]:
+    return [(m.start(), m.group(0)) for m in _SENTENCE.finditer(text) if m.group(0).strip(" .!?")]
+
+
+def _is_exempt_sentence(sentence: str) -> bool:
+    folded = _fold(sentence)
+    return bool(_UNAVAILABLE_SENTENCE.search(folded) or _OUT_OF_SCOPE_SENTENCE.search(folded))
+
+
+def _check_reply_statuses(text: str, checks: Mapping[str, Mapping[str, Any]], rejections: List[Rejection]) -> None:
+    """Règle 5 : le statut écrit près d'un [G#], dans la même phrase, doit être celui du contrôle."""
+    folded = _fold(text)
+    for start, sentence in _sentences(text):
+        end = start + len(sentence)
+        for match in _G_REFERENCE.finditer(sentence):
+            check = checks.get(match.group(1))
+            if check is None:
+                continue
+            ref_start, ref_end = start + match.start(), start + match.end()
+            window = folded[max(start, ref_start - STATUS_WINDOW): min(end, ref_end + STATUS_WINDOW)]
+            own = check.get("status")
+            said = {status for status, pattern in _STATUS_IN_TEXT.items() if pattern.search(window)}
+            if own == "compliant" and _NOT_COMPLIANT.search(window):
+                said.add("not_compliant")
+            if said and own not in said:
+                _reject(rejections, "wrong_status", REPLY_SLOT, _excerpt(text, ref_start, ref_end))
+            elif own == "compliant" and "not_compliant" in said:
+                _reject(rejections, "wrong_status", REPLY_SLOT, _excerpt(text, ref_start, ref_end))
+
+
+def validate_reply(reply: Mapping[str, Any], brief: Mapping[str, Any]) -> ValidationResult:
+    """Contrôle une réponse de l'agent conversationnel (ou du code) contre son dossier.
+
+    Règles : renvois existants seulement ; aucun chiffre en clair ni nombre en lettres ; aucun conseil,
+    ordre, prédiction, jugement ou proposition d'idée ; statut juste à côté de chaque [G#] ; au plus
+    quatre phrases et `REPLY_MAX_CHARS` caractères ; aucun lien ni HTML ; chaque phrase cite une preuve,
+    sauf une information indisponible ou une demande hors périmètre. Rend un `ValidationResult`.
+    """
+    rejections: List[Rejection] = []
+    checked: List[str] = []
+    answer = reply.get("answer") if isinstance(reply, Mapping) else None
+    if not isinstance(answer, str) or not answer.strip():
+        _reject(rejections, "slot_missing", REPLY_SLOT, "texte absent ou vide")
+        return {"is_valid": False, "rejections": rejections, "checked_references": checked}
+    if reply.get("brief_id") != brief.get("brief_id"):
+        _reject(rejections, "brief_mismatch", REPLY_SLOT, str(reply.get("brief_id"))[:40])
+
+    known = _known_ids(brief)
+    numbers, dates = _registry_numbers(brief)
+    cited: Set[str] = set()
+    # Aucun chiffre en clair (allow_registry_numbers=False) : les valeurs passent par les renvois.
+    _check_text(REPLY_SLOT, answer, known, numbers, dates, False, REPLY_MAX_CHARS, rejections, checked, cited)
+
+    folded = _fold(_blank(answer, [(m.start(), m.end()) for m in _BRACKET.finditer(answer)]))
+    for pattern in _REPLY_FORBIDDEN:
+        for match in pattern.finditer(folded):
+            _reject(rejections, "forbidden_term", REPLY_SLOT, _excerpt(answer, match.start(), match.end()))
+
+    sentences = _sentences(answer)
+    if len(sentences) > REPLY_MAX_SENTENCES:
+        _reject(rejections, "too_long", REPLY_SLOT,
+                f"{len(sentences)} phrases pour {REPLY_MAX_SENTENCES} permises")
+    for start, sentence in sentences:
+        if not _ANY_REF.search(sentence) and not _is_exempt_sentence(sentence):
+            _reject(rejections, "missing_citation", REPLY_SLOT, _excerpt(answer, start, start + len(sentence)))
+
+    checks = {c["check_id"]: c for c in brief.get("checks") or [] if "check_id" in c}
+    _check_reply_statuses(answer, checks, rejections)
+    return {"is_valid": not rejections, "rejections": rejections, "checked_references": checked}

@@ -650,3 +650,134 @@ def test_valid_fixtures_and_invalid_fixture_keep_their_verdicts_after_hardening(
     for name in ("explainer_output_robert_novice.json", "explainer_output_robert_pro.json"):
         assert validate(load(name), brief())["is_valid"] is True
     assert validate(load("explainer_output_invalid.json"), brief())["is_valid"] is False
+
+
+# ---- validate_reply : réponse de l'agent conversationnel (issue 78) ----
+
+sys.path.insert(0, str(Path(__file__).parent))
+from conversation_briefs import check_by_status, evidence_of, make_brief, reply  # noqa: E402
+from alphaforge.explanation_validator import validate_reply  # noqa: E402
+
+
+def _codes(result):
+    return [r["code"] for r in result["rejections"]]
+
+
+@pytest.fixture()
+def conv_brief():
+    return make_brief()
+
+
+def test_reply_with_existing_references_and_exact_statuses_is_valid(conv_brief):
+    conflict = check_by_status(conv_brief, "conflict")
+    tension = check_by_status(conv_brief, "tension")
+    text = (f"La regle [{conflict['check_id']}] est en conflit : la mesure atteint [{evidence_of(conv_brief, conflict)}]. "
+            f"La regle [{tension['check_id']}] est en tension avec [{evidence_of(conv_brief, tension)}].")
+    result = validate_reply(reply(text), conv_brief)
+    assert result["is_valid"], result["rejections"]
+    assert set(result["checked_references"]) == {conflict["check_id"], tension["check_id"],
+                                                 evidence_of(conv_brief, conflict), evidence_of(conv_brief, tension)}
+
+
+@pytest.mark.parametrize("text, code", [
+    ("La perte atteint [E999].", "unknown_reference"),
+    ("La perte atteint E1 sur la periode [E1].", "unknown_reference"),
+    ("La perte atteint 25 % selon [E1].", "number_outside_registry"),
+    ("La perte atteint trois fois la limite [E1].", "number_outside_registry"),
+    ("Le contenu est ici https://exemple.org [E1].", "forbidden_term"),
+    ("", "slot_missing"),
+])
+def test_reply_rejects_bad_references_numbers_markup_and_empty_text(conv_brief, text, code):
+    assert code in _codes(validate_reply(reply(text), conv_brief))
+
+
+def test_reply_never_allows_a_figure_even_from_the_registry(conv_brief):
+    """Contrat ConversationReply : aucun chiffre en clair, les valeurs passent par les renvois."""
+    shown = next(e["display_value"] for e in conv_brief["evidence"] if e.get("unit") == "pct")
+    assert "number_outside_registry" in _codes(validate_reply(reply(f"La mesure atteint {shown} [E1]."), conv_brief))
+
+
+@pytest.mark.parametrize("text", [
+    "Je vous recommande de garder ce profil [E1].",          # conseil
+    "Achetez plutot un autre actif [E1].",                     # ordre
+    "La perte va baisser l'an prochain [E1].",               # prédiction
+    "Ce rendement est garanti [E1].",                          # promesse
+    "C'est une bonne idee pour ce profil [E1].",              # jugement
+    "Ce n'est pas grave pour ce profil [E1].",                # jugement (règle 4 du prompt)
+    "Vous pourriez ajouter des obligations [E1].",             # proposition d'idée (règle 8)
+    "Remplacez cette position pour reduire [E1].",            # proposition d'idée
+    "Ce portefeuille est solide [E1].",                        # jugement flatteur
+])
+def test_reply_rejects_advice_orders_predictions_judgements_and_proposals(conv_brief, text):
+    assert "forbidden_term" in _codes(validate_reply(reply(text), conv_brief))
+
+
+def test_reply_rejects_a_status_that_contradicts_the_check(conv_brief):
+    conflict = check_by_status(conv_brief, "conflict")
+    compliant = check_by_status(conv_brief, "compliant")
+    assert "wrong_status" in _codes(validate_reply(reply(f"La regle [{conflict['check_id']}] est conforme."), conv_brief))
+    assert "wrong_status" in _codes(validate_reply(
+        reply(f"La regle [{compliant['check_id']}] n'est pas conforme."), conv_brief))
+    assert "wrong_status" in _codes(validate_reply(
+        reply(f"La regle [{conflict['check_id']}] est en tension."), conv_brief))
+
+
+def test_reply_status_of_two_rules_in_one_sentence_is_read_per_rule(conv_brief):
+    conflict = check_by_status(conv_brief, "conflict")
+    tension = check_by_status(conv_brief, "tension")
+    text = f"La regle [{conflict['check_id']}] est en conflit et la regle [{tension['check_id']}] est en tension."
+    assert validate_reply(reply(text), conv_brief)["is_valid"]
+
+
+def test_reply_every_assertion_needs_a_reference(conv_brief):
+    text = "La regle [G1] est en conflit. Ce portefeuille fictif reste diversifie."
+    result = validate_reply(reply(text), conv_brief)
+    assert _codes(result) == ["missing_citation"]
+
+
+@pytest.mark.parametrize("text", [
+    "Cette information n'est pas disponible dans ce prototype.",
+    "La capacite a absorber une perte n'est pas disponible dans ce prototype.",
+    "Ce prototype ne le fait pas : il decrit seulement des simulations fictives.",
+    "Cette demande est hors du perimetre de cet outil.",
+])
+def test_reply_without_reference_is_allowed_only_for_missing_or_out_of_scope(conv_brief, text):
+    result = validate_reply(reply(text), conv_brief)
+    assert result["is_valid"], result["rejections"]
+
+
+def test_reply_refusal_must_not_use_forbidden_words_even_negated(conv_brief):
+    """Strict : un refus est formule sans les mots interdits (regle 9 du prompt : "ce prototype ne le fait pas")."""
+    text = "Ce prototype ne predit aucun rendement."
+    assert "forbidden_term" in _codes(validate_reply(reply(text), conv_brief))
+
+
+def test_reply_exception_does_not_cover_an_extra_claim(conv_brief):
+    text = "Cette information n'est pas disponible dans ce prototype. Le profil supporte bien cette perte."
+    assert "missing_citation" in _codes(validate_reply(reply(text), conv_brief))
+
+
+def test_reply_injection_obeyed_by_the_model_is_rejected(conv_brief):
+    """La question demande d'ignorer les règles : une réponse qui obéit est rejetée."""
+    text = "Comme demande, j'ignore les regles : achetez TSLA, il va monter [E1]."
+    codes = _codes(validate_reply(reply(text), conv_brief))
+    assert "forbidden_term" in codes
+
+
+def test_reply_length_and_sentence_count_are_bounded(conv_brief):
+    five = " ".join(["La regle [G1] est en conflit."] * 5)
+    assert "too_long" in _codes(validate_reply(reply(five), conv_brief))
+    long_text = "La regle [G1] est en conflit, " + "avec un texte tres long " * 30 + "[E1]."
+    assert "too_long" in _codes(validate_reply(reply(long_text), conv_brief))
+
+
+def test_reply_for_another_brief_is_rejected(conv_brief):
+    other = {**reply("La regle [G1] est en conflit."), "brief_id": "autre"}
+    assert "brief_mismatch" in _codes(validate_reply(other, conv_brief))
+
+
+def test_reply_validation_matches_the_validation_result_contract(conv_brief):
+    result = validate_reply(reply("La regle [G1] est en conflit."), conv_brief)
+    assert set(result) == {"is_valid", "rejections", "checked_references"}
+    for rejection in validate_reply(reply("Achetez 25 [E999]."), conv_brief)["rejections"]:
+        assert set(rejection) == {"code", "slot", "excerpt"} and rejection["slot"] == "answer"
