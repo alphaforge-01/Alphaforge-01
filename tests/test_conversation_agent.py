@@ -62,6 +62,13 @@ def code_fallback(brief):
             "model_id": None, "prompt_version": None, "attempt": 0}
 
 
+@pytest.fixture()
+def without_flux_b(monkeypatch):
+    """Simule l'absence des modules du flux B : un `None` passé reste absent (sans import des vrais)."""
+    from alphaforge import analysis_pipeline
+    monkeypatch.setattr(analysis_pipeline, "_conversation_collaborators", lambda validate, fallback: (validate, fallback))
+
+
 def converse_response(text, stop="end_turn"):
     return {"output": {"message": {"role": "assistant", "content": [{"text": text}]}}, "stopReason": stop}
 
@@ -164,7 +171,7 @@ def test_offline_uses_the_code_reply_without_calling_bedrock(brief):
     assert result["trace"][2]["status"] == "skipped"
 
 
-def test_without_any_code_reply_a_fixed_sentence_is_shown(brief):
+def test_without_any_code_reply_a_fixed_sentence_is_shown(brief, without_flux_b):
     result = answer_question(brief, "offline", validate=validate_ok, fallback=None)
     assert result["reply"]["answer"] == CONVERSATION_UNAVAILABLE
     assert not any(ch.isdigit() for ch in CONVERSATION_UNAVAILABLE)
@@ -220,7 +227,7 @@ def test_a_weak_grounding_keeps_the_model_reply_with_a_signal(brief):
     assert "replaced_by_template" not in details
 
 
-def test_without_guardrail_or_validator_no_model_text_is_produced(brief):
+def test_without_guardrail_or_validator_no_model_text_is_produced(brief, without_flux_b):
     called = []
 
     def runner(*args):
@@ -312,7 +319,7 @@ def test_the_guardrail_on_a_code_reply_after_a_rejection_keeps_the_first_reason(
     assert "replaced_by_template" not in result["trace"][2]["details"]
 
 
-def test_the_fixed_sentence_is_not_validated_and_says_so(brief):
+def test_the_fixed_sentence_is_not_validated_and_says_so(brief, without_flux_b):
     result = answer_question(brief, "offline", validate=validate_ok, fallback=None)
     assert result["validation_skipped"] == "reponse_fixe"
     assert result["trace"][1]["status"] == "skipped"
