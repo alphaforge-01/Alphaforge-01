@@ -16,7 +16,7 @@ Noms seulement (voir `.env.example`). Les valeurs vivent dans le terminal dédi�
 | `ALPHAFORGE_ANALYST_MODEL_ID` | Modèle ou profil d'inférence de l'agent analyste | Choisi après `check_aws_access.py` |
 | `ALPHAFORGE_EXPLAINER_MODEL_ID` | Modèle de l'agent explicateur (même modèle au départ) | Idem |
 | `ALPHAFORGE_GUARDRAIL_ID`, `ALPHAFORGE_GUARDRAIL_VERSION` | Garde-fou à appliquer | Sortie de `setup_guardrail.py --apply` |
-| `ALPHAFORGE_TRACE_BUCKET` | Compartiment S3 privé des traces | Créé plus tard (tâche C7) |
+| `ALPHAFORGE_TRACE_BUCKET` | Compartiment S3 privé des traces | Nom affiché par `setup_trace_bucket.py --apply` ou `--check` |
 
 Aucun identifiant de modèle ni de garde-fou n'est codé en dur : le code lit ces variables.
 
@@ -52,6 +52,21 @@ Tous les scripts se lancent depuis la racine du projet, dans le même terminal q
    - envoie chaque requête de `tests/fixtures/guardrail_prompts.json` à `ApplyGuardrail` (source `INPUT`) et affiche un tableau attendu/obtenu ;
    - code de sortie 3 si une requête n'a pas le résultat attendu. Consomme du quota partagé : ne pas boucler.
 
+6. **Compartiment des traces, simulation (C7)** : `python scripts/setup_trace_bucket.py` affiche le plan, sans créer aucun client AWS.
+7. **Compartiment des traces, création ou correction (C7)** : `python scripts/setup_trace_bucket.py --apply`
+   - nom `alphaforge-traces-<suffixe>` : le suffixe vient de `--suffix` ou, par défaut, des 8 premiers caractères hexadécimaux du SHA-256 du numéro de compte renvoyé par STS ; le numéro lui-même n'est jamais affiché ni stocké ;
+   - crée le compartiment en `us-east-1` s'il n'existe pas, puis applique seulement les réglages qui manquent (voir section 5) ; ne supprime rien, ne remplace aucun énoncé de politique ni aucune étiquette existante ;
+   - si le nom existe déjà dans un autre compte, le script s'arrête sans rien modifier (code 4) : choisir un autre `--suffix` ;
+   - copier la ligne affichée `ALPHAFORGE_TRACE_BUCKET=...` dans le terminal dédié ou un `.env` ignoré par Git, jamais dans le dépôt.
+8. **Compartiment des traces, vérification (C7)** : `python scripts/setup_trace_bucket.py --check`
+   - lecture seule : affiche l'état de chaque réglage ; code 3 si le compartiment est absent ou si un réglage manque.
+9. **Essai réel de bout en bout (C8)** : `python scripts/try_bedrock_run.py` (simulation par défaut), puis `python scripts/try_bedrock_run.py --run`
+   - sans `--run`, n'appelle rien : affiche la configuration lue (identifiants de modèle, présence du garde-fou et du compartiment, jamais de secret) et vérifie que `ALPHAFORGE_ANALYST_MODEL_ID`, `ALPHAFORGE_EXPLAINER_MODEL_ID`, `ALPHAFORGE_GUARDRAIL_ID` et `ALPHAFORGE_GUARDRAIL_VERSION` sont définies (code 2 sinon) ;
+   - avec `--run` : pour chaque persona de `--personas` (défaut `robert,amira`, au plus 3), analyse de l'idée fictive TSLA 25 % financée au prorata avec les vrais outils, puis explications `novice` et `pro`. Budget borné : au plus 3 x (1 analyse + 2 explications), le script refuse au-delà ;
+   - résumé par persona : mode demandé et effectif, statut et acteur de chaque étape, raison de repli, outils appelés, validation, scores du garde-fou, trace S3 enregistrée ou non. Jamais le texte des prompts ni de secret ;
+   - `--save-local` copie les traces dans `outputs/reports/traces/` (US-16, avant l'expiration du compte) ; `--check-requests` passe les requêtes de `tests/fixtures/guardrail_prompts.json` à `check_request` et affiche un tableau attendu/obtenu (code 3 en cas d'écart) ;
+   - code 1 si une étape est en `error`, si l'analyse n'est pas en mode effectif `bedrock` ou si une explication a basculé hors Bedrock pour une autre raison qu'un contrôle du code (validateur, garde-fou). Consomme du quota partagé : ne pas boucler.
+
 Options du garde-fou : `--grounding-threshold` et `--relevance-threshold` (défaut 0,5, borne 0,99), `--grounding-action NONE|BLOCK` (défaut `NONE`, mode détection).
 
 Les tests automatisés (`pytest tests`) n'appellent jamais AWS : ils utilisent des clients simulés.
@@ -77,8 +92,22 @@ Préfixe `alphaforge-`. Seule la personne du flux C crée ou modifie des ressour
 | Ressource | Nom | Rôle | Création | État |
 | --- | --- | --- | --- | --- |
 | Garde-fou Bedrock | `alphaforge-guardrail` | Sujets refusés et ancrage contextuel | `scripts/setup_guardrail.py --apply` | Script prêt, non exécuté |
-| Compartiment S3 privé | `alphaforge-traces-<suffixe>` (préfixe `alphaforge-`) | Une trace JSON sans secret par analyse | À écrire (tâche C7), quatre options Block Public Access activées | À faire |
+| Compartiment S3 privé | `alphaforge-traces-<suffixe>` (préfixe `alphaforge-`, suffixe dérivé par SHA-256 du compte ou `--suffix`) | Une trace JSON sans secret par analyse et par explication en mode `bedrock` (US-16) | `scripts/setup_trace_bucket.py --apply`, vérification par `--check` | Script prêt, non exécuté |
 | Rôle d'exécution | Rôle de l'atelier pour le développement local ; rôle dédié seulement si hébergement | Inférence Bedrock, `ApplyGuardrail`, écriture S3 sur le seul compartiment des traces | À décider avec l'équipe | À faire |
+
+Réglages du compartiment des traces, appliqués par `setup_trace_bucket.py --apply` et contrôlés par `--check` :
+
+| Réglage | Valeur | Raison |
+| --- | --- | --- |
+| Block Public Access | Les quatre options activées | Aucune exposition publique ; `trace_store.py` refuse d'écrire sinon |
+| Chiffrement par défaut | SSE-S3 (`AES256`) ; un chiffrement KMS déjà en place est conservé | Données au repos chiffrées, sans clé KMS à gérer |
+| Politique de compartiment | Un seul énoncé `Deny` sur `s3:*` si `aws:SecureTransport` vaut `false`, ajouté aux énoncés existants | Refuser tout accès hors TLS ; aucune autorisation publique ni croisée |
+| Propriété des objets | `BucketOwnerEnforced` | ACL désactivées, le compte propriétaire possède tous les objets |
+| Étiquette | `Project=alphaforge`, ajoutée aux étiquettes existantes | Repérer la ressource dans le compte partagé |
+
+Toutes les lectures et écritures passent `ExpectedBucketOwner`, ce qui empêche d'agir sur un compartiment homonyme d'un autre compte. Le suffixe dérivé évite d'écrire le numéro de compte dans le nom ; ce n'est pas une protection forte (une recherche exhaustive réduirait le numéro à quelques centaines de candidats), et un numéro de compte n'est pas un identifiant d'authentification. Utiliser `--suffix` pour un nom sans lien avec le compte.
+
+Permissions du rôle de console du flux C pour ce script : `sts:GetCallerIdentity`, `s3:CreateBucket`, `s3:ListBucket` (utilisé par `HeadBucket`), `s3:GetBucketPublicAccessBlock`, `s3:PutBucketPublicAccessBlock`, `s3:GetEncryptionConfiguration`, `s3:PutEncryptionConfiguration`, `s3:GetBucketPolicy`, `s3:PutBucketPolicy`, `s3:GetBucketOwnershipControls`, `s3:PutBucketOwnershipControls`, `s3:GetBucketTagging`, `s3:PutBucketTagging`, limitées à `arn:aws:s3:::alphaforge-traces-*`. Aucune action `Delete*` n'est nécessaire.
 
 Permissions minimales visées pour un éventuel rôle d'application (moindre privilège, pas de `AmazonBedrockFullAccess`) : `bedrock:InvokeModel` (utilisé par Converse) sur les modèles et profils choisis, `bedrock:ApplyGuardrail` sur `alphaforge-guardrail`, `s3:PutObject` sur le préfixe des traces et `s3:GetBucketPublicAccessBlock` sur le compartiment (le code vérifie les quatre options Block Public Access avant toute écriture et refuse d'écrire sinon). Aucune lecture S3 n'est nécessaire au code. Les actions de création de garde-fou (`bedrock:CreateGuardrail`, `UpdateGuardrail`, `CreateGuardrailVersion`, `ListGuardrails`, `GetGuardrail`) restent réservées au rôle de console du flux C.
 
@@ -90,7 +119,7 @@ Permissions minimales visées pour un éventuel rôle d'application (moindre pri
 | Amazon Bedrock (contrôle) | Liste des modèles et profils, gestion du garde-fou | Choisir un modèle `ACTIVE` vérifié dans le compte, créer le garde-fou par script reproductible |
 | Amazon Bedrock Runtime, API Converse | Agents analyste et explicateur | API unifiée avec appels d'outils, identifiant de modèle configurable |
 | Amazon Bedrock Guardrails | Sujets refusés, ancrage contextuel | Faire respecter la règle 8 et mesurer la fidélité de l'explication au dossier |
-| Amazon S3 (plus tard) | Traces d'exécution privées | Preuve consultable de l'intégration réelle (US-16) |
+| Amazon S3 | Compartiment privé `alphaforge-traces-<suffixe>` (traces d'exécution JSON) | Preuve consultable de l'intégration réelle (US-16), créée et vérifiée par script reproductible |
 
 ## 7. Points à vérifier dans le compte
 
