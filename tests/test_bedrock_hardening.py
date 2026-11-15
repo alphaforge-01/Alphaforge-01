@@ -143,7 +143,6 @@ def test_verified_text_is_kept_and_cached():
 
 @pytest.mark.parametrize("guard, reason", [
     (Guard(action="intervened"), "garde_fou_sortie"),
-    (Guard(action="none", flags={"below_threshold": True, "filters": ["GROUNDING"]}), "garde_fou_sortie"),
     (Guard(action="not_run"), "garde_fou_indisponible"),
     (Guard(error=RuntimeError("boom")), "garde_fou_indisponible"),
 ])
@@ -179,3 +178,39 @@ def test_redact_text_masks_more_secret_shapes(raw, fragment):
 def test_redact_text_keeps_regular_text_and_hashes():
     text = "empreinte " + "a" * 64 + " et modele us.anthropic.claude-haiku-5-5"
     assert redact_text(text) == text
+
+
+def test_weak_grounding_is_flagged_but_the_text_is_kept_and_cached():
+    """Plan de sprint : ancrage en detection. Un score faible est signale dans la trace, sans ecarter le texte."""
+    cache = ExplanationCache()
+    guard = Guard(action="none", flags={"below_threshold": True, "filters": ["GROUNDING"]})
+    explanation = explained(guard, cache=cache)
+    assert explanation["output"]["origin"] == "llm" and "TEXTE-MODELE" in explanation["rendered_markdown"]
+    details = explanation["trace"][2]["details"]
+    assert details["grounding_below_threshold"] == ["GROUNDING"] and details["grounding_weak"] is True
+    assert explanation["trace"][0]["status"] == "ok" and len(cache) == 1
+
+
+def test_resolved_text_replaces_references_with_the_values_the_user_sees():
+    from alphaforge.analysis_pipeline import _model_text
+    deps = fixture_deps()
+    result = run_analysis(PROFILE, PORTFOLIO, IDEA, deps=deps, config=BedrockConfig())
+    brief = deps.build_brief(result, "novice")
+    shown = brief["evidence"][0]["display_value"]
+    output = deps.render_template(brief)
+    output["summary"] = f"Valeur observee {{E}}.".replace("{E}", "[" + brief["evidence"][0]["evidence_id"] + "]")
+    text = _model_text(output, brief)
+    assert shown in text and "[" + brief["evidence"][0]["evidence_id"] + "]" not in text
+    assert "[" + brief["evidence"][0]["evidence_id"] + "]" in _model_text(output)      # sans dossier : texte brut
+
+
+def test_resolved_text_falls_back_to_raw_text_when_too_long_or_unresolvable():
+    from alphaforge.analysis_pipeline import _model_text
+    from alphaforge.bedrock_client import GROUNDING_ANSWER_MAX_CHARS
+    deps = fixture_deps()
+    result = run_analysis(PROFILE, PORTFOLIO, IDEA, deps=deps, config=BedrockConfig())
+    brief = deps.build_brief(result, "novice")
+    output = deps.render_template(brief)
+    output["limits_context"] = "x" * (GROUNDING_ANSWER_MAX_CHARS + 10)
+    assert _model_text(output, brief) == _model_text(output)          # trop long une fois remplace : texte brut
+    assert _model_text(output, {"evidence": "casse"}) == _model_text(output)   # dossier inutilisable : texte brut

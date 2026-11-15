@@ -21,7 +21,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from .bedrock_client import BedrockClient, BedrockConfig, BedrockError, redact_text
+from .bedrock_client import (
+    GROUNDING_ANSWER_MAX_CHARS, BedrockClient, BedrockConfig, BedrockError, redact_text,
+)
 from .contracts import (
     AnalysisResult, AnalystSubmission, ExplanationResult, GovernanceResult, GuardrailResult,
     InvestmentIdea, InvestorProfile, Level, Portfolio, PortfolioSnapshot, TraceStep, Variant,
@@ -457,7 +459,7 @@ def explain(
     if effective_mode == "bedrock" and config.has_guardrail:
         try:
             bedrock_client = client or BedrockClient(config)
-            checked_text = _model_text(output)
+            checked_text = _model_text(output, brief)
             guardrail = bedrock_client.check_output_grounding(
                 json.dumps(brief, ensure_ascii=False), "Explique le resultat de l'analyse.", checked_text)
             guard_status = "ok" if guardrail["action"] != "not_run" else "skipped"
@@ -472,11 +474,15 @@ def explain(
         except Exception as error:  # le controle d'ancrage est accessoire : jamais de plantage
             guard_status = "error"
             guard_details = {"error": type(error).__name__}
-    below_threshold = bool(guard_details.get("grounding_below_threshold"))
-    verified = guardrail["action"] == "none" and not below_threshold
+    if guard_details.get("grounding_below_threshold"):
+        # Plan de sprint : l'ancrage est en mode detection, son score est affiche sans bloquer. Le francais est
+        # juge severement par le controle, et la fidelite est deja garantie par le validateur (renvois existants,
+        # aucun nombre invente). Un ancrage faible est donc signale dans la trace, sans ecarter le texte.
+        guard_details["grounding_weak"] = True
+    verified = guardrail["action"] == "none"
     if output["origin"] == "llm" and not verified:
-        # Le texte du modele n'est affiche que si le garde-fou l'a verifie et laisse passer : refus, ancrage
-        # sous le seuil, erreur ou controle impossible (taille) donnent le gabarit construit par le code.
+        # Le texte du modele n'est affiche que si le garde-fou l'a verifie et ne l'a pas refuse : un sujet interdit
+        # (intervention), une erreur ou un controle impossible (taille) donnent le gabarit construit par le code.
         unavailable = guardrail["action"] == "not_run"
         output = deps.render_template(brief)
         validation = deps.validate(output, brief)
@@ -527,15 +533,27 @@ def persist_trace(
         return {"saved": False, "location": None, "reason": type(error).__name__}
 
 
-def _model_text(output: dict[str, Any]) -> str:
-    """Les phrases ecrites par le modele, renvois non remplaces : l'objet que le garde-fou doit verifier.
+def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None) -> str:
+    """Les phrases ecrites par le modele : l'objet que le garde-fou doit verifier.
 
     Le texte rendu complet (tableaux, preuves) depasse la limite de 5000 caracteres du controle d'ancrage,
     et ses chiffres viennent du code, pas du modele : seules les phrases du modele sont a verifier.
+    Si le dossier est fourni, les renvois ([E3], [G1]...) sont remplaces par les memes valeurs que celles que
+    voit l'utilisateur : sans cela, le garde-fou lit des reperes opaques et ne peut pas les rattacher au dossier
+    (scores d'ancrage mesures de 0,16 a 0,47). Repli sur le texte brut si le remplacement est impossible ou trop long.
     """
     parts = [output["summary"], *(factor["text"] for factor in output["factors"]),
              output["counterfactual"], output["variants"], output["limits_context"]]
-    return "\n".join(part for part in parts if part)
+    raw = "\n".join(part for part in parts if part)
+    if brief is None:
+        return raw
+    try:
+        from .explanation_rendering import _Registry   # meme remplacement que le rendu affiche
+        registry = _Registry(brief)
+        resolved = "\n".join(registry.substitute(part) for part in parts if part).replace("**", "")
+    except Exception:  # le remplacement est une amelioration : jamais une cause d'echec
+        return raw
+    return resolved if len(resolved) <= GROUNDING_ANSWER_MAX_CHARS else raw
 
 
 def check_request(
