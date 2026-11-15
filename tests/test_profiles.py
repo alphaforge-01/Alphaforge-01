@@ -77,7 +77,8 @@ def test_personas_are_fictional_and_assumptions():
         assert profile["is_fictional"] is True
         assert entry["portfolio"]["is_fictional"] is True
         assert entry["portfolio"]["base_currency"] == "CAD"
-        assert len(profile["rules"]) == 6
+        # Six règles financières ; Mateo (exigence ESG forte) a en plus R7, l'exclusion ESG.
+        assert len(profile["rules"]) == (7 if profile["esg_preference"] == "strong" else 6)
         assert all(r["is_assumption"] is True for r in profile["rules"])
         assert all(r["origin"] == "persona" for r in profile["rules"])
 
@@ -368,9 +369,65 @@ def test_high_risk_beginner_is_flagged():
 
 
 def test_esg_preference_is_never_silently_dropped():
-    found = check_answers(valid_answers(esg_preference="strong"))
-    assert "esg_not_evaluated" in codes(found, "info")
-    assert "esg_not_evaluated" not in codes(check_answers(valid_answers()))
+    assert "esg_not_evaluated" in codes(check_answers(valid_answers(esg_preference="moderate")), "info")
+    assert "esg_evidence_unavailable" in codes(check_answers(valid_answers(esg_preference="strong")), "info")
+    quiet = codes(check_answers(valid_answers()))
+    assert "esg_not_evaluated" not in quiet and "esg_evidence_unavailable" not in quiet
+
+
+def esg_rules(profile):
+    return [r for r in profile["rules"] if r["rule_type"] == "esg_exclusion"]
+
+
+def test_mateo_has_an_esg_exclusion_rule_that_follows_the_contract():
+    mateo = load_personas()["mateo"]["profile"]
+    assert mateo["esg_preference"] == "strong"
+    (rule,) = esg_rules(mateo)
+    assert rule["rule_id"] == "R7" and set(rule) == RULE_KEYS
+    assert (rule["params"], rule["direction"], rule["unit"]) == ({}, "max", "bool")
+    assert (rule["warn_threshold"], rule["limit_threshold"]) == (None, 0.0)
+    assert rule["is_assumption"] is True and rule["origin"] == "persona"
+    assert [r["rule_id"] for r in mateo["rules"]] == ["R1", "R2", "R3", "R4", "R5", "R6", "R7"]
+
+
+def test_personas_without_strong_esg_have_no_esg_rule():
+    personas = load_personas()
+    assert esg_rules(personas["robert"]["profile"]) == [] and esg_rules(personas["amira"]["profile"]) == []
+
+
+def test_custom_profile_gets_an_esg_rule_only_for_strong_preference():
+    strong = build_profile_from_answers(valid_answers(esg_preference="strong"))
+    (rule,) = esg_rules(strong)
+    assert rule["rule_id"] == "R7" and rule["origin"] == "checkbox" and set(rule) == RULE_KEYS
+    assert rule["limit_threshold"] == 0.0 and rule["warn_threshold"] is None and rule["is_assumption"] is True
+    for preference in ("none", "moderate"):
+        profile = build_profile_from_answers(valid_answers(esg_preference=preference))
+        assert esg_rules(profile) == [] and len(profile["rules"]) == 6
+
+
+def test_esg_rule_never_carries_a_score_or_evidence_reference():
+    for profile in (load_personas()["mateo"]["profile"],
+                    build_profile_from_answers(valid_answers(esg_preference="strong"))):
+        (rule,) = esg_rules(profile)
+        assert rule["params"] == {} and rule["warn_threshold"] is None
+
+
+# ---------- R6 : actions individuelles ----------
+
+def test_r6_label_says_individual_stocks_and_matches_its_parameters():
+    profiles = [e["profile"] for e in load_personas().values()]
+    profiles.append(build_profile_from_answers(valid_answers()))
+    for profile in profiles:
+        r6 = rule_by_id(profile, "R6")
+        assert r6["rule_type"] == "max_asset_class_weight" and r6["params"] == {"asset_class": "equity"}
+        assert r6["label_fr"] == "Concentration en actions individuelles"
+        assert "par catégorie" not in r6["label_fr"]
+
+
+def test_r6_thresholds_were_not_changed():
+    thresholds = {k: (rule_by_id(e["profile"], "R6")["warn_threshold"], rule_by_id(e["profile"], "R6")["limit_threshold"])
+                  for k, e in load_personas().items()}
+    assert thresholds == {"amira": (0.7, 0.85), "mateo": (0.7, 0.85), "robert": (0.65, 0.8)}
 
 
 def test_issues_have_expected_shape():

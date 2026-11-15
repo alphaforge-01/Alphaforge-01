@@ -310,3 +310,60 @@ def test_counterfactual_slot_fits_when_long(level):
     brief = make_brief(level, max_chars_per_slot=140)
     text = render_template(brief)["counterfactual"]
     assert len(text) <= 140 and "règle seule" in text and "ou moins" not in text
+
+
+# ---------- règle ESG sans preuve : vérification impossible, distincte de la conformité financière ----------
+
+def esg_check(check_id="G7"):
+    return make_check(check_id, "missing_info", rule_type="esg_exclusion", value=None, margin=None,
+                      warn_threshold=None, limit_threshold=0.0, unit="bool",
+                      missing_reason="Aucune preuve ESG disponible.")
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+def test_esg_missing_factor_says_verification_is_impossible(level):
+    brief = brief_with(level, [make_check("G1", "compliant"), esg_check()])
+    factor = next(f for f in render_template(brief)["factors"] if f["check_id"] == "G7")["text"].lower()
+    assert factor.count("g7") == 1 and "preuve esg" in factor and "impossible" in factor
+    assert "conforme" not in factor and "respect" not in factor
+    if level == "novice":
+        assert "ni validée ni écartée" in factor
+    else:
+        assert "distinct des verdicts financiers" in factor
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+def test_summary_separates_financial_compliance_from_missing_checks(level):
+    out = render_template(brief_with(level, [make_check("G1", "compliant"), make_check("G2", "compliant"),
+                                             esg_check("G3")]))
+    summary = out["summary"]
+    assert "[G3]" in summary and "[G1]" not in summary and "[G2]" not in summary
+    assert VERDICT_FR["missing_info"] in summary
+    assert "toutes les règles" not in summary.lower()
+    assert ("autres règles évaluées sont respectées" in summary) or ("règles évaluables sont conformes" in summary)
+
+
+def test_summary_plural_when_several_checks_cannot_be_verified():
+    out = render_template(brief_with("novice", [make_check("G1", "compliant"), esg_check("G2"), esg_check("G3")]))
+    assert "n'ont pas pu être vérifiés" in out["summary"]
+
+
+def test_summary_with_a_real_problem_keeps_the_usual_form():
+    out = render_template(brief_with("novice", [make_check("G1", "conflict", -0.1), esg_check("G2"),
+                                                make_check("G3", "compliant")]))
+    assert "le verdict d'ensemble est : conflit" in out["summary"]
+    assert "autres règles évaluées sont respectées" not in out["summary"]
+
+
+def test_counterfactual_slot_when_only_information_is_missing():
+    text = render_template(brief_with("pro", [make_check("G1", "compliant"), esg_check("G2")]))["counterfactual"]
+    assert "aucun contrefactuel à calculer" in text and "manque d'information" in text
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+def test_esg_texts_pass_the_validator(level):
+    from alphaforge.explanation_validator import validate
+    brief = brief_with(level, [make_check("G1", "compliant"), esg_check("G2")])
+    output = render_template(brief)
+    assert validate(output, brief)["is_valid"] is True
+    assert validate(output, brief, allow_registry_numbers=False)["is_valid"] is True

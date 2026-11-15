@@ -452,3 +452,64 @@ def test_module_has_no_network_or_model_dependency():
     source = Path(explanation_validator.__file__).read_text(encoding="utf-8")
     assert not re.search(r"^\s*(import|from)\s+(boto3|botocore|requests|urllib|anthropic)", source, re.M)
     assert "\u2014" not in source
+
+
+# ---------- dates ISO et nombres financiers (non-régression) ----------
+
+def brief_with_date_evidence(display="2021-12-17", unit="text", value="2021-12-17", metric="max_drawdown_start"):
+    dossier = brief()
+    dossier["evidence"].append({
+        "evidence_id": "E6", "evidence_key": f"{metric}:portfolio_after", "tool_name": "analyze_portfolio",
+        "metric": metric, "subject": "portfolio_after", "label_fr": "Date du sommet", "value": value,
+        "unit": unit, "display_value": display, "qualifier": None, "period_start": "2021-11-12",
+        "period_end": "2026-11-12", "as_of": "2026-11-12", "currency": "CAD", "source_ids": ["prices_daily.csv"],
+        "transformation": "Date du sommet avant la perte maximale", "n_observations": 1000, "limit_ids": ["LM1"],
+    })
+    return dossier
+
+
+@pytest.mark.parametrize("invented", ["12 %", "17 %", "2021 %", "12", "17", "0,12", "12,17 %"])
+def test_iso_date_components_do_not_authorize_financial_numbers(invented):
+    dossier = brief_with_date_evidence()
+    output = with_text("variants", f"La perte atteint {invented} selon [E6].")
+    result = validate(output, dossier)
+    assert any(r["code"] == "number_outside_registry" and r["slot"] == "variants"
+               for r in result["rejections"]), result["rejections"]
+
+
+def test_full_iso_date_from_registry_is_still_accepted():
+    dossier = brief_with_date_evidence()
+    output = with_text("variants", "Le sommet date du 2021-12-17 selon [E6].")
+    assert "number_outside_registry" not in codes(validate(output, dossier))
+
+
+def test_date_from_another_evidence_does_not_authorize_unrelated_date():
+    dossier = brief_with_date_evidence()
+    output = with_text("variants", "Le creux date du 2022-06-16.")
+    assert "number_outside_registry" in codes(validate(output, dossier))
+
+
+def test_display_value_mixing_date_and_number_keeps_only_the_number():
+    dossier = brief_with_date_evidence(display="2021-12-17 : 17,6 %", unit="pct", value=0.176)
+    assert "number_outside_registry" not in codes(
+        validate(with_text("variants", "Mesure 17,6 % le 2021-12-17."), dossier))
+    assert "number_outside_registry" in codes(validate(with_text("variants", "Mesure 12 %."), dossier))
+
+
+def test_date_components_stay_rejected_even_in_non_strict_and_strict_modes():
+    dossier = brief_with_date_evidence()
+    output = with_text("variants", "Soit 12 % de baisse.")
+    assert "number_outside_registry" in codes(validate(output, dossier))
+    assert "number_outside_registry" in codes(validate(output, dossier, allow_registry_numbers=False))
+
+
+def test_registry_numbers_helper_separates_dates_and_numbers():
+    numbers, dates = explanation_validator._registry_numbers(brief_with_date_evidence())
+    assert "2021-12-17" in dates and {"2021", "12", "17"}.isdisjoint(numbers)
+    assert "25" in numbers and "41.25" in numbers          # les nombres financiers restent autorisés
+
+
+def test_registry_numbers_still_accepted_next_to_date_evidence():
+    dossier = brief_with_date_evidence()
+    output = with_text("variants", "Le poids est 25 % et la part défensive 41,25 %, sur 1000 observations.")
+    assert validate(output, dossier)["is_valid"] is True

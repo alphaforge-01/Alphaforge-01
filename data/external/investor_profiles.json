@@ -93,7 +93,7 @@
             "warn_threshold": 0.7,
             "limit_threshold": 0.85,
             "unit": "pct",
-            "label_fr": "Concentration par catégorie",
+            "label_fr": "Concentration en actions individuelles",
             "origin": "persona",
             "is_assumption": true
           }
@@ -242,7 +242,19 @@
             "warn_threshold": 0.7,
             "limit_threshold": 0.85,
             "unit": "pct",
-            "label_fr": "Concentration par catégorie",
+            "label_fr": "Concentration en actions individuelles",
+            "origin": "persona",
+            "is_assumption": true
+          },
+          {
+            "rule_id": "R7",
+            "rule_type": "esg_exclusion",
+            "params": {},
+            "direction": "max",
+            "warn_threshold": null,
+            "limit_threshold": 0.0,
+            "unit": "bool",
+            "label_fr": "Exclusion ESG (preuves requises)",
             "origin": "persona",
             "is_assumption": true
           }
@@ -391,7 +403,7 @@
             "warn_threshold": 0.65,
             "limit_threshold": 0.8,
             "unit": "pct",
-            "label_fr": "Concentration par catégorie",
+            "label_fr": "Concentration en actions individuelles",
             "origin": "persona",
             "is_assumption": true
           }

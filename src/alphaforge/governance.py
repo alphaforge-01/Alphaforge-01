@@ -14,6 +14,9 @@ Conventions (hypothèses de l'équipe, voir `profiles.py` pour les seuils) :
   la place avant le prochain changement de statut, négative si la limite est
   dépassée (conflit). Conforme : distance au seuil de tension. Tension et
   conflit : distance à la limite. Elle est `None` s'il n'y a plus de seuil.
+- Règle `esg_exclusion` : sans preuve ESG (aucune n'existe dans le dépôt), elle rend toujours
+  `missing_info`, jamais `compliant`. Le pire statut global d'un profil à exigence ESG est donc
+  au mieux `missing_info`, même si toutes les règles financières sont conformes.
 - Pire statut : conflict > tension > missing_info > compliant. Un statut connu
   mais défavorable prime sur une information manquante, et l'information
   manquante prime sur "conforme" : l'absence de donnée ne vaut jamais conformité.
@@ -46,9 +49,10 @@ STATUS_SEVERITY: Dict[str, int] = {
 
 # Champ de `PortfolioSnapshot` qui alimente chaque type de règle. Ce nom sert aussi
 # de `metric` pour retrouver les preuves (`evidence_key` = "<metric>:<subject>").
-# Les règles par classe d'actifs lisent `weight_by_asset_class[classe]`. Le contrat
-# ne prévoit pas de métrique de preuve propre à une classe : elles n'ont donc
-# aucune preuve associée tant que le contrat ne la définit pas.
+# Les règles par classe d'actifs lisent `weight_by_asset_class[classe]` et retrouvent
+# leur preuve par la métrique composée `weight_by_asset_class.<classe>` (voir
+# `docs/evidence_keys.md`). Le flux A ne produit pas de preuve pour une classe
+# absente du portefeuille (son poids est 0) : la liste de preuves reste alors vide.
 _SNAPSHOT_FIELD = {
     "max_single_asset_weight": "top_asset_weight",
     "max_portfolio_volatility": "volatility_ann",
@@ -57,8 +61,24 @@ _SNAPSHOT_FIELD = {
     "max_correlated_group_weight": "largest_correlated_group_weight",
 }
 
-def rule_metric(rule_type: str) -> Optional[str]:
-    """Métrique de preuve associée à un type de règle, ou `None` (règles par classe d'actifs)."""
+ASSET_CLASS_METRIC_PREFIX = "weight_by_asset_class"
+_ASSET_CLASS_RULE_TYPES = ("max_asset_class_weight", "excluded_asset_class")
+
+
+def asset_class_metric(asset_class: str) -> str:
+    """Métrique de preuve du poids d'une classe d'actifs : `weight_by_asset_class.<classe>`."""
+    return f"{ASSET_CLASS_METRIC_PREFIX}.{asset_class}"
+
+
+def rule_metric(rule_type: str, params: Optional[Mapping[str, Any]] = None) -> Optional[str]:
+    """Métrique de preuve associée à une règle, ou `None` si aucune n'est définie.
+
+    Les règles par classe d'actifs demandent `params["asset_class"]` : sans classe, `None`
+    (aucune preuve n'est devinée). Les autres types de règle ignorent `params`.
+    """
+    if rule_type in _ASSET_CLASS_RULE_TYPES:
+        asset_class = (params or {}).get("asset_class")
+        return asset_class_metric(asset_class) if asset_class else None
     return _SNAPSHOT_FIELD.get(rule_type)
 
 
@@ -89,7 +109,7 @@ def _extract_value(rule: Rule, snapshot: Mapping[str, Any]):
         asset_class = (rule.get("params") or {}).get("asset_class")
         if not asset_class:
             return None, None, "Classe d'actifs absente des paramètres de la règle."
-        metric = None  # pas de métrique de preuve par classe dans le contrat
+        metric = asset_class_metric(asset_class)
         by_class = snapshot.get("weight_by_asset_class")
         if not isinstance(by_class, Mapping):
             return None, metric, "Répartition par classe d'actifs indisponible dans l'instantané."
@@ -100,7 +120,8 @@ def _extract_value(rule: Rule, snapshot: Mapping[str, Any]):
         return float(value), metric, None
 
     if rule_type == "esg_exclusion":
-        return None, None, "Aucune preuve ESG disponible : la règle ne peut pas être évaluée."
+        return None, None, ("Aucune preuve ESG disponible : la vérification ESG est impossible, "
+                            "aucun verdict ESG n'est donné.")
     return None, None, f"Type de règle non pris en charge : {rule_type}."
 
 

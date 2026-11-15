@@ -21,6 +21,8 @@ Codes de rejet (fixés par `contracts.py`) :
 
 Limites connues :
 - Le validateur ne juge pas le sens des phrases sans chiffre ni renvoi.
+- Une date ISO du registre n'autorise que la date complète, pas ses composantes
+  (`2021-12-29` n'autorise pas un `12 %` ni un `29`).
 - Un nombre qui figure dans le registre est accepté, même appliqué à la mauvaise
   mesure. `allow_registry_numbers=False` impose zéro chiffre en clair, comme le gabarit.
 - `brief_id` et `level` de la sortie ne sont pas comparés à ceux du dossier :
@@ -117,11 +119,19 @@ def _numbers_in(text: str) -> List[str]:
 
 
 def _registry_numbers(brief: Mapping[str, Any]) -> Tuple[Set[str], Set[str]]:
-    """Nombres et dates ISO présents dans les preuves du dossier."""
+    """Nombres financiers et dates ISO présents dans les preuves du dossier.
+
+    Les deux ensembles sont séparés : une date ISO (`2021-12-29`) autorise seulement
+    la date complète, jamais ses composantes (`2021`, `12`, `29`) comme nombres. Les
+    dates qui figurent dans un `display_value` (par exemple `max_drawdown_start`) sont
+    retirées avant d'en extraire les nombres.
+    """
     numbers: Set[str] = set()
     dates: Set[str] = set()
     for entry in brief.get("evidence") or []:
-        numbers.update(_numbers_in(str(entry.get("display_value") or "")))
+        shown = str(entry.get("display_value") or "")
+        dates.update(m.group(0) for m in _ISO_DATE.finditer(shown))
+        numbers.update(_numbers_in(_ISO_DATE.sub(" ", shown)))
         value = entry.get("value")
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             numbers.add(_canonical(repr(round(float(value), 10))) or "")
