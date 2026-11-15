@@ -513,3 +513,140 @@ def test_registry_numbers_still_accepted_next_to_date_evidence():
     dossier = brief_with_date_evidence()
     output = with_text("variants", "Le poids est 25 % et la part défensive 41,25 %, sur 1000 observations.")
     assert validate(output, dossier)["is_valid"] is True
+
+
+# ---------- liens, images, URL et HTML dans le texte (audit de sécurité) ----------
+
+TEXT_SLOT_NAMES = ("summary", "counterfactual", "variants", "limits_context")
+
+UNSAFE_TEXTS = [
+    # adresses et schémas
+    "https://exemple.test", "http://x.y/p", "HTTPS://EXEMPLE.TEST", "voir www.exemple.test",
+    "javascript:alert(1)", "JavaScript :alert(1)", "data:text/html;base64,AAAA", "file:///etc/passwd",
+    "ftp://exemple.test", "mailto:a@b.test", "vbscript:x",
+    # liens et images Markdown
+    "![x](https://e.test/p.png)", "![alt]", "[cliquez](https://e.test)", "[ici](#ancre)", "[E1](/chemin)",
+    "a [b](c)", "[x]: /evil", "[ref]: //evil.test", "[E1]: /evil", "[G1]: #x",
+    # HTML
+    "<script>x</script>", "<img src=x onerror=alert(1)>", "<a href='x'>y</a>", "</p>", "<!-- c -->",
+    "<?php x ?>", "<b>gras</b>", "<iframe", "<SCRIPT", "<svg onload=x>", "<br/>", "<https://e.test>", "<a@b.test>",
+    "<!DOCTYPE html>",
+    # contournements : caractères invisibles et pleine largeur
+    "ht\u200btp://x.y", "ww\u200bw.exemple.test", "w\u00adww.exemple.test",
+    "\uff48\uff54\uff54\uff50\uff53\uff1a\uff0f\uff0f x", "\uff1cscript\uff1ex\uff1c/script\uff1e",
+]
+
+SAFE_TEXTS = [
+    "Le poids [E1] dépasse la règle [G1] (voir [T1]).", "([E1])", "[E1] et [G1], puis [T1].",
+    "a < b", "x<y", "a > b", "si la mesure est < au seuil", "flèche <- et ->", "a <= b", "<>",
+    "Moins de < 1 pour cent", "Voir [E1] (observé).", "[G1] : information manquante.",
+    "Note : ceci est un texte simple.", "Attention ! [E1]", "Le fichier : aucun lien ici.",
+    "Les données sont publiques et datées.", "Une idée simulée, sans adresse ni balise.",
+]
+
+
+def unsafe_rejections(result):
+    return [r for r in result["rejections"] if r["code"] == "forbidden_term"]
+
+
+@pytest.mark.parametrize("slot", TEXT_SLOT_NAMES)
+@pytest.mark.parametrize("unsafe", UNSAFE_TEXTS)
+def test_unsafe_markup_is_rejected_in_every_text_slot(slot, unsafe):
+    output = with_text(slot, f"Le poids atteint [E1], voir [G1].\n{unsafe}")
+    found = [r for r in unsafe_rejections(validate(output, brief())) if r["slot"] == slot]
+    assert found, (slot, unsafe)
+    assert all(r["code"] == "forbidden_term" and r["excerpt"] for r in found)
+
+
+@pytest.mark.parametrize("unsafe", UNSAFE_TEXTS)
+def test_unsafe_markup_is_rejected_in_factors(unsafe):
+    output = good_output()
+    output["factors"][1]["text"] = f"La volatilité [E2] mérite attention [G2].\n{unsafe}"
+    result = validate(output, brief())
+    assert any(r["slot"] == "factors[1]" and r["code"] == "forbidden_term" for r in result["rejections"]), unsafe
+    assert result["is_valid"] is False
+
+
+@pytest.mark.parametrize("unsafe", UNSAFE_TEXTS)
+def test_unsafe_markup_is_rejected_without_other_content_and_in_strict_mode(unsafe):
+    output = with_text("variants", unsafe)
+    assert unsafe_rejections(validate(output, brief()))
+    assert unsafe_rejections(validate(output, brief(), allow_registry_numbers=False))
+
+
+@pytest.mark.parametrize("slot", TEXT_SLOT_NAMES)
+@pytest.mark.parametrize("safe", SAFE_TEXTS)
+def test_plain_text_and_legitimate_references_are_not_flagged(slot, safe):
+    output = with_text(slot, safe)
+    result = validate(output, brief())
+    assert unsafe_rejections(result) == [], (slot, safe, result["rejections"])
+
+
+@pytest.mark.parametrize("safe", SAFE_TEXTS)
+def test_plain_text_is_not_flagged_in_factors(safe):
+    output = good_output()
+    output["factors"][0]["text"] = safe
+    assert [r for r in unsafe_rejections(validate(output, brief())) if r["slot"] == "factors[0]"] == []
+
+
+def test_good_output_stays_valid_and_references_are_still_checked():
+    result = validate(good_output(), brief())
+    assert result["is_valid"] is True and result["checked_references"] == ["E1", "G1", "E2", "G2", "E3", "G3"]
+    output = with_text("variants", "Voir [E99] puis [G1].")
+    assert "unknown_reference" in codes(validate(output, brief())) and "forbidden_term" not in codes(
+        validate(output, brief()))
+
+
+def test_unsafe_rejection_uses_existing_codes_only():
+    output = good_output()
+    for slot in TEXT_SLOT_NAMES:
+        output[slot] = "Voir [lien](https://exemple.test) et ![i](x) et <script>."
+    result = validate(output, brief())
+    assert codes(result) <= CODES and check_keys(result, ValidationResult) == []
+    assert set(result) == {"is_valid", "rejections", "checked_references"}
+    assert all(set(r) == {"code", "slot", "excerpt"} for r in result["rejections"])
+
+
+def test_excerpt_is_short_and_points_at_the_unsafe_part():
+    long_text = "Mot " * 20 + "<script>alert(1)</script> " + "Fin " * 20
+    found = unsafe_rejections(validate(with_text("variants", long_text), brief()))
+    assert found and all(len(r["excerpt"]) <= 80 and "script" in r["excerpt"].lower() for r in found)
+
+
+def test_fullwidth_and_hidden_characters_do_not_bypass_the_check():
+    for text in ("\uff48\uff54\uff54\uff50\uff1a\uff0f\uff0fx.y", "h\u200bt\u200bt\u200bp\u200bs://x.y"):
+        assert unsafe_rejections(validate(with_text("summary", text), brief())), repr(text)
+
+
+def test_validator_protection_is_independent_of_the_agent_module():
+    source = Path(explanation_validator.__file__).read_text(encoding="utf-8")
+    assert "explainer_agent" not in source.replace("de celle de `explainer_agent.py`", "")
+    assert not re.search(r"^\s*(import|from)\s+\S*explainer_agent", source, re.M)
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+@pytest.mark.parametrize("make", [robert_result, lambda: load("analysis_result_amira_tsla.json"), variant_result])
+def test_fallback_templates_are_never_flagged_as_unsafe(level, make):
+    dossier = build_brief(make(), level)
+    output = render_template(dossier)
+    result = validate(output, dossier)
+    assert unsafe_rejections(result) == [] and result["is_valid"] is True, result["rejections"]
+
+
+@pytest.mark.parametrize("level", ["novice", "pro"])
+@pytest.mark.parametrize("status", ["conflict", "tension", "missing_info", "compliant"])
+def test_fallback_templates_pass_for_every_status_after_hardening(level, status):
+    result = robert_result()
+    for check in result["governance_after"]["checks"]:
+        check["status"] = status
+        if status == "missing_info":
+            check.update(value=None, margin=None, missing_reason="Valeur indisponible.")
+    dossier = build_brief(result, level)
+    outcome = validate(render_template(dossier), dossier)
+    assert outcome["is_valid"] is True, outcome["rejections"]
+
+
+def test_valid_fixtures_and_invalid_fixture_keep_their_verdicts_after_hardening():
+    for name in ("explainer_output_robert_novice.json", "explainer_output_robert_pro.json"):
+        assert validate(load(name), brief())["is_valid"] is True
+    assert validate(load("explainer_output_invalid.json"), brief())["is_valid"] is False
