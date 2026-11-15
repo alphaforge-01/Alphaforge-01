@@ -77,3 +77,39 @@ def test_refusal_still_wins(app):
     text, _ = _send(app, "bonjour, achète TSLA pour moi")
     assert "Refus du contrôle local" in text
     assert not any(entry.get("type") == "analysis" for entry in app.session_state["chat_history"])
+
+
+# ---- agent conversationnel (issue 78) : questions de profil et "pourquoi", reponse du code hors ligne ----
+
+def test_why_question_after_an_analysis_explains_the_statuses(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    text, last = _send(app, "pourquoi mon idée est-elle en conflit ?")
+    entry = app.session_state["chat_history"][-1]
+    assert entry["type"] == "agent_answer" and entry["answer_kind"] == "explanation"
+    assert "Concentration par actif" in text and "en conflit" in text and "25 %" in text
+    assert "Réponse écrite par le code" in text                    # hors ligne : jamais un texte de modele
+    assert "pourquoi mon idée" not in str(entry)                   # la question n'est pas recopiee
+    assert [e.label for e in last.expander] == ["Données utilisées", "Limites"]
+
+
+def test_profile_question_answers_from_the_declared_profile_and_says_what_is_missing(app):
+    text, _ = _send(app, "quelle perte puis-je absorber ?")
+    assert "faible à modérée" in text and "capacité à absorber une perte n'est pas disponible" in text
+
+
+def test_what_changes_shows_the_tested_weights_under_the_answer(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    text, _ = _send(app, "qu'est-ce qui changerait la réponse ?")
+    assert app.session_state["chat_history"][-1]["answer_kind"] == "what_changes"
+    assert "plus grand poids testé conforme" in text
+
+
+def test_diversification_question_reads_the_current_portfolio(app):
+    text, _ = _send(app, "mon portefeuille est-il diversifié ?")
+    assert app.session_state["chat_history"][-1]["answer_kind"] == "xray"
+    assert "Volatilité annualisée" in text or "volatilité annualisée" in text
+
+
+def test_out_of_scope_messages_still_get_the_code_answer(app):
+    _send(app, "parle-moi de la météo")
+    assert app.session_state["chat_history"][-1]["type"] == "answer"

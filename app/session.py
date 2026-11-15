@@ -210,6 +210,10 @@ def ask(text: Optional[str] = None) -> None:
         _append({"role": "assistant", "type": "clarify", "parsed": parsed})
     elif parsed["status"] == "confirm":
         _append({"role": "assistant", "type": "confirm", "parsed": parsed})
+    elif parsed["status"] == "answer" and parsed.get("answer_kind") in ("out_of_scope", "portfolio") \
+            and data_source.classify_question(text):
+        # Question de profil ou "pourquoi" : agent conversationnel, sous contrôle (issue 78).
+        _append(_agent_answer(text, data_source.classify_question(text), persona, guard))
     elif parsed["status"] == "answer":
         entry: Dict[str, Any] = {"role": "assistant", "type": "answer", "parsed": parsed}
         if parsed.get("answer_kind") == "portfolio":
@@ -223,6 +227,54 @@ def ask(text: Optional[str] = None) -> None:
     else:
         _set_idea(parsed["idea"])
         _append_analysis(guard.get("action"), persona)
+
+
+def _latest_analysis(persona: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Dernière analyse déjà calculée pour l'idée courante et ce profil, sans nouvel appel."""
+    analysed = any(entry.get("type") == "analysis" for entry in st.session_state.chat_history)
+    if st.session_state.idea is None or not analysed:
+        return None
+    effective = idea_panel.effective_idea(st.session_state.idea, persona["portfolio"])[0]
+    key = (st.session_state.mode, fingerprint(persona["profile"]), fingerprint(persona["portfolio"]),
+           fingerprint(effective))
+    return st.session_state.analysis_cache.get(key)
+
+
+def _agent_answer(text: str, kind: str, persona: Dict[str, Any], guard: Dict[str, Any]) -> Dict[str, Any]:
+    """Réponse de l'agent conversationnel, prête à afficher. La question n'est pas recopiée dans l'entrée."""
+    mode = st.session_state.mode
+    level = st.session_state.level or "novice"
+    try:
+        xray_cache_key = (mode, fingerprint(persona["profile"]), fingerprint(persona["portfolio"]))
+        xray = st.session_state.xray_cache.get(xray_cache_key)
+        if xray is None:
+            xray = data_source.get_xray(mode, persona["profile"], persona["portfolio"])
+            st.session_state.xray_cache[xray_cache_key] = xray
+        brief = data_source.build_conversation_brief(
+            text, kind, level, persona["profile"], result=_latest_analysis(persona), xray=xray)
+        conversation = data_source.answer_question(mode, brief, guard)
+    except data_source.DataUnavailable as exc:
+        return {"role": "assistant", "type": "info", "text": str(exc)}
+    except Exception as exc:  # la page ne plante jamais
+        LOGGER.exception("Réponse de l'agent conversationnel impossible")
+        return {"role": "assistant", "type": "note",
+                "text": texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__)}
+    evidence = {entry["evidence_id"]: entry for entry in brief["evidence"]}
+    checks = {check["check_id"]: check for check in brief["checks"]}
+    counterfactuals = [
+        {"label": checks[ref]["label_fr"], "weight": (checks[ref]["counterfactual"] or {}).get("display_value"),
+         "none": (checks[ref]["counterfactual"] or {}).get("compliant_at_or_below") is None}
+        for ref in brief["focus"] if ref in checks and checks[ref].get("counterfactual")
+    ] if kind == "what_changes" else []
+    return {
+        "role": "assistant", "type": "agent_answer", "answer_kind": kind,
+        "rendered": conversation["rendered_answer"], "origin": conversation["reply"]["origin"],
+        "fallback_reason": conversation["trace"][0]["details"].get("fallback_reason"),
+        "guard": dict(conversation["trace"][2]["details"]),
+        "evidence": [evidence[ref] for ref in conversation.get("cited_evidence", []) if ref in evidence],
+        "limits": [limit["text"] for limit in brief["limits"]],
+        "counterfactuals": counterfactuals,
+    }
 
 
 def request_analysis() -> None:
