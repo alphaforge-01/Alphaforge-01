@@ -194,6 +194,9 @@ class GovernanceResult(TypedDict):
     subject: str                # "portfolio_before", "portfolio_after", "variant:V1"
     overall_status: RuleStatus  # le pire statut
     checks: list[RuleCheck]
+    # Ajouts facultatifs (P1-9) : `overall_status` reste le pire statut de TOUTES les règles.
+    financial_status: NotRequired[RuleStatus | None]   # pire statut des règles financières ; None si le profil n'en a pas
+    esg_status: NotRequired[RuleStatus | None]         # pire statut des règles ESG (`esg_exclusion`) ; None sans règle ESG
 
 class AnalystSubmission(TypedDict):     # paramètres de submit_analysis
     understood_idea: InvestmentIdea
