@@ -13,13 +13,14 @@ from typing import Any, Callable, Dict, List, Mapping, Optional
 
 import streamlit as st
 
+import data_source
 import ui_texts as texts
 from components import explanation_panel, idea_panel, result_panel, trace_panel
 from components.evidence import ProofContext, source_line
 from components.persistence import kept_toggle
 from components.rules import render_key_points
 from components.style import html, pill
-from formatting import escape_dollars, summary_section
+from formatting import escape_dollars, format_pct, summary_section
 
 
 def _guard_caption(action: Optional[str]) -> Optional[str]:
@@ -62,7 +63,7 @@ def _render_clarify(entry: Mapping[str, Any], index: int, on_choice: Callable[..
     funding_source = "from_ticker" if funding else "pro_rata"
     choices = []
     # Poids manquant, ou décimal (arrondi proposé) : un bouton par poids, même actif et même financement.
-    if reason in ("missing_weight", "weight_out_of_range") and len(tickers) == 1:
+    if reason in ("missing_weight", "weight_out_of_range", "relative_weight") and len(tickers) == 1:
         choices = [idea_panel.make_idea(tickers[0], option, funding_source, funding)
                    for option in parsed.get("suggested_weights") or []]
     elif reason == "several_assets" and weight is not None and 0 < weight <= 1:
@@ -77,6 +78,72 @@ def _render_clarify(entry: Mapping[str, Any], index: int, on_choice: Callable[..
                           args=(idea, texts.CHAT_CHOICE.format(choice=label)))
     else:
         st.caption(texts.CHAT_CLARIFY_MANUAL)
+
+
+def _example_buttons(index: int, on_ask: Optional[Callable[[str], None]]) -> None:
+    if on_ask is None:
+        return
+    with st.container(horizontal=True):
+        for position, example in enumerate(texts.CHAT_HELP_EXAMPLES):
+            st.button(example, key=f"help_{index}_{position}", on_click=on_ask, args=(example,))
+
+
+def _render_portfolio(entry: Mapping[str, Any]) -> None:
+    label = str(entry.get("portfolio_label") or texts.CHAT_PORTFOLIO_DEFAULT)
+    st.markdown(texts.CHAT_PORTFOLIO_TITLE.format(label=escape_dollars(label[:1].lower() + label[1:])))
+    positions = sorted(entry.get("positions") or [], key=lambda p: (-float(p["weight"]), p["ticker"]))
+    st.markdown("\n".join(texts.CHAT_PORTFOLIO_LINE.format(
+        ticker=escape_dollars(p["ticker"]), name=escape_dollars(str(p["name"])), weight=format_pct(p["weight"]))
+        for p in positions) or texts.PROOF_NONE)
+    st.caption(texts.CHAT_PORTFOLIO_HINT)
+
+
+def _render_definition(term_id: Optional[str]) -> None:
+    glossary = data_source.get_glossary()
+    if not glossary:
+        st.info(texts.CHAT_GLOSSARY_MISSING)
+        return
+    term = glossary.get(term_id) if term_id else None
+    if term is None:
+        st.markdown(texts.CHAT_DEFINITION_UNKNOWN.format(
+            terms=escape_dollars(", ".join(t["term"] for t in glossary.values()))))
+        return
+    level = st.session_state.get("level") if st.session_state.get("level") in ("novice", "pro") else "novice"
+    texts_for_level = term[level]
+    st.markdown(texts.CHAT_DEFINITION.format(term=escape_dollars(term["term"]),
+                                             definition=escape_dollars(texts_for_level["definition"])))
+    if texts_for_level.get("analogy"):
+        st.markdown(texts.CHAT_ANALOGY.format(analogy=escape_dollars(texts_for_level["analogy"])))
+    st.caption(texts.CHAT_DEFINITION_SOURCE.format(level=texts.LEVEL_LABELS[level].lower()))
+
+
+def _render_answer(entry: Mapping[str, Any], index: int, on_ask: Optional[Callable[[str], None]]) -> None:
+    """Réponse produite par le code (accueil, portefeuille, définition, hors périmètre) : aucun modèle."""
+    kind = entry["parsed"].get("answer_kind")
+    if kind == "portfolio":
+        _render_portfolio(entry)
+    elif kind == "definition":
+        _render_definition(entry["parsed"].get("term_id"))
+    elif kind == "greeting":
+        st.markdown(texts.CHAT_GREETING)
+        _example_buttons(index, on_ask)
+    else:
+        st.markdown(texts.CHAT_OUT_OF_SCOPE)
+        _example_buttons(index, on_ask)
+
+
+def _render_confirm(entry: Mapping[str, Any], index: int, on_choice: Callable[..., None]) -> None:
+    """Idée proposée (poids lu sans "%", relance) : rien n'est simulé avant le clic."""
+    parsed = entry["parsed"]
+    idea = parsed["idea"]
+    label = idea_panel.describe_idea(idea)
+    st.markdown(texts.CHAT_CONFIRM.format(idea=label))
+    why = texts.CHAT_CONFIRM_WHY.get(parsed.get("reason") or "")
+    if why:
+        st.caption(why)
+    st.button(texts.CHAT_CONFIRM_YES, key=f"confirm_{index}", type="primary", on_click=on_choice,
+              args=(idea, texts.CHAT_CHOICE.format(choice=label)))
+    st.caption(texts.CHAT_CLARIFY_MANUAL)
 
 
 def render_compact(entry: Mapping[str, Any], result: Optional[Mapping[str, Any]]) -> None:
@@ -144,7 +211,7 @@ def render_reply(entry: Mapping[str, Any], index: int, result: Mapping[str, Any]
 def render_entry(entry: Mapping[str, Any], index: int, is_latest_analysis: bool,
                  render_analysis: Callable[[Mapping[str, Any], int], None],
                  cached_result: Callable[[Mapping[str, Any]], Optional[Mapping[str, Any]]],
-                 on_choice: Callable[..., None]) -> None:
+                 on_choice: Callable[..., None], on_ask: Optional[Callable[[str], None]] = None) -> None:
     role = entry.get("role")
     if role == "user":
         avatar = ":material/tune:" if entry.get("origin") == "manual" else "user"
@@ -161,6 +228,10 @@ def render_entry(entry: Mapping[str, Any], index: int, is_latest_analysis: bool,
             _render_refused(entry)
         elif kind == "clarify":
             _render_clarify(entry, index, on_choice)
+        elif kind == "confirm":
+            _render_confirm(entry, index, on_choice)
+        elif kind == "answer":
+            _render_answer(entry, index, on_ask)
         elif kind == "analysis":
             if entry.get("guard_action") is not None:
                 # Demande écrite : on montre l'idée comprise. Une idée venue d'un bouton ou des

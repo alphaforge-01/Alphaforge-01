@@ -108,7 +108,7 @@ def render() -> None:
     for index, entry in enumerate(history):
         session.guarded(lambda: conversation.render_entry(
             entry, index, index == latest, render_analysis,
-            cached_result, session.submit_idea))
+            cached_result, session.submit_idea, session.ask))
     st.chat_input(texts.CHAT_PLACEHOLDER, key=session.CHAT_INPUT_KEY, on_submit=session.ask)
     navigation.next_step("simulation")
 
