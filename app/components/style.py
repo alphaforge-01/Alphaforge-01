@@ -3,12 +3,14 @@
 Les couleurs de base viennent de .streamlit/config.toml. Ce module ajoute
 seulement : l'en-tête compact, les pastilles de statut (toujours couleur et
 texte), le verdict, les étiquettes des trois zones (faits, hypothèses,
-simulation) et des cartes de métriques de hauteur égale. Les blocs Streamlit
+simulation), des cartes de métriques de hauteur égale et les bulles des
+niveaux Novice / Pro de l'accueil. Les blocs Streamlit
 sont ciblés par la classe `st-key-<clé>` que Streamlit pose sur un conteneur
 qui a une clé.
 """
 from __future__ import annotations
 
+import re
 from html import escape
 
 import streamlit as st
@@ -75,6 +77,29 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 [class*="st-key-next-step"] a { background: #1d4e89; border-radius: .5rem; padding: .35rem .9rem; }
 [class*="st-key-next-step"] a p, [class*="st-key-next-step"] a span { color: #ffffff !important; }
 
+.af-levels { display: flex; justify-content: space-between; margin: .2rem 0 -.2rem; }
+.af-level { position: relative; display: inline-block; cursor: help; outline: none;
+  font-size: .85rem; font-weight: 600; padding: .15rem .7rem; border-radius: 999px;
+  background: #eef2f7; border: 1px solid #dbe2ea; color: #1a2332; }
+.af-level--active { background: #1d4e89; border-color: #1d4e89; color: #ffffff; }
+.af-bubble { visibility: hidden; opacity: 0; transition: opacity .15s ease-in-out;
+  position: absolute; z-index: 1000; top: calc(100% + .6rem); left: 0;
+  width: min(28rem, 85vw); padding: .7rem .85rem; border-radius: .6rem;
+  background: #ffffff; border: 1px solid #c9d3df; box-shadow: 0 6px 18px rgba(20, 50, 92, .18);
+  color: #1a2332; font-size: .85rem; font-weight: 400; line-height: 1.45; text-align: left; }
+.af-bubble::before { content: ""; position: absolute; top: -.45rem; left: 1.2rem;
+  border-width: 0 .45rem .45rem; border-style: solid;
+  border-color: transparent transparent #c9d3df; }
+.af-level--end .af-bubble { left: auto; right: 0; }
+.af-level--end .af-bubble::before { left: auto; right: 1.2rem; }
+.af-level:hover .af-bubble, .af-level:focus .af-bubble { visibility: visible; opacity: 1; }
+.af-bubble-title { font-weight: 650; margin-bottom: .2rem; }
+.af-bubble-desc { color: #5b6675; margin-bottom: .45rem; }
+.af-bubble-source { color: #5b6675; font-size: .75rem; margin-top: .45rem; }
+/* Curseur de l'accueil : les étiquettes à bulle nomment déjà les niveaux, on masque ceux du curseur. */
+[class*="st-key-home_level"] [data-testid="stSliderThumbValue"],
+[class*="st-key-home_level"] [data-testid="stSliderTickBar"] { display: none; }
+
 [data-testid="stSidebar"] .af-side-disclaimer { font-size: .78rem; color: #5c4700;
   background: #fff8e6; border: 1px solid #f0dfa8; border-radius: .45rem; padding: .4rem .6rem; }
 </style>
@@ -94,6 +119,40 @@ def pill(status: str) -> str:
     """Pastille de statut : couleur et libellé, jamais la couleur seule."""
     label = texts.STATUS_LABELS.get(status, status)
     return f'<span class="af-pill af-pill--{escape(status)}">{escape(label)}</span>'
+
+
+def _inline_html(text: str) -> str:
+    """Texte Markdown court en HTML sûr : échappé, gras conservé, `$` neutralisé, sans ligne vide.
+
+    Une ligne vide couperait le bloc HTML pour le moteur Markdown de Streamlit.
+    """
+    safe = escape(text).replace("$", "&#36;")
+    safe = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", safe)
+    return "<br>".join(line for line in safe.splitlines() if line.strip())
+
+
+def level_bubbles(items: list) -> None:
+    """Étiquettes de niveau alignées sur les extrémités du curseur ; une bulle s'ouvre au survol.
+
+    `items` : dicts {label, title, description, example, source, active}, dans l'ordre du curseur.
+    Les étiquettes sont focalisables : la bulle s'ouvre aussi au clavier et au toucher.
+    """
+    parts = []
+    for position, item in enumerate(items):
+        classes = ["af-level"]
+        if item["active"]:
+            classes.append("af-level--active")
+        if position == len(items) - 1 and position > 0:
+            classes.append("af-level--end")
+        parts.append(
+            f'<span class="{" ".join(classes)}" tabindex="0">{escape(item["label"])}'
+            f'<span class="af-bubble" role="tooltip">'
+            f'<div class="af-bubble-title">{escape(item["title"])}</div>'
+            f'<div class="af-bubble-desc">{escape(item["description"])}</div>'
+            f'<div>{_inline_html(item["example"])}</div>'
+            f'<div class="af-bubble-source">{escape(item["source"])}</div>'
+            f'</span></span>')
+    html(f'<div class="af-levels">{"".join(parts)}</div>')
 
 
 def zone_label(kind: str) -> None:

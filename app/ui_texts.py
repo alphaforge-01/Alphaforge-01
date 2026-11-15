@@ -43,10 +43,15 @@ PROFILE_NOT_IN_MODE = "Ce profil n'existe pas dans ce mode de données. Choisiss
 HOME_PROFILES_TITLE = "Choisir un profil du datathon"
 HOME_CUSTOM_LINK = "Ou créer un profil fictif"
 HOME_LEVEL_TITLE = "Niveau d'explication de l'agent"
-HOME_LEVEL_CHOSEN = "Niveau choisi"
+HOME_LEVEL_DESCRIPTIONS = {
+    "novice": "Novice : phrases simples, une image pour chaque notion, sans jargon.",
+    "pro": "Pro : vocabulaire précis, mesures et méthode, plus concis.",
+}
+HOME_PREVIEW_TITLE = "Exemple de réponse en mode {level}"
+HOME_LEVEL_HOVER_HINT = "Survolez Novice ou Pro pour voir comment l'agent s'exprime, puis réglez le curseur."
 HOME_PREVIEW_SOURCE = (
-    "Aperçu : même passage (Résumé) rédigé par l'agent explicateur pour {persona} et l'idée "
-    "\"25 % dans TSLA\", modèle {model}, chiffres à la date de la trace. Textes réels, tirés de {novice} et {pro}."
+    "Passage (Résumé) rédigé par l'agent explicateur pour {persona} et l'idée \"25 % dans TSLA\", "
+    "modèle {model}, chiffres à la date de la trace. Texte réel, tiré de {source}."
 )
 
 # --- Simulation et conversation -------------------------------------------------------
