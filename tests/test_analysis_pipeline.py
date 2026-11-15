@@ -536,3 +536,38 @@ def test_agent_calls_are_labeled_agent_and_code_additions_code():
     calls = result["trace"][0]["details"]["tool_calls"]
     assert calls[0]["caller"] == "agent"
     assert calls[-1]["tool_name"] == "get_asset_facts" and calls[-1]["caller"] == "code"
+
+
+def test_counterfactual_slot_is_always_written_by_the_code_and_passes_validation():
+    from alphaforge.analysis_pipeline import explain
+    from alphaforge.fixture_collaborators import fixture_deps
+
+    deps = fixture_deps()
+    config = BedrockConfig(mode="bedrock", analyst_model_id="m", explainer_model_id="m",
+                           guardrail_id="g-test", guardrail_version="1")
+    result = run("robert")
+    seen = {}
+
+    def runner(client, model_id, brief, validate):
+        output = deps.render_template(brief)
+        seen["template"] = output["counterfactual"]
+        output.update({"origin": "llm", "attempt": 1, "model_id": model_id, "prompt_version": "explainer_v5",
+                       "counterfactual": "Le detail est donne ci-dessous."})
+        return output
+
+    class Guard:
+        def __init__(self):
+            self.config = config
+            self.last_grounding_flags = {}
+
+        def check_output_grounding(self, source, query, answer):
+            seen["answer"] = answer
+            return {"check": "output_grounding", "action": "none", "denied_topics": [],
+                    "grounding_score": 0.9, "relevance_score": 0.9, "mode": "detect"}
+
+    explanation = explain(result, "novice", mode="bedrock", config=config, client=Guard(), deps=deps,
+                          explainer_runner=runner)
+    assert explanation["output"]["origin"] == "llm" and explanation["validation"]["is_valid"]
+    assert explanation["output"]["counterfactual"] == seen["template"]
+    assert "Le detail est donne" not in seen["answer"]
+    assert explanation["trace"][0]["details"]["slots_written_by_code"] == ["counterfactual"]
