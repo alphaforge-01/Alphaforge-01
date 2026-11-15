@@ -67,10 +67,18 @@ def _init_widgets(idea: Optional[Mapping[str, Any]], tickers: List[str]) -> None
     st.session_state.setdefault(FUNDING_KEY, default["funding_source"])
 
 
+def _submit_once(on_submit: Callable[[Dict[str, Any]], None], idea: Dict[str, Any]) -> None:
+    """Une idée identique à celle déjà simulée n'est pas renvoyée : le fil ne la répète pas."""
+    if idea == st.session_state.get("idea"):
+        st.toast(texts.IDEA_ALREADY_SIMULATED)
+        return
+    on_submit(idea)
+
+
 def _submit_from_widgets(on_submit: Callable[[Dict[str, Any]], None]) -> None:
     """Lit les sélecteurs au moment du clic, pas ceux du rendu précédent."""
     funding = st.session_state[FUNDING_KEY]
-    on_submit(make_idea(
+    _submit_once(on_submit, make_idea(
         st.session_state[ASSET_KEY], st.session_state[WEIGHT_KEY] / 100, funding,
         st.session_state.get(FUNDING_TICKER_KEY) if funding == "from_ticker" else None))
 
@@ -92,7 +100,7 @@ def render_idea_panel(universe: List[Dict[str, Any]], portfolio: Mapping[str, An
             preset_idea = make_idea(preset["ticker"], preset["target_weight"])
             st.button(preset["label"], key=f"idea_preset_{preset['ticker']}_{round(preset['target_weight'] * 100)}",
                       type="primary" if preset_idea == idea else "secondary",
-                      on_click=on_submit, args=(preset_idea,))
+                      on_click=_submit_once, args=(on_submit, preset_idea))
 
     _init_widgets(idea, tickers)
     left, middle, right = st.columns([3, 3, 4])

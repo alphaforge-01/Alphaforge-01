@@ -115,11 +115,17 @@ def render_reply(entry: Mapping[str, Any], index: int, result: Mapping[str, Any]
     render_key_points(result["governance_after"]["checks"], result["evidence"], "portfolio_after",
                       rules_by_id, ctx, key_prefix=f"kp{index}")
     if explanation is not None:
-        explanation_panel.render_origin(explanation)
-        summary = summary_section(explanation.get("rendered_markdown", ""))
-        if summary:
-            st.markdown(escape_dollars(summary))
-    st.caption(texts.DISCLAIMER)
+        if explanation["output"].get("origin") == "llm":
+            # Texte de l'agent : son résumé apporte une formulation propre au niveau choisi.
+            explanation_panel.render_origin(explanation)
+            summary = summary_section(explanation.get("rendered_markdown", ""))
+            if summary:
+                st.markdown(escape_dollars(summary))
+        else:
+            # Texte standard : il redirait le verdict. Il reste dans l'onglet "Explication complète" ;
+            # seul un repli en mode Bedrock est signalé ici.
+            explanation_panel.render_fallback_note(explanation)
+    # L'avertissement reste visible en permanence dans le bandeau du haut (règle 8).
     if not kept_toggle(texts.CHAT_SHOW_DETAILS, f"details_{index}"):
         return
     details_tab, text_tab, sources_tab, trace_tab = st.tabs(
@@ -156,10 +162,13 @@ def render_entry(entry: Mapping[str, Any], index: int, is_latest_analysis: bool,
         elif kind == "clarify":
             _render_clarify(entry, index, on_choice)
         elif kind == "analysis":
-            st.caption(texts.CHAT_UNDERSTOOD.format(idea=idea_panel.describe_idea(entry["idea"])))
-            guard = _guard_caption(entry.get("guard_action"))
-            if guard:
-                st.caption(guard)
+            if entry.get("guard_action") is not None:
+                # Demande écrite : on montre l'idée comprise. Une idée venue d'un bouton ou des
+                # réglages est déjà écrite dans la bulle de l'utilisateur et dans l'en-tête.
+                st.caption(texts.CHAT_UNDERSTOOD.format(idea=idea_panel.describe_idea(entry["idea"])))
+                guard = _guard_caption(entry.get("guard_action"))
+                if guard:
+                    st.caption(guard)
             if is_latest_analysis:
                 render_analysis(entry, index)
             else:

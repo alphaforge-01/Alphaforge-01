@@ -16,7 +16,7 @@ import data_source
 import ui_texts as texts
 from components.evidence import ProofContext, index_by_key, lookup, render_card, render_value
 from components.idea_panel import describe_idea
-from components.rules import render_checks, sort_checks, status_badge, counterfactual_text
+from components.rules import render_checks, status_badge
 from components.style import html, pill, zone
 from components.xray import render_composition
 
@@ -35,29 +35,17 @@ def split_verdict_html(governance: Mapping[str, Any]) -> str:
 
 
 def render_verdict(result: Mapping[str, Any]) -> None:
-    """Statut global après l'idée, avant l'idée, et les règles qui posent problème."""
+    """Statut global après l'idée (pastille et phrase), rappel du statut avant l'idée."""
     after = result["governance_after"]["overall_status"]
     before = result["governance_before"]["overall_status"]
-    problems = [check for check in sort_checks(result["governance_after"]["checks"])
-                if check["status"] != "compliant"]
-    items = []
-    for check in problems:
-        line = texts.VERDICT_RULE.format(label=check["label_fr"],
-                                         status=texts.STATUS_LABELS.get(check["status"], check["status"]))
-        counterfactual = counterfactual_text(check)
-        if counterfactual:
-            line = f"{line} {counterfactual}"
-        items.append(f"<li>{escape(line)}</li>")
-    rules_html = f"<ul>{''.join(items)}</ul>" if items else ""
+    # Les règles en cause et leur contrefactuel sont dans les points clés, juste en dessous.
     html(
         f'<div class="af-verdict af-verdict--{escape(after)}">'
         f'<div class="af-verdict-head">{pill(after)}'
         f'<span>{escape(texts.VERDICT_HEADLINES.get(after, ""))}</span></div>'
         f'<div class="af-verdict-sub">'
-        f'{escape(texts.VERDICT_TITLE.format(status=texts.STATUS_LABELS.get(after, after)))}. '
         f'{escape(texts.VERDICT_BEFORE.format(status=texts.STATUS_LABELS.get(before, before)))}.</div>'
         f'{split_verdict_html(result["governance_after"])}'
-        f'{rules_html}'
         f'<div class="af-verdict-note">{escape(texts.VERDICT_FOOTNOTE)}</div></div>'
     )
 
@@ -68,6 +56,17 @@ def render_mode_note(result: Mapping[str, Any]) -> None:
     reason = details.get("fallback_reason")
     if details.get("mode_requested") == "bedrock" and reason:
         st.info(texts.RESULT_MODE_FALLBACK.format(reason=texts.REASON_CODES_FR.get(reason, reason)))
+
+
+def _without_scope(label: str) -> str:
+    """Retire "(portefeuille avant/après l'ajout)" : les en-têtes des colonnes le disent déjà.
+
+    Affichage seulement : les libellés du registre restent intacts (explicateur, source d'ancrage).
+    """
+    for suffix in texts.SCOPE_SUFFIXES:
+        if label.endswith(suffix):
+            return label[: -len(suffix)]
+    return label
 
 
 def render_comparison(result: Mapping[str, Any], ctx: ProofContext, names: Mapping[str, str]) -> None:
@@ -86,7 +85,7 @@ def render_comparison(result: Mapping[str, Any], ctx: ProofContext, names: Mappi
         label_col, before_col, after_col, delta_col = st.columns(widths, vertical_alignment="center")
         # Un libellé qui nomme les titres d'un groupe serait faux pour l'autre colonne.
         label_col.markdown(texts.METRIC_LABELS.get(metric)
-                           or (after or before or {}).get("label_fr", metric))
+                           or _without_scope((after or before or {}).get("label_fr", metric)))
         for column, entry, subject in ((before_col, before, "portfolio_before"),
                                        (after_col, after, "portfolio_after")):
             with column:

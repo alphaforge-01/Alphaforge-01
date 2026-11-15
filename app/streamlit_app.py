@@ -13,7 +13,6 @@ app/data_source.py et les affiche (docs/ui_spec.md).
 from __future__ import annotations
 
 import sys
-from html import escape
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent
@@ -87,11 +86,6 @@ def render_sidebar_profile() -> None:
             )
 
 
-def render_sidebar_disclaimer() -> None:
-    with st.sidebar:
-        style.html(f'<div class="af-side-disclaimer">{escape(texts.DISCLAIMER)}</div>')
-
-
 def render_header() -> None:
     persona = session.active_persona()
     banners.render_header(
@@ -112,7 +106,6 @@ def main() -> None:
     session.guarded(lambda: session.resolve_level(session.available_profiles()))
     session.guarded(render_sidebar_level)
     session.guarded(render_sidebar_profile)
-    render_sidebar_disclaimer()
 
     # Au-dessus de chaque page : avertissement toujours visible (US-12) et mode actif (US-15).
     session.guarded(render_header)

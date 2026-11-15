@@ -18,6 +18,8 @@ from formatting import format_pct, format_pts
 # Règles par classe d'actifs : une classe absente du portefeuille n'a pas de preuve
 # dans le registre, et la gouvernance la compte à 0.
 _CLASS_RULES = ("max_asset_class_weight", "excluded_asset_class")
+# Préfixe de clé lu par le CSS (components/style.py) : chiffre des points clés en grand.
+KEY_POINTS_KEY = "keypoints-"
 
 
 def threshold_text(rule: Mapping[str, Any], threshold: Optional[float]) -> str:
@@ -60,6 +62,8 @@ def _margin_text(check: Dict[str, Any]) -> Optional[str]:
     if check["status"] == "tension" or check.get("warn_threshold") is None:
         return texts.RULE_MARGIN_TO_CONFLICT.format(margin=format_pts(margin))
     if check["status"] == "compliant":
+        if margin == 0:
+            return texts.RULE_AT_LIMIT
         return texts.RULE_MARGIN_TO_TENSION.format(margin=format_pts(margin))
     return None
 
@@ -117,22 +121,23 @@ def render_key_points(checks: List[Dict[str, Any]], evidence: Mapping[str, Dict[
                       limit: int = 3) -> None:
     """Deux ou trois points clés : règles les plus graves, chiffre cliquable, contrefactuel ou marge."""
     index = index_by_key(evidence)
-    for check in sort_checks(checks)[:limit]:
-        rule = {**(rules_by_id.get(check["rule_id"]) or {}), "unit": check.get("unit")}
-        status_col, label_col, value_col = st.columns([2, 5, 2], vertical_alignment="center")
-        with status_col:
-            status_badge(check["status"])
-        with label_col:
-            st.markdown(check["label_fr"])
-            # Le contrefactuel est déjà dans le verdict : ici, la marge, sans répétition.
-            note = _margin_text(check)
-            if check["status"] == "missing_info":
-                note = texts.RULE_MISSING.format(reason=check.get("missing_reason") or "")
-            if note:
-                st.caption(note)
-        with value_col:
-            entry = _value_entry(check, rule, evidence, index, subject)
-            if entry is None and check.get("rule_type") in _CLASS_RULES and check.get("value") == 0:
-                st.markdown(texts.RULE_NO_POSITION)
-            else:
-                render_value(entry, ctx, key=f"{key_prefix}_{check['check_id']}")
+    with st.container(key=f"{KEY_POINTS_KEY}{key_prefix}"):
+        for check in sort_checks(checks)[:limit]:
+            rule = {**(rules_by_id.get(check["rule_id"]) or {}), "unit": check.get("unit")}
+            status_col, label_col, value_col = st.columns([1, 4, 2], vertical_alignment="center")
+            with status_col:
+                status_badge(check["status"])
+            with label_col:
+                st.markdown(check["label_fr"])
+                # Règle en cause : le contrefactuel (poids conforme) ; sinon la marge.
+                note = counterfactual_text(check) or _margin_text(check)
+                if check["status"] == "missing_info":
+                    note = texts.RULE_MISSING.format(reason=check.get("missing_reason") or "")
+                if note:
+                    st.caption(note)
+            with value_col:
+                entry = _value_entry(check, rule, evidence, index, subject)
+                if entry is None and check.get("rule_type") in _CLASS_RULES and check.get("value") == 0:
+                    st.markdown(texts.RULE_NO_POSITION)
+                else:
+                    render_value(entry, ctx, key=f"{key_prefix}_{check['check_id']}")

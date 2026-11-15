@@ -47,8 +47,9 @@ HOME_LEVEL_DESCRIPTIONS = {
     "novice": "Novice : phrases simples, une image pour chaque notion, sans jargon.",
     "pro": "Pro : vocabulaire précis, mesures et méthode, plus concis.",
 }
+HOME_LEVEL_DEFAULT = "Sans choix, le niveau suit celui du profil choisi."
 HOME_PREVIEW_TITLE = "Exemple de réponse en mode {level}"
-HOME_LEVEL_HOVER_HINT = "Cliquez sur l'interrupteur pour passer de Novice à Pro. Survolez un niveau pour voir comment l'agent s'exprime."
+HOME_LEVEL_HOVER_HINT = "Choisissez Novice ou Pro. Survolez un bouton pour voir comment l'agent s'exprime."
 HOME_PREVIEW_SOURCE = (
     "Passage (Résumé) rédigé par l'agent explicateur pour {persona} et l'idée \"25 % dans TSLA\", "
     "modèle {model}, chiffres à la date de la trace. Texte réel, tiré de {source}."
@@ -328,6 +329,7 @@ SUBJECT_VARIANT = "variante {variant_id}"
 RULE_THRESHOLDS = "Tension {warn}, conflit {limit}."
 RULE_THRESHOLDS_HELP = "Seuils : hypothèses de l'équipe, réglables, pas une norme."
 RULE_MARGIN_TO_TENSION = "Marge avant la tension : {margin}."
+RULE_AT_LIMIT = "À la limite de la tension, sans la franchir."
 RULE_MARGIN_TO_CONFLICT = "Marge avant le conflit : {margin}."
 RULE_BEYOND_LIMIT = "Dépasse la limite de {margin}."
 RULE_COUNTERFACTUAL = "Conforme avec un poids de {value} ou moins pour l'idée (simulation)."
@@ -370,7 +372,6 @@ RESULT_BEDROCK_RUN = "Analyser cette idée pour ce profil"
 RESULT_MODE_FALLBACK = "Bedrock non utilisé ({reason}) : mêmes outils et même gouvernance, en séquence scriptée."
 
 # Verdict en tête du résultat : le désaccord avec le profil est dit tout de suite.
-VERDICT_TITLE = "Après l'idée : {status}"
 VERDICT_BEFORE = "Avant l'idée : {status}"
 VERDICT_HEADLINES = {
     "conflict": "Cette idée va à l'encontre du profil.",
@@ -378,14 +379,15 @@ VERDICT_HEADLINES = {
     "missing_info": "Il manque une information pour conclure.",
     "compliant": "Cette idée respecte les règles du profil.",
 }
-VERDICT_RULE = "{label} : {status}."
 # Verdicts séparés (flux B, P1-9), affichés seulement si le profil a une règle ESG.
 VERDICT_SPLIT_FINANCIAL = "Financier"
 VERDICT_SPLIT_ESG = "ESG"
 VERDICT_SPLIT_HELP = (
     "Le verdict global est le plus sévère des deux : règles financières d'un côté, règles ESG de l'autre."
 )
-VERDICT_FOOTNOTE = "Règles et seuils : hypothèses de l'équipe. Détail sous \"Voir le détail\"."
+# Suffixes de périmètre des libellés du registre, retirés dans le tableau avant/après.
+SCOPE_SUFFIXES = (" (portefeuille avant l'ajout)", " (portefeuille après l'ajout)")
+VERDICT_FOOTNOTE = "Seuils : hypothèses de l'équipe."
 
 TAB_COMPARE = "Avant / après"
 TAB_RULES = "Règles du profil"
@@ -399,7 +401,12 @@ COLUMN_DELTA = "Écart"
 RESULT_AMOUNT_NOTE = "Montants : pertes historiques observées sur la période, appliquées au capital fictif."
 RESULT_COMPOSITION = "Composition après l'idée"
 # Libellés génériques des mesures qui ont des membres propres à chaque colonne ou qui peuvent manquer.
-METRIC_LABELS = {"largest_correlated_group_weight": "Poids du plus grand groupe corrélé"}
+# Libellés neutres du tableau avant/après : celui du registre nomme un titre ou un groupe précis,
+# faux pour l'autre colonne (le titre de chaque colonne est affiché sous son chiffre).
+METRIC_LABELS = {
+    "largest_correlated_group_weight": "Poids du plus grand groupe corrélé",
+    "top_asset_weight": "Poids du plus gros actif",
+}
 COMPARE_METRICS = XRAY_METRICS
 
 ASSET_FACTS_NOTE = "Mêmes chiffres pour tous les profils : seules les règles changent."
@@ -423,7 +430,7 @@ EXPLANATION_SPINNER = "Rédaction de l'explication..."
 EXPLANATION_RUN = "Rédiger l'explication (niveau {level})"
 EXPLANATION_ORIGIN = {
     "llm": "Rédigé par l'agent explicateur",
-    "template": "Texte de repli (gabarit)",
+    "template": "Texte standard",
 }
 EXPLANATION_ORIGIN_HELP = {
     "llm": "Agent Bedrock, contrôlé par le validateur et le garde-fou.",
@@ -522,6 +529,8 @@ GUARDRAIL_DETAILS_TEXT = (
 )
 GUARDRAIL_OFFLINE = "Le garde-fou n'est appelé qu'en mode Amazon Bedrock. Ici, chaque test affiche \"contrôle non exécuté\"."
 GUARDRAIL_ALLOWED = "Doivent passer"
+IDEA_ALREADY_SIMULATED = "Cette idée est déjà simulée ci-dessous."
+GUARDRAIL_MORE = "{count} autres exemples"
 GUARDRAIL_DENIED = "Doivent être refusées"
 GUARDRAIL_TEST = "Tester"
 GUARDRAIL_SPINNER = "Interrogation du garde-fou..."

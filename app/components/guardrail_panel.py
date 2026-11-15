@@ -43,12 +43,23 @@ def _contradicts_expected(prompt: Mapping[str, Any], result: Mapping[str, Any]) 
     return (prompt.get("expected") == "allowed") != (action == "none")
 
 
-def _render_prompt_list(title: str, prompts: List[Dict[str, Any]]) -> None:
-    st.markdown(f"**{title}**")
+# Exemples visibles par colonne ; les autres restent dans un encadré repliable.
+VISIBLE_PROMPTS = 4
+
+
+def _render_prompt_rows(prompts: List[Dict[str, Any]]) -> None:
     for prompt in prompts:
         text_col, button_col = st.columns([4, 1], vertical_alignment="center")
         text_col.markdown(prompt["text"])
         button_col.button(texts.GUARDRAIL_TEST, key=f"guard_{prompt['id']}", on_click=_queue, args=(prompt,))
+
+
+def _render_prompt_list(title: str, prompts: List[Dict[str, Any]]) -> None:
+    st.markdown(f"**{title}**")
+    _render_prompt_rows(prompts[:VISIBLE_PROMPTS])
+    if len(prompts) > VISIBLE_PROMPTS:
+        with st.expander(texts.GUARDRAIL_MORE.format(count=len(prompts) - VISIBLE_PROMPTS)):
+            _render_prompt_rows(prompts[VISIBLE_PROMPTS:])
 
 
 def render_guardrail_panel(mode: str, prompts: List[Dict[str, Any]],
