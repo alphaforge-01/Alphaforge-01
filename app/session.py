@@ -20,7 +20,7 @@ import streamlit as st
 import data_source
 import navigation
 import ui_texts as texts
-from components import idea_panel
+from components import idea_panel, persistence
 from components.evidence import ProofContext
 
 LOGGER = logging.getLogger("alphaforge.ui")
@@ -69,12 +69,6 @@ def init_state() -> None:
 
 # --- Rappels des widgets ------------------------------------------------------
 
-def _sync_idea_widgets(portfolio: Dict[str, Any]) -> None:
-    """Les sélecteurs montrent l'idée telle qu'elle sera analysée pour ce portefeuille (US-09)."""
-    if st.session_state.idea is not None:
-        idea_panel.sync_widgets(idea_panel.effective_idea(st.session_state.idea, portfolio)[0])
-
-
 def _append(entry: Dict[str, Any]) -> None:
     st.session_state.chat_history.append(entry)
 
@@ -103,15 +97,21 @@ def _append_analysis(guard_action: Optional[str] = None, persona: Optional[Dict[
     _append(entry)
 
 
-def _profile_changed(persona: Dict[str, Any]) -> None:
-    """Le fil note le changement de profil ; l'idée gardée est réanalysée pour ce profil (US-09).
+def _reset_simulation() -> None:
+    """Nouveau profil, nouvelle simulation : fil vidé, idée oubliée, sélecteurs remis par défaut.
 
-    En mode bedrock, cette réanalyse attend un clic : aucune demande explicite n'est posée ici.
+    Choix de l'équipe (remplace la reprise de l'idée de US-09) : rien d'un profil précédent
+    ne reste affiché. Les caches restent : revenir à un profil et refaire une idée déjà vue
+    est instantané, sans nouvel appel aux agents.
     """
-    message = texts.CHAT_PROFILE_CHANGED if st.session_state.idea is not None else texts.CHAT_PROFILE_CHOSEN
-    _append({"role": "assistant", "type": "note",
-             "text": message.format(name=display_name(persona["profile"]))})
-    _append_analysis(persona=persona)
+    st.session_state.chat_history = []
+    st.session_state.idea = None
+    for key in (idea_panel.ASSET_KEY, idea_panel.WEIGHT_KEY, idea_panel.FUNDING_KEY,
+                idea_panel.FUNDING_TICKER_KEY):
+        st.session_state.pop(key, None)
+    for key in [k for k in st.session_state
+                if str(k).startswith(("details_", persistence.KEEP_PREFIX + "details_"))]:
+        del st.session_state[key]
 
 
 def _clear_requests() -> None:
@@ -127,9 +127,8 @@ def select_profile(profile_id: str, personas: Dict[str, Any]) -> None:
     _clear_requests()
     if not st.session_state.level_chosen:
         st.session_state.level = personas[profile_id]["profile"]["default_level"]
-    _sync_idea_widgets(personas[profile_id]["portfolio"])
     if changed:
-        _profile_changed(personas[profile_id])
+        _reset_simulation()
 
 
 def select_profile_and_go(profile_id: str, personas: Dict[str, Any]) -> None:
@@ -145,8 +144,7 @@ def use_custom_profile(persona: Dict[str, Any]) -> None:
     _clear_requests()
     if not st.session_state.level_chosen:
         st.session_state.level = persona["profile"]["default_level"]
-    _sync_idea_widgets(persona["portfolio"])
-    _profile_changed(persona)
+    _reset_simulation()
 
 
 def _set_idea(idea: Dict[str, Any]) -> None:
