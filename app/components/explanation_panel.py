@@ -11,6 +11,7 @@ from typing import Any, Mapping
 import streamlit as st
 
 import ui_texts as texts
+from formatting import escape_dollars
 from components.evidence import ProofContext, display, render_proof
 
 LEVEL_WIDGET_KEY = "level_choice"
@@ -27,6 +28,14 @@ def render_level_choice() -> str:
              format_func=texts.LEVEL_LABELS.get, horizontal=True, on_change=_sync_level,
              help=texts.EXPLANATION_LEVEL_HELP)
     return st.session_state.level
+
+
+def _without_title(markdown: str) -> str:
+    """Retire le titre H1 du texte rendu : la section a déjà son titre."""
+    lines = markdown.splitlines()
+    if lines and lines[0].startswith("# "):
+        return "\n".join(lines[1:]).lstrip("\n")
+    return markdown
 
 
 def subject_label(subject: str) -> str:
@@ -65,5 +74,5 @@ def render_explanation(explanation: Mapping[str, Any], result: Mapping[str, Any]
     render_fallback_note(explanation)
     st.caption(texts.EXPLANATION_ORIGIN.get(origin, origin))
     with st.container(border=True):
-        st.markdown(explanation["rendered_markdown"])
+        st.markdown(escape_dollars(_without_title(explanation["rendered_markdown"])))
     render_cited_evidence(explanation, result, ctx)

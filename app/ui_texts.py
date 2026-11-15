@@ -188,6 +188,7 @@ PROFILE_NOT_IN_MODE = (
 # --- Preuves (clic sur un chiffre, US-11) -------------------------------------
 PROOF_HELP = "Cliquer pour voir d'où vient ce chiffre."
 PROOF_ID = "Preuve"
+PROOF_KEY = "Clé de la preuve"
 PROOF_VALUE = "Valeur"
 PROOF_TOOL = "Calculé par l'outil"
 PROOF_SOURCES = "Sources"
@@ -228,6 +229,10 @@ XRAY_METRICS = (
     "defensive_share",
     "currency_exposure.CAD",
     "currency_exposure.USD",
+    "largest_correlated_group_weight",
+)
+XRAY_CORRELATION = (
+    "Groupe corrélé : période du {start} au {end}, {count} jours communs, en {currency}."
 )
 # Sujet d'une preuve, pour distinguer avant, après et variantes.
 SUBJECT_LABELS = {
@@ -242,7 +247,10 @@ RULE_THRESHOLDS = "Seuils (hypothèses de l'équipe) : tension {warn}, conflit {
 RULE_MARGIN_TO_TENSION = "Marge avant la tension : {margin}."
 RULE_MARGIN_TO_CONFLICT = "Marge avant le conflit : {margin}."
 RULE_BEYOND_LIMIT = "Au-delà de la limite de {margin}."
-RULE_COUNTERFACTUAL = "Conforme à cette règle avec un poids de {value} ou moins pour l'idée."
+RULE_COUNTERFACTUAL = (
+    "Simulation : conforme à cette règle avec un poids de {value} ou moins pour l'idée "
+    "(hypothèse de l'équipe, pas une recommandation)."
+)
 RULE_NO_COUNTERFACTUAL = "Aucun poids testé pour l'idée n'est conforme à cette règle."
 RULE_MISSING = "Information manquante : {reason}"
 RULE_NO_POSITION = "aucune position"
@@ -278,6 +286,7 @@ IDEA_PRESETS = (
     {"label": "25 % dans TSLA", "ticker": "TSLA", "target_weight": 0.25},
     {"label": "15 % dans NVDA", "ticker": "NVDA", "target_weight": 0.15},
     {"label": "10 % dans BTC-USD", "ticker": "BTC-USD", "target_weight": 0.10},
+    {"label": "40 % dans BTC-USD", "ticker": "BTC-USD", "target_weight": 0.40},
     {"label": "15 % dans XOM", "ticker": "XOM", "target_weight": 0.15},
 )
 
@@ -301,6 +310,16 @@ ASSET_FACTS_NOTE = (
 ASSET_FACTS_METRICS = ("volatility_ann", "max_drawdown", "recovery_days")
 ASSET_FACTS_SPINNER = "Lecture des faits sur l'actif..."
 RESULT_OVERALL_BEFORE = "Avant l'idée : {status}"
+ZONE_SIMULATION = "Simulation sur un portefeuille fictif"
+ZONE_SIMULATION_NOTE = (
+    "La colonne Après est une simulation : elle décrit l'effet historique de l'idée, "
+    "pas ce qui arrivera."
+)
+ZONE_FACTS = "Faits historiques sur l'actif"
+ZONE_ASSUMPTIONS = "Hypothèses de l'équipe"
+ZONE_ASSUMPTIONS_NOTE = (
+    "Les seuils des règles sont des hypothèses de l'équipe, pas des normes ni un conseil."
+)
 RESULT_COMPARE = "Avant et après l'idée"
 COLUMN_MEASURE = "Mesure"
 COLUMN_BEFORE = "Avant"
@@ -316,6 +335,8 @@ RESULT_MODE_FALLBACK = (
     "scriptée a pris le relais, avec les mêmes outils et la même gouvernance."
 )
 # Mesures comparées avant et après, dans cet ordre.
+# Libellés génériques des mesures qui ont des membres propres à chaque colonne ou qui peuvent manquer.
+METRIC_LABELS = {"largest_correlated_group_weight": "Poids du plus grand groupe corrélé"}
 COMPARE_METRICS = XRAY_METRICS
 VARIANTS_TITLE = "Variantes simulées"
 VARIANTS_NOTICE = (
@@ -394,6 +415,10 @@ TRACE_GUARDRAIL_ACTIONS = {
     "intervened": "intervention",
     "not_run": "contrôle non exécuté",
 }
+TRACE_STATUS_INTERVENTION = "intervention"
+TRACE_GUARDRAIL_DENIED = "Sujet refusé : {topics}."
+TRACE_GUARDRAIL_BELOW_THRESHOLD = "Ancrage sous le seuil : le texte du modèle n'est pas montré."
+TRACE_GUARDRAIL_ERROR = "Le contrôle d'ancrage a échoué ({error})."
 TRACE_GUARDRAIL_REPLACED = "Le texte du modèle a été remplacé par le gabarit."
 TRACE_SAVED = "Trace enregistrée sur S3 : {location}."
 TRACE_NOT_SAVED = "Trace non enregistrée sur S3 ({reason})."
@@ -442,6 +467,7 @@ GUARDRAIL_RESULT_NOT_RUN = (
     "Contrôle non exécuté : passez en mode Amazon Bedrock avec un garde-fou configuré."
 )
 GUARDRAIL_EXPECTED = {"allowed": "Attendu : permise.", "denied": "Attendu : refusée."}
+GUARDRAIL_UNEXPECTED = "Résultat différent de l'attendu : à signaler à l'équipe du garde-fou."
 GUARDRAIL_NO_TOPIC = "non précisé"
 # Noms des sujets refusés, tels que créés par scripts/setup_guardrail.py (flux C).
 GUARDRAIL_TOPIC_LABELS = {

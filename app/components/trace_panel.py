@@ -95,6 +95,13 @@ def _step_lines(step: Mapping[str, Any]) -> List[str]:
                 action=texts.TRACE_GUARDRAIL_ACTIONS.get(details["action"], details["action"]),
                 grounding="-" if scores["grounding_score"] is None else f"{scores['grounding_score']:.2f}",
                 relevance="-" if scores["relevance_score"] is None else f"{scores['relevance_score']:.2f}"))
+        if details.get("denied_topics"):
+            topics = ", ".join(texts.GUARDRAIL_TOPIC_LABELS.get(t, t) for t in details["denied_topics"])
+            lines.append(texts.TRACE_GUARDRAIL_DENIED.format(topics=topics))
+        if details.get("grounding_below_threshold"):
+            lines.append(texts.TRACE_GUARDRAIL_BELOW_THRESHOLD)
+        if details.get("error"):
+            lines.append(texts.TRACE_GUARDRAIL_ERROR.format(error=details["error"]))
         if details.get("replaced_by_template"):
             lines.append(texts.TRACE_GUARDRAIL_REPLACED)
     if details.get("fallback_reason"):
@@ -108,6 +115,18 @@ def _step_lines(step: Mapping[str, Any]) -> List[str]:
     return lines
 
 
+def _status_badge(step: Mapping[str, Any]) -> tuple:
+    """Libellé et couleur de l'état. Une intervention du garde-fou n'est jamais "réussi" (règle 8)."""
+    details = step.get("details") or {}
+    if step.get("name") == "guardrail" and (
+            details.get("action") == "intervened" or details.get("grounding_below_threshold")
+            or details.get("replaced_by_template")):
+        return texts.TRACE_STATUS_INTERVENTION, "orange"
+    status = step.get("status")
+    return (texts.TRACE_STATUSES.get(status, status),
+            "orange" if status in ("fallback", "error") else "gray")
+
+
 def render_step(step: Mapping[str, Any], brief: Optional[Mapping[str, Any]]) -> None:
     with st.container(border=True):
         head, actor, status, duration = st.columns([4, 2, 2, 2], vertical_alignment="center")
@@ -118,8 +137,8 @@ def render_step(step: Mapping[str, Any], brief: Optional[Mapping[str, Any]]) -> 
                      color="violet" if step.get("actor") == "agent" else
                      "blue" if step.get("actor") == "guardrail" else "gray")
         with status:
-            st.badge(texts.TRACE_STATUSES.get(step.get("status"), step.get("status")),
-                     color="orange" if step.get("status") in ("fallback", "error") else "gray")
+            label, color = _status_badge(step)
+            st.badge(label, color=color)
         duration.caption(texts.TRACE_DURATION_VALUE.format(ms=step.get("duration_ms", 0)))
         lines = _step_lines(step)
         if lines:

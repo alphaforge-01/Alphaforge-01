@@ -32,12 +32,25 @@ def drawdown_caption(index: Mapping[str, Dict[str, Any]], subject: str) -> Optio
         start=format_date(start["display_value"]), end=format_date(end["display_value"]))
 
 
+def correlation_caption(index: Mapping[str, Dict[str, Any]], subject: str) -> Optional[str]:
+    """Période et méthode du groupe corrélé, lues dans sa preuve (US-18), jamais supposées."""
+    entry = lookup(index, "largest_correlated_group_weight", subject)
+    if not entry or not entry.get("period_start") or not entry.get("period_end"):
+        return None
+    head = texts.XRAY_CORRELATION.format(
+        start=format_date(entry["period_start"]), end=format_date(entry["period_end"]),
+        count=entry.get("n_observations") or texts.NOT_AVAILABLE,
+        currency=entry.get("currency") or texts.NOT_AVAILABLE)
+    return f"{head} {entry.get('transformation') or ''}".strip()
+
+
 def render_metric_cards(index: Mapping[str, Dict[str, Any]], snapshot: Mapping[str, Any], subject: str,
                         ctx: ProofContext, key_prefix: str) -> None:
     captions = {
         "max_drawdown": drawdown_caption(index, subject),
         "top_asset_weight": (texts.XRAY_TOP_ASSET.format(ticker=snapshot["top_asset"])
                              if snapshot.get("top_asset") else None),
+        "largest_correlated_group_weight": ", ".join(snapshot.get("correlated_group_members") or []) or None,
     }
     metrics = list(texts.XRAY_METRICS)
     for start in range(0, len(metrics), 4):
@@ -45,7 +58,7 @@ def render_metric_cards(index: Mapping[str, Dict[str, Any]], snapshot: Mapping[s
         for column, metric in zip(st.columns(4), row):
             with column:
                 render_card(lookup(index, metric, subject), ctx, key=f"{key_prefix}_{metric}",
-                            caption=captions.get(metric))
+                            label=texts.METRIC_LABELS.get(metric), caption=captions.get(metric))
 
 
 def _weight_rows(index: Mapping[str, Dict[str, Any]], snapshot: Mapping[str, Any], field: str,
@@ -98,6 +111,9 @@ def render_xray(xray: Mapping[str, Any], rules_by_id: Mapping[str, Dict[str, Any
     if period:
         st.caption(period)
     render_metric_cards(index, xray["snapshot"], SUBJECT, ctx, key_prefix="xray")
+    correlation = correlation_caption(index, SUBJECT)
+    if correlation:
+        st.caption(correlation)
     st.subheader(texts.XRAY_RULES)
     render_checks(xray["governance"]["checks"], xray["evidence"], SUBJECT, rules_by_id, ctx,
                   key_prefix="xray_rule", show_counterfactual=False)

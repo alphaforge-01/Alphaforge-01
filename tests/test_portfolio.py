@@ -195,7 +195,8 @@ class TestSnapshot:
         for key in ("subject", "max_drawdown_start", "max_drawdown_end", "top_asset"):
             assert type(snapshot[key]) is str, key
         assert snapshot["recovery_days"] is None or type(snapshot["recovery_days"]) is int
-        assert snapshot["largest_correlated_group_weight"] is None
+        assert type(snapshot["largest_correlated_group_weight"]) is float
+        assert all(type(member) is str for member in snapshot["correlated_group_members"])
 
     def test_no_nan_anywhere(self, snapshot):
         for value in _all_floats(snapshot):

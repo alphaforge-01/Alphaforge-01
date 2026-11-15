@@ -13,10 +13,16 @@ from __future__ import annotations
 
 from datetime import date
 
+from alphaforge.evidence import format_cad as evidence_format_cad
 from alphaforge.explanation_rendering import format_percent, format_points
 
 MONTHS_FR = ("janv.", "févr.", "mars", "avr.", "mai", "juin",
              "juil.", "août", "sept.", "oct.", "nov.", "déc.")
+
+
+def escape_dollars(markdown: str) -> str:
+    """Streamlit lit $...$ comme une formule : deux montants dans un paragraphe seraient mal rendus."""
+    return markdown.replace("$", "\\$")
 
 
 def format_pct(fraction: float) -> str:
@@ -31,8 +37,7 @@ def format_pts(fraction: float) -> str:
 
 def format_cad(amount: float) -> str:
     """100000 -> "100 000 $". Espace comme séparateur de milliers."""
-    text = f"{amount:,.0f}".replace(",", " ")
-    return f"{text} $"
+    return evidence_format_cad(amount)
 
 
 def format_horizon(min_years: int, max_years: int) -> str:

@@ -384,7 +384,8 @@ def test_personas_starting_portfolios_have_no_conflict_on_concentration():
     for entry in load_personas().values():
         result = evaluate(entry["profile"], make_snapshot(
             top_asset_weight=0.10, volatility_ann=0.10, max_drawdown=0.10,
-            defensive_share=0.7, weight_by_asset_class={"equity": 0.3, "etf_bond": 0.7}))
+            defensive_share=0.7, weight_by_asset_class={"equity": 0.3, "etf_bond": 0.7},
+            largest_correlated_group_weight=0.10))
         # Mateo a une règle ESG sans preuve possible : au mieux `missing_info`, jamais `compliant`.
         has_esg = any(r["rule_type"] == "esg_exclusion" for r in entry["profile"]["rules"])
         assert result["overall_status"] == ("missing_info" if has_esg else "compliant"), entry["profile"]["profile_id"]
