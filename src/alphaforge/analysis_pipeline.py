@@ -24,7 +24,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .bedrock_client import (
-    GROUNDING_ANSWER_MAX_CHARS, BedrockClient, BedrockConfig, BedrockError, redact_text,
+    GROUNDING_ANSWER_MAX_CHARS, GROUNDING_SOURCE_MAX_CHARS, BedrockClient, BedrockConfig, BedrockError,
+    redact_text,
 )
 from .contracts import (
     AnalysisResult, AnalystSubmission, ExplanationResult, GovernanceResult, GuardrailResult,
@@ -480,13 +481,14 @@ def explain(
         try:
             bedrock_client = client or BedrockClient(config)
             checked_text = _model_text(output, brief)
+            source_text, source_kind = _grounding_source(brief)
             guardrail = bedrock_client.check_output_grounding(
-                json.dumps(brief, ensure_ascii=False), "Explique le resultat de l'analyse.", checked_text)
+                source_text, "Explique le resultat de l'analyse.", checked_text)
             guard_status = "ok" if guardrail["action"] != "not_run" else "skipped"
             guard_details = {
                 "action": guardrail["action"], "grounding_score": guardrail["grounding_score"],
                 "relevance_score": guardrail["relevance_score"], "mode": guardrail["mode"],
-                "checked_chars": len(checked_text),
+                "checked_chars": len(checked_text), "source_kind": source_kind, "source_chars": len(source_text),
             }
             flags = getattr(bedrock_client, "last_grounding_flags", None)
             if isinstance(flags, dict) and flags.get("below_threshold"):
@@ -626,6 +628,25 @@ def _scope_evidence_labels(evidence: dict[str, Any]) -> None:
                 if suffix not in label:
                     entry["label_fr"] = label + suffix
                 break
+
+
+def _grounding_source(brief: dict[str, Any]) -> tuple[str, str]:
+    """Source du controle d'ancrage : rend (texte, genre), genre valant "phrases" ou "json".
+
+    Mesure sur le compte : le dossier en JSON (cles et codes anglais, nombres bruts) est mal relie par le
+    controle au texte francais ("en conflit", "17,6 %") et donne des scores de 0,15 a 0,45. Le meme dossier
+    reecrit en phrases francaises donne de 0,73 a 0,92. Le module `grounding_source` ne fait que reformuler
+    le dossier, sans rien ajouter ; l'explicateur recoit toujours le JSON. Repli sur le JSON si le module est
+    absent, en erreur ou trop long : le controle tourne toujours.
+    """
+    try:
+        from .grounding_source import build_grounding_source
+        text = build_grounding_source(brief)
+        if isinstance(text, str) and text.strip() and len(text) <= GROUNDING_SOURCE_MAX_CHARS:
+            return text, "phrases"
+    except Exception:  # le module est une amelioration : jamais une cause d'echec du controle
+        pass
+    return json.dumps(brief, ensure_ascii=False), "json"
 
 
 def _excerpts(rejections: list[dict[str, Any]], limit: int = 8) -> list[str]:
