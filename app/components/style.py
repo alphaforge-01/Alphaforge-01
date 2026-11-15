@@ -75,13 +75,36 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 
 [class*="st-key-card-"] { min-height: 7.4rem; }
 
-/* Cartes des personas : même hauteur dans une rangée, bouton "Choisir" aligné en bas. */
-[data-testid="stHorizontalBlock"]:has([class*="st-key-persona-"]) { align-items: stretch; }
-[data-testid="stColumn"]:has([class*="st-key-persona-"]) > [data-testid="stVerticalBlock"],
-[data-testid="stColumn"]:has([class*="st-key-persona-"]) [data-testid="stLayoutWrapper"]:has(> [class*="st-key-persona-"]) {
-  flex: 1 1 auto; height: 100%; display: flex; flex-direction: column; }
-[class*="st-key-persona-"] { flex: 1 1 auto; height: 100%; }
-[class*="st-key-persona-"] [class*="st-key-choose_profile_"] { margin-top: auto; }
+/* Carrousel des personas : une carte à la fois, flèches de part et d'autre. */
+[class*="st-key-persona-carousel"] { gap: 1rem; margin: .4rem 0 .2rem; }
+[class*="st-key-persona_prev"] button, [class*="st-key-persona_next"] button {
+  border-radius: 999px; width: 2.6rem; height: 2.6rem; padding: 0; }
+/* Une seule flèche par bouton : l'indication du raccourci clavier (gauche, droite) est masquée,
+   le raccourci reste actif et il est rappelé dans l'info-bulle. */
+[class*="st-key-persona_prev"] kbd, [class*="st-key-persona_next"] kbd { display: none; }
+.af-pc { position: relative; padding: 1.2rem 1.3rem 1rem; border-radius: .9rem; background: #ffffff;
+  border: 1px solid #dbe2ea; border-top: 5px solid var(--af-accent);
+  box-shadow: 0 8px 22px rgba(20, 50, 92, .10); margin-bottom: .6rem; }
+.af-pc-head { display: flex; align-items: center; gap: .85rem; }
+.af-pc-avatar { flex: 0 0 auto; width: 3.1rem; height: 3.1rem; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: 1.45rem; font-weight: 700; color: #ffffff;
+  background: var(--af-accent); }
+.af-pc-name { font-size: 1.45rem; font-weight: 700; color: #1a2332; display: flex; align-items: center;
+  gap: .5rem; flex-wrap: wrap; }
+.af-pc-badge, .af-pc-selected { font-size: .72rem; font-weight: 600; padding: .1rem .55rem; border-radius: 999px; }
+.af-pc-badge { background: #eef2f7; color: #5b6675; border: 1px solid #dbe2ea; }
+.af-pc-selected { background: var(--af-accent); color: #ffffff; }
+.af-pc-sub { color: #5b6675; font-size: .88rem; margin-top: .1rem; }
+.af-pc-summary { margin: .9rem 0 .8rem; color: #1a2332; line-height: 1.5; }
+.af-pc-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.af-pc-tile { background: #f5f7fa; border-radius: .6rem; padding: .5rem .6rem; }
+.af-pc-tile-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #5b6675; }
+.af-pc-tile-value { font-size: .9rem; font-weight: 600; color: #1a2332; margin-top: .15rem; }
+.af-pc-foot { margin-top: .75rem; font-size: .78rem; color: #5b6675; }
+.af-dots { display: flex; justify-content: center; gap: .4rem; margin: .1rem 0 .6rem; }
+.af-dot { width: .5rem; height: .5rem; border-radius: 50%; background: #c9d3df; }
+.af-dot--on { background: #1d4e89; width: 1.4rem; border-radius: 999px; }
+@media (max-width: 640px) { .af-pc-tiles { grid-template-columns: 1fr; } }
 [class*="st-key-card-"] [data-testid="stPopover"] button p { font-size: 1.35rem; font-weight: 650; }
 /* Points clés de la réponse : le chiffre est l'information principale. */
 [class*="st-key-keypoints-"] [data-testid="stPopover"] button p { font-size: 1.2rem; font-weight: 650; }

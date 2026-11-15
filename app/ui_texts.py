@@ -56,6 +56,11 @@ HOME_PREVIEW_SOURCE = (
 )
 
 # --- Simulation et conversation -------------------------------------------------------
+CHART_TITLE = "Portefeuille fictif de départ : {name}"
+CHART_CAPTION = "Poids actuels des positions, lus dans le registre de la radiographie. Survolez une barre pour le détail."
+CHART_TOOLTIP_TICKER = "Titre"
+CHART_TOOLTIP_NAME = "Nom"
+CHART_TOOLTIP_WEIGHT = "Poids"
 SIM_SHOW_XRAY = "Afficher la radiographie du portefeuille"
 SIM_MANUAL = "Réglages manuels"
 CHAT_PLACEHOLDER = "Ex. : Et si je mettais 25 % dans TSLA ?"
@@ -228,7 +233,10 @@ PERSONA_HORIZON = "Horizon"
 PERSONA_OBJECTIVE = "Objectif"
 PERSONA_EXPERIENCE = "Expérience"
 PERSONA_CAPITAL = "Capital fictif"
-CHOOSE_PROFILE = "Choisir"
+CHOOSE_THIS_PROFILE = "Choisir ce profil"
+CAROUSEL_PREV = "Profil précédent (flèche gauche)"
+CAROUSEL_NEXT = "Profil suivant (flèche droite)"
+CAROUSEL_POSITION = "Profil {n} sur {total}"
 SELECTED_PROFILE = "Profil choisi"
 
 CUSTOM_REMINDER = "Aucune donnée personnelle : ni nom, ni revenu, ni compte."

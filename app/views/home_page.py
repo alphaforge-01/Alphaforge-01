@@ -60,7 +60,7 @@ def render() -> None:
     if not personas:
         session.show_personas_error()
     else:
-        profile_panel.render_persona_cards(
+        profile_panel.render_persona_carousel(
             personas, st.session_state.profile_id,
             on_select=lambda profile_id: session.select_profile_and_go(profile_id, personas))
     navigation.link("custom", texts.HOME_CUSTOM_LINK)
