@@ -95,6 +95,8 @@ Préfixe `alphaforge-`. Seule la personne du flux C crée ou modifie des ressour
 | Compartiment S3 privé | `alphaforge-traces-<suffixe>` (préfixe `alphaforge-`, suffixe dérivé par SHA-256 du compte ou `--suffix`) | Une trace JSON sans secret par analyse et par explication en mode `bedrock` (US-16) | `scripts/setup_trace_bucket.py --apply`, vérification par `--check` | Créé, réglages vérifiés par `--check`, traces écrites lors des essais réels |
 | Rôle d'exécution | Rôle de l'atelier pour le développement local ; rôle dédié seulement si hébergement | Inférence Bedrock, `ApplyGuardrail`, écriture S3 sur le seul compartiment des traces | Aucun rôle dédié : le prototype tourne en local avec le rôle de l'atelier | Politique de référence ci-dessous, non appliquée |
 
+Les captures de la console qui montrent le garde-fou, les modèles et le compartiment sont dans `outputs/figures/` (description dans `outputs/figures/README.md`).
+
 Réglages du compartiment des traces, appliqués par `setup_trace_bucket.py --apply` et contrôlés par `--check` :
 
 | Réglage | Valeur | Raison |
@@ -176,7 +178,7 @@ Texte de référence pour un hébergement futur. Il n'est appliqué à aucun rô
   | 4 | Standard | 16/19 à 17/19 | définition de la prédiction recentrée sur l'avenir, résultat variable d'un essai à l'autre |
 
   Restent des faux refus sur des questions historiques (A02, A07, parfois A09), classées à tort comme prédiction. Le classifieur n'est pas parfaitement stable d'un essai à l'autre. Les refus attendus (D01 à D09) sont tous obtenus avec le niveau Standard. Ces faux refus touchent le panneau de test en texte libre, pas l'analyse, qui passe par le formulaire structuré.
-- Changer le garde-fou : `--apply` met à jour le garde-fou existant et publie une nouvelle version numérotée. Les versions publiées ne changent plus : revenir en arrière consiste à pointer `ALPHAFORGE_GUARDRAIL_VERSION` vers une version précédente. L'identifiant et la version se communiquent dans le canal de l'équipe, pas dans le dépôt.
+- Changer le garde-fou : `--apply` met à jour le garde-fou existant et publie une nouvelle version numérotée. Les versions publiées ne changent plus : revenir en arrière consiste à pointer `ALPHAFORGE_GUARDRAIL_VERSION` vers une version précédente. L'identifiant du garde-fou se communique dans le canal de l'équipe, pas dans le dépôt. Le numéro de version, lui, n'est pas sensible : la version 4 est celle des essais réels du 15 novembre.
 - Comportement en français : faux refus sur les requêtes permises (`A01` à `A10`) et refus manqués (`D01` à `D09`) au test `--test`. Ajuster les définitions et exemples, puis relancer `--apply` (nouvelle version).
 - Limites d'`ApplyGuardrail` pour l'ancrage : 100 000 caractères pour la source, 1 000 pour la requête, 5 000 pour le texte.
 
