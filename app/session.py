@@ -242,7 +242,9 @@ def _agent_kind(text: str, parsed: Dict[str, Any], analysed: bool) -> Optional[s
         or (status == "answer" and answer_kind == "definition" and parsed.get("term_id") is None)
         # Lue comme une idée sans actif ("c'est grave une perte de 26 % ?") ; un actif inconnu nommé
         # ("le risque de GME") garde la demande de précision, qui dit qu'il n'est pas dans l'univers.
-        or (status == "clarify" and parsed.get("reason") == "unknown_asset" and not parsed.get("unknown_tokens"))
+        # Message tout en majuscules : ses mots ("EST", "EN") ne sont pas des titres inconnus.
+        or (status == "clarify" and parsed.get("reason") == "unknown_asset"
+            and (not parsed.get("unknown_tokens") or text.isupper()))
     )
     if not eligible:
         return None

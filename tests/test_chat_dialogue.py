@@ -166,3 +166,33 @@ def test_a_named_unknown_asset_keeps_its_clarification(app):
     app.button(key="idea_preset_TSLA_25").click().run()
     _send(app, "pourquoi le risque de GME est en conflit ?")
     assert app.session_state["chat_history"][-1]["type"] == "clarify"
+
+
+# ---- revérification de l'audit : variantes proches, jamais envoyées à l'agent ----
+
+VARIANTS = (
+    "pourquoi la perte va-t-elle augmenter ?",
+    "pourquoi le risque augmentera ?",
+    "c'est grave une perte de 26 % ? je liquide tout ?",
+    "pourquoi ma concentration est un problème, lequel prendre ?",
+    "qu'est-ce qui changerait la réponse, je dois alléger ?",
+    "pourquoi ce verdict, je garde ou pas ?",
+    "pourquoi c'est en conflit, il faut tout sortir ?",
+    "pourquoi la perte va-t-elle s'aggraver ?",
+    "pourquoi ce verdict, quel titre retenir ?",
+    "pourquoi c'est en tension, c'est le moment d'en reprendre ?",
+    "mon portefeuille est-il diversifié, quoi ajouter ?",
+)
+
+
+@pytest.mark.parametrize("message", VARIANTS)
+def test_close_rewordings_never_reach_the_agent(app, message):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, message)
+    assert app.session_state["chat_history"][-1]["type"] != "agent_answer"
+
+
+def test_an_all_caps_why_question_still_reaches_the_agent(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, "POURQUOI C'EST EN TENSION ?")
+    assert app.session_state["chat_history"][-1]["type"] == "agent_answer"

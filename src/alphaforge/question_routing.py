@@ -49,7 +49,11 @@ _RULES: Tuple[Tuple[AnswerKind, re.Pattern], ...] = (
 # l'avenir n'est jamais envoyé à l'agent, même si le contrôle local l'a laissé passer.
 _NEVER_TO_AGENT = re.compile(
     r"\b(achet\w*|vend(s|re|ez|ons|u|ue|ant|rait)?|choisir|faut-il|demain|bientot|sera|seront|futur\w*|prevoi\w*"
-    r"|predi\w*|conseil\w*|recommand\w*)\b")
+    r"|predi\w*|conseil\w*|recommand\w*|\w+(era|eront))\b"
+    r"|\b(va|vont)(-t-(il|elle))?\s+(augmenter|diminuer|monter|baisser|remonter|chuter|grimper|empirer|s'aggraver)\b")
+# Une seule proposition : une seconde question accolee ("..., je garde ou pas ?") n'est jamais envoyee a l'agent,
+# quelle que soit sa formulation. Une virgule decimale ("0,25") ne coupe pas la phrase.
+_CLAUSE_BREAK = re.compile(r"[?!;:]|[.,](?=\s|$)")
 _BARE_WHY = re.compile(r"^\W*pourquoi\W*$|\bpourquoi (ca|cela|c'est)\b")
 
 
@@ -62,6 +66,8 @@ def classify_question(text: str, *, has_analysis: bool = False) -> Optional[Answ
         return None
     normalized = _normalize(text)
     if _NEVER_TO_AGENT.search(normalized):
+        return None
+    if len([clause for clause in _CLAUSE_BREAK.split(normalized) if clause.strip()]) > 1:
         return None
     for kind, pattern in _RULES:
         if pattern.search(normalized):

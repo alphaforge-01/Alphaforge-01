@@ -93,7 +93,7 @@ _REFUSAL_PATTERNS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         r"\bl'an\s+prochain\b|\bl'annee\s+prochaine\b",
         # Prémisse d'avenir dans une question ("pourquoi la perte sera plus forte demain ?").
         r"\b(sera|seront)\b.*\b(demain|bientot|prochain\w*)\b",
-        r"\b(va|vont)\s+(augmenter|diminuer|empirer|s'aggraver)\b",
+        r"\b(va|vont)(-t-(il|elle))?\s+(augmenter|diminuer|empirer|s'aggraver)\b",
     )),
     (PERSONALIZED_ADVICE, (
         r"\b(dois-je|devrais-je|je\s+devrais|que\s+dois-je)\b",

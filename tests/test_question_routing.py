@@ -54,3 +54,27 @@ def test_transactional_or_predictive_messages_never_reach_the_agent(text):
 
 def test_the_barrier_keeps_ordinary_profile_questions():
     assert classify_question("quel est mon horizon d'investissement ?") == "profile"
+
+
+VARIANTS = (
+    "pourquoi la perte va-t-elle augmenter ?",
+    "pourquoi le risque augmentera ?",
+    "c'est grave une perte de 26 % ? je liquide tout ?",
+    "pourquoi ma concentration est un problème, lequel prendre ?",
+    "qu'est-ce qui changerait la réponse, je dois alléger ?",
+    "pourquoi ce verdict, je garde ou pas ?",
+    "pourquoi c'est en conflit, il faut tout sortir ?",
+    "pourquoi la perte va-t-elle s'aggraver ?",
+    "pourquoi ce verdict, quel titre retenir ?",
+    "pourquoi c'est en tension, c'est le moment d'en reprendre ?",
+    "mon portefeuille est-il diversifié, quoi ajouter ?",
+)
+
+
+@pytest.mark.parametrize("text", VARIANTS)
+def test_close_rewordings_are_never_routed(text):
+    assert classify_question(text, has_analysis=True) is None
+
+
+def test_a_decimal_comma_does_not_split_the_question():
+    assert classify_question("pourquoi un poids de 0,25 met la règle en conflit ?") == "explanation"
