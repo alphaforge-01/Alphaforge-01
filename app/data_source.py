@@ -186,6 +186,19 @@ def get_bedrock_status() -> Dict[str, bool]:
     }
 
 
+def split_verdicts(governance: Dict[str, Any]) -> Dict[str, Optional[str]]:
+    """Verdicts global, financier et ESG d'un résultat de gouvernance (flux B, P1-9).
+
+    `esg` vaut None quand le profil n'a pas de règle ESG : aucune pastille ESG n'est
+    alors affichée. Sans le module de gouvernance, seul le verdict global est rendu.
+    """
+    try:
+        governance_module = _src_module("governance", texts.MSG_PIPELINE_NOT_READY)
+    except DataUnavailable:
+        return {"overall": governance.get("overall_status"), "financial": None, "esg": None}
+    return governance_module.split_verdicts(governance)
+
+
 def rule_metric(rule_type: str) -> Optional[str]:
     """Métrique du registre associée à un type de règle (flux B), ou None."""
     try:

@@ -15,6 +15,7 @@ import data_source
 import ui_texts as texts
 from components.persistence import KEEP_PREFIX
 from components.rules import threshold_text
+from components.style import PERSONA_CARD_KEY
 from formatting import format_cad, format_horizon
 
 LOGGER = logging.getLogger("alphaforge.ui")
@@ -41,7 +42,8 @@ def _identity_line(persona: Dict[str, Any]) -> Optional[str]:
 def _render_card(profile_id: str, persona: Dict[str, Any], is_selected: bool,
                  on_select: Callable[[str], None]) -> None:
     profile = persona["profile"]
-    with st.container(border=True):
+    # Clé lue par le CSS (components/style.py) : cartes de même hauteur, bouton aligné en bas.
+    with st.container(border=True, key=f"{PERSONA_CARD_KEY}{profile_id}"):
         name_col, badge_col = st.columns([3, 1], vertical_alignment="center")
         name_col.subheader(profile["display_name"], anchor=False)
         with badge_col:
