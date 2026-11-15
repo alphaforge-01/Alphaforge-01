@@ -269,3 +269,33 @@ def test_real_offline_brief_fits_size_limit():
             for check in brief["checks"]:
                 assert f"Contrôle {check['label_fr']}" in source
             assert "reste sous" not in source
+
+
+# ---- contexte du profil (l'explicateur peut le citer, la source doit donc le contenir) ----
+
+PROFILE_CONTEXT = {
+    "objective": "Préserver le capital avant la retraite", "horizon_years_min": 3, "horizon_years_max": 5,
+    "risk_tolerance": "low_moderate", "risk_tolerance_fr": "faible à modérée",
+    "experience": "advanced", "experience_fr": "avancé",
+    "esg_preference": "none", "esg_preference_fr": "aucune", "crypto_allowed": False,
+}
+
+
+def test_profile_context_is_written_in_the_source_when_the_brief_has_it():
+    brief = make_brief()
+    brief["profile_context"] = deepcopy(PROFILE_CONTEXT)
+    source = build_grounding_source(brief)
+    assert "Préserver le capital avant la retraite" in source
+    assert "va de 3 à 5 ans" in source
+    assert "tolérance au risque du profil est faible à modérée" in source
+    assert "expérience de l'investisseur est avancé" in source
+    assert "préférence ESG du profil est aucune" in source
+    assert "cryptoactifs ne sont pas permis" in source
+
+
+def test_profile_context_absent_adds_nothing_and_partial_context_adds_only_what_exists():
+    brief = make_brief()
+    assert "Contexte du profil" not in build_grounding_source(brief)
+    brief["profile_context"] = {"crypto_allowed": True}
+    source = build_grounding_source(brief)
+    assert "cryptoactifs sont permis" in source and "horizon" not in source and "tolérance" not in source
