@@ -2,6 +2,7 @@
 name: code-reviewer
 description: Reviews code changes for correctness, clarity and compliance with the project rules before they are committed. Use after a feature or significant change is written, before committing.
 model: opus
+effort: high
 tools: Read, Grep, Glob, Bash
 ---
 

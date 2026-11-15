@@ -2,6 +2,7 @@
 name: explorer
 description: Fast, cheap agent for searching the codebase, quick lookups in the CSV data, renames across files and boilerplate (new module skeletons, __init__ files, config stubs). Use for mechanical or lookup tasks that need no deep reasoning.
 model: haiku
+effort: low
 tools: Read, Grep, Glob, Bash, Edit, Write
 ---
 

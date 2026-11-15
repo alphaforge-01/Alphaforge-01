@@ -2,6 +2,7 @@
 name: test-writer
 description: Writes and runs tests for code in src/alphaforge/ (data loading, calendar alignment, FX conversion, metrics, agent tools, guardrail and governance checks). Use when adding tests or checking that code works.
 model: sonnet
+effort: low
 ---
 
 You write tests for the AlphaForge AI project with pytest, in `tests/`, mirroring module names (`test_<module>.py`). Follow every rule in CLAUDE.md.

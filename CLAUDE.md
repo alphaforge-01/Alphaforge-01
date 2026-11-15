@@ -25,19 +25,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 6. Secrets: never put AWS credentials (access key IDs `AKIA...`/`ASIA...`, secret keys, session tokens) or any other secret (API keys, passwords, tokens) in the repo: not in code, notebooks (including cell outputs), config files, docs, commit messages or test fixtures, not even temporarily or as "example" values. A key pushed to GitHub is considered compromised within minutes. Credentials come only from outside the repo: AWS CLI profiles (`~/.aws/`, `aws configure` / `aws sso login`), environment variables, a git-ignored `.env`, or IAM roles when running on AWS. Code reads them via boto3's default credential chain or `os.environ`, never hard-coded. Before every commit, check the staged diff for secrets; if one is found, stop and tell the user. If a secret was ever committed or pushed, tell the user to revoke/rotate it in AWS immediately: deleting it in a later commit or rewriting history is not enough.
 7. Data sources: only public or fictional data (required by the challenge). No real client accounts, no confidential banking information, no personal data of real people, ever: investor profiles, portfolios and capital amounts are fictional (the three personas or invented ones), and test fixtures/examples are invented too. Respect each public source's terms of use: before adding a source, check its terms (access, API limits, storage, redistribution) and record them in `data/external/sources.md`; if a source forbids redistribution, do not commit its raw files (git-ignore them and commit the download script instead); never scrape a site whose terms forbid it. If unsure whether data is allowed, ask the user before using it.
 8. Simulation only: the prototype never executes real transactions and never presents itself as personalized financial advice. No tool, agent or integration may connect to a brokerage account or trading API (no order placement, no account linking, not even in "paper" mode against a real broker). Portfolios and allocations are fictional and labeled as such. User-facing outputs carry a short disclaimer (simulation, educational, not personalized advice) and separate facts, assumptions and fictional scenarios. When agents run on Amazon Bedrock, attach a Bedrock Guardrail to enforce this (e.g. a denied topic for personalized investment advice and trade execution requests, plus contextual grounding checks so answers stay faithful to the provided data), and surface guardrail interventions in the explanation trace.
-9. Model routing: the main session runs on Sonnet (`.claude/settings.json`) and does the regular building. Delegate to the project subagents in `.claude/agents/` without waiting to be asked, whenever a task matches:
+9. Model routing: the main session runs on Sonnet at medium effort (`.claude/settings.json`) and does the regular building. Each subagent sets its model and reasoning effort in its frontmatter (`model:`, `effort:`), sized to the task so tokens go where they matter. Delegate to the project subagents in `.claude/agents/` without waiting to be asked, whenever a task matches:
 
-| Task | Subagent | Model |
-| --- | --- | --- |
-| Planning a feature or architecture | `planner` | Fable |
-| Building a feature | main session | Sonnet |
-| UI, UX and frontend | `frontend-dev` | Opus |
-| AWS, Bedrock, Guardrails, IAM, credentials | `aws-integration` | Opus |
-| Codebase search, data lookups, renames, boilerplate | `explorer` | Haiku |
-| Writing and running tests | `test-writer` | Sonnet |
-| Hard bugs, or a first fix that failed | `debugger` | Opus |
-| Security and compliance audit (rules 6 to 8) | `security-auditor` | Fable |
-| Code review before committing a feature | `code-reviewer` | Opus |
+| Task | Subagent | Model | Effort |
+| --- | --- | --- | --- |
+| Planning a feature or architecture | `planner` | Fable | high |
+| Building a feature | main session | Sonnet | medium |
+| UI, UX and frontend | `frontend-dev` | Opus | medium |
+| AWS, Bedrock, Guardrails, IAM, credentials | `aws-integration` | Opus | xhigh |
+| Codebase search, data lookups, renames, boilerplate | `explorer` | Haiku | low |
+| Writing and running tests | `test-writer` | Sonnet | low |
+| Hard bugs, or a first fix that failed | `debugger` | Opus | max |
+| Security and compliance audit (rules 6 to 8) | `security-auditor` | Fable | xhigh |
+| Code review before committing a feature | `code-reviewer` | Opus | high |
 
 Run `planner` before any non-trivial feature, `code-reviewer` before committing a feature, and `security-auditor` before pushes touching AWS or data sources. Skip delegation for trivial tasks where it costs more than it saves. Relay subagent results to the user, since they do not see them.
 10. Branches: never commit directly to `main`; it only receives merged pull requests. Start every piece of work on its own branch created from an up-to-date `main` (`git switch main && git pull && git switch -c <branch>`). Branch names reuse the commit types: `<type>/<short-description>` in English kebab-case, e.g. `feat/profile-builder`, `fix/fx-conversion`, `docs/use-case-decision`, `data/esg-evidence`, `chore/branch-workflow`. One branch per topic; keep it short-lived. Push with `git push -u origin <branch>` and merge into `main` through a GitHub pull request (title follows rule 3, description in French, no AI attribution per rule 2). Never force-push `main`; never rewrite history on a branch others use. If you find yourself on `main` with uncommitted work, create the branch before committing.
