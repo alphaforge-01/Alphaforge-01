@@ -318,9 +318,9 @@ def test_standard_tier_accepts_a_custom_profile():
 
 
 def test_standard_config_matches_the_installed_boto3_model():
-    import boto3
-    client = boto3.client("bedrock", region_name="us-east-1", aws_access_key_id="x", aws_secret_access_key="x")
-    shape = client.meta.service_model.operation_model("CreateGuardrail").input_shape
+    from botocore.session import get_session
+    # Modele du service lu directement : aucun client, donc aucune recherche d'identifiants ni appel reseau.
+    shape = get_session().get_service_model("bedrock").operation_model("CreateGuardrail").input_shape
     config = sg.build_guardrail_config(tier="standard")
     assert set(config) <= set(shape.members)
     assert set(config["topicPolicyConfig"]) <= set(shape.members["topicPolicyConfig"].members)

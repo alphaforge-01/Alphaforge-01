@@ -125,7 +125,7 @@ Permissions minimales visées pour un éventuel rôle d'application (moindre pri
 
 - Modèles en cycle de vie `ACTIVE` et profils d'inférence disponibles (`us.`, `global.`) : l'API ne dit pas si un modèle accepte Converse ou les outils, d'où l'essai `--try-converse`.
 - Prise en charge du choix d'outil forcé (`--tool-choice any`) par le modèle retenu.
-- Niveau de classification des sujets refusés : **Standard** (défaut du script, `--tier classic` pour l'autre). Il exige le profil interrégional `us.guardrail.v1:0` : les demandes sont alors traitées dans une autre région américaine, ce qui reste acceptable pour des données publiques ou fictives. Disponible dans le compte de l'atelier. Le niveau d'ancrage contextuel reste Classic.
+- Niveau de classification des sujets refusés : **Standard** (défaut du script, `--tier classic` pour l'autre). Il exige le profil interrégional `us.guardrail.v1:0` : les demandes sont alors traitées dans une autre région américaine, ce qui reste acceptable pour des données publiques ou fictives. Disponible dans le compte de l'atelier. Le niveau d'ancrage contextuel reste Classic. Le panneau de test en texte libre envoie la saisie hors de `us-east-1` : n'y saisir rien de réel.
 - Mesure sur le compte (19 requêtes de `tests/fixtures/guardrail_prompts.json`), avec le niveau Classic puis Standard :
 
   | Version | Niveau | Concordance | Remarque |
