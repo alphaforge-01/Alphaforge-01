@@ -120,7 +120,7 @@ L'univers des organisateurs : 31 actifs, 10 actions canadiennes, 10 actions amé
 1. **Les outils calculent** et produisent des preuves. Chaque preuve porte une clé stable `<métrique>:<sujet>` (par exemple `max_drawdown:portfolio_after`), sa valeur, son affichage français, sa période, son nombre d'observations, sa devise, ses fichiers sources, une phrase de transformation et ses limites (LM1 à LM5). Liste complète : [docs/evidence_keys.md](evidence_keys.md).
 2. **Le registre numérote** les preuves d'une analyse (E1, E2...).
 3. **La gouvernance** rattache chaque contrôle de règle à la preuve de la métrique lue (`evidence_ids`).
-4. **L'explicateur n'écrit aucun chiffre** : il écrit `[E38]`, `[G1]`, `[T3]`. Le code remplace chaque renvoi par la valeur du registre.
+4. **L'explicateur n'écrit aucun chiffre** : il écrit `[E39]`, `[G1]`, `[T3]`. Le code remplace chaque renvoi par la valeur du registre.
 5. **Le validateur** rejette le texte s'il contient un chiffre absent du registre, un renvoi inconnu, une recommandation ou une prévision, ou s'il omet une règle en tension ou en conflit. Un texte rejeté deux fois est remplacé par le gabarit, et la trace le dit.
 6. **L'interface** affiche chaque chiffre depuis sa preuve ; un clic ouvre la fiche de la preuve.
 
@@ -134,15 +134,15 @@ Exécution réelle en mode hors ligne (`run_analysis`, données jusqu'au 12 nove
 
 **Ce que l'explicateur a réellement écrit** (aucun chiffre) :
 
-> « Pour la part d'un seul placement dans le portefeuille (voir [T3]), la mesure [E38] franchit la limite fixée pour ce profil. Contrôle : [G1]. »
+> « Pour la part d'un seul placement dans le portefeuille (voir [T3]), la mesure [E39] franchit la limite fixée pour ce profil. Contrôle : [G1]. »
 
 **Remontée de la conclusion :**
 
 | Niveau | Élément | Contenu |
 | --- | --- | --- |
-| Contrôle | `G1`, règle `R1` Concentration par actif | Statut **conflit** : valeur 0,25 ; alerte 0,20 ; limite 0,22 ; contrefactuel « conforme à 20 % ou moins » ; preuve `E38` |
-| Preuve | `E38` = `top_asset_weight:portfolio_after` | Valeur 0,25, affichage « 25 % », libellé « Poids du plus gros actif (TSLA) », outil `simulate_portfolio_change`, limite LM4 (hypothèses de simulation) |
-| Trace, étape 1 | Appel `simulate_portfolio_change` | Paramètres `{ticker: TSLA, target_weight: 0.25, funding_source: pro_rata}`, statut `ok`, preuves `E29` à `E63` |
+| Contrôle | `G1`, règle `R1` Concentration par actif | Statut **conflit** : valeur 0,25 ; alerte 0,20 ; limite 0,22 ; contrefactuel « conforme à 20 % ou moins » ; preuve `E39` |
+| Preuve | `E39` = `top_asset_weight:portfolio_after` | Valeur 0,25, affichage « 25 % », libellé « Poids du plus gros actif (TSLA) », outil `simulate_portfolio_change`, limite LM4 (hypothèses de simulation) |
+| Trace, étape 1 | Appel `simulate_portfolio_change` | Paramètres `{ticker: TSLA, target_weight: 0.25, funding_source: pro_rata}`, statut `ok`, preuves `E30` à `E65` |
 | Calcul | `portfolio.apply_idea` | TSLA porté à 25 %, les six autres positions de Robert réduites au prorata (multipliées par 0,75) |
 | Données | `data/external/investor_profiles.json` | Portefeuille fictif de départ de Robert (aucune position TSLA) |
 
@@ -150,10 +150,10 @@ La même analyse rattache les deux autres règles non conformes à des preuves d
 
 | Contrôle | Statut | Preuve | Affichage | Période et sources |
 | --- | --- | --- | --- | --- |
-| `G2` Volatilité annuelle | tension (alerte 16 %, limite 25 %) | `E29` `volatility_ann:portfolio_after` | 17,6 % | 12 nov. 2021 au 12 nov. 2026, 1 227 rendements, `prices_daily.csv`, `fx_usdcad_daily.csv` |
-| `G3` Perte maximale historique | tension (alerte 20 %, limite 35 %) | `E30` `max_drawdown:portfolio_after` | 26,04 % | Idem, limites LM1 à LM5 |
+| `G2` Volatilité annuelle | tension (alerte 16 %, limite 25 %) | `E30` `volatility_ann:portfolio_after` | 17,6 % | 12 nov. 2021 au 12 nov. 2026, 1 227 rendements, `prices_daily.csv`, `fx_usdcad_daily.csv` |
+| `G3` Perte maximale historique | tension (alerte 20 %, limite 35 %) | `E31` `max_drawdown:portfolio_after` | 26,04 % | Idem, limites LM1 à LM5 |
 
-**Variante simulée** (proposée par l'analyste, recalculée par les mêmes outils) : `V1`, réduction du poids visé à 17 %, verdict **conforme** (trace : second appel `simulate_portfolio_change` avec `target_weight: 0.17`, preuves `E64` à `E98`).
+**Variante simulée** (proposée par l'analyste, recalculée par les mêmes outils) : `V1`, réduction du poids visé à 17 %, verdict **conforme** (trace : second appel `simulate_portfolio_change` avec `target_weight: 0.17`, preuves `E66` à `E101`).
 
 **Trace complète de l'explication :** étape 4 explication (gabarit en mode hors ligne, agent en mode `bedrock`), étape 5 validation (valide, 14 renvois vérifiés), étape 6 garde-fou (non exécuté hors ligne ; en mode `bedrock`, action et scores d'ancrage affichés).
 
@@ -164,7 +164,7 @@ Exécution réelle du 14 novembre 2026 au soir, heure de l'Est (horodatage `2026
 | Étape | Acteur | Ce que montre la trace |
 | --- | --- | --- |
 | 1. Analyse | Agent analyste (Claude Haiku 5.5 sur Bedrock) | 3 tours, 5 appels d'outils choisis par l'agent : `analyze_portfolio` (28 preuves), puis quatre `simulate_portfolio_change` pour explorer l'idée et des variantes ; l'un d'eux rend un statut `error`, absorbé sans plantage ; fin par `submit_analysis` |
-| 2. Gouvernance | Code | R1 Concentration par actif en conflit (preuve `E38`, 25 %), R2 et R3 en tension (`E29`, `E30`) : mêmes verdicts et mêmes preuves qu'en mode hors ligne |
+| 2. Gouvernance | Code | R1 Concentration par actif en conflit (preuve `E38`, 25 %), R2 et R3 en tension (`E29`, `E30`) : mêmes verdicts et mêmes valeurs qu'en mode hors ligne ; seuls les numéros diffèrent (`E39`, `E30`, `E31` en 4.2), car le registre numérote dans l'ordre des appels que l'agent a choisi |
 | 4. Explication | Agent explicateur (Claude Sonnet 5.5, prompt `explainer_v4`) | Premier essai, sans réparation. Phrase rendue : « Le poids de TSLA atteint 25 % et dépasse la limite de la règle **Concentration par actif** (en conflit), comme beaucoup d'oeufs dans le même panier » ; le « 25 % » vient du renvoi à la preuve `E38`, l'image du glossaire (`T3`) |
 | 5. Validation | Code | Valide, 9 renvois vérifiés, aucun rejet |
 | 6. Garde-fou | Bedrock Guardrails | Aucun sujet refusé (action `none`) ; ancrage 0,34 (faible, signalé, texte conservé), pertinence 1,0 ; 1 284 caractères de phrases du modèle contrôlés |
