@@ -83,7 +83,7 @@ Les tests automatisés (`pytest tests`) n'appellent jamais AWS : ils utilisent d
 
 Les sujets sont volontairement étroits : chaque définition précise que l'analyse historique d'une idée de placement fictive n'est pas visée. Le cas de démo ("Que se passe-t-il pour Robert si on ajoute 25 % de TSLA ?") doit passer.
 
-Le volet d'ancrage s'évalue avec `ApplyGuardrail` sur les seules phrases écrites par le modèle, avec les renvois remplacés par les valeurs que voit l'utilisateur : source = dossier d'explication, requête = question fixe, contenu = ces phrases (limite de 5000 caractères, que le texte rendu complet dépasse). Le score d'ancrage est affiché dans la trace sans écarter le texte (mode détection du plan de sprint), sauf sous un plancher de 0,3 : le texte est alors remplacé par le gabarit (`ancrage_insuffisant`), comme lorsque le garde-fou intervient, est indisponible ou ne renvoie aucun score. Un score entre 0,3 et 0,5 est signalé (`grounding_weak`) ; les scores mesurés se situent autour de 0,4. Le garde-fou complète les contrôles du code (validateur, gouvernance) ; il ne prouve pas l'exactitude factuelle. Limite assumée : seul le texte de l'explicateur passe par `ApplyGuardrail`. Les appels Converse de l'analyste n'ont pas de `guardrailConfig`, car sa sortie est structurée (idée, variantes, codes fermés) et sans prose destinée à l'utilisateur : le code la valide, et aucune phrase de l'analyste n'est affichée. Ses interventions et scores sont convertis en `GuardrailResult` (`summarize_assessment` dans `scripts/setup_guardrail.py`, à reprendre dans `bedrock_client.py` à la tâche C4).
+Le volet d'ancrage s'évalue avec `ApplyGuardrail` sur les seules phrases écrites par le modèle, avec les renvois remplacés par les valeurs que voit l'utilisateur : source = dossier d'explication, requête = question fixe, contenu = ces phrases (limite de 5000 caractères, que le texte rendu complet dépasse). Le score d'ancrage est affiché dans la trace sans écarter le texte (mode détection du plan de sprint), sauf sous un plancher de 0,3 : le texte est alors remplacé par le gabarit (`ancrage_insuffisant`), comme lorsque le garde-fou intervient, est indisponible ou ne renvoie aucun score. Un score entre 0,3 et 0,5 est signalé (`grounding_weak`). La source envoyée au garde-fou est le dossier réécrit en phrases françaises (`grounding_source.py`) : avec le dossier JSON, le texte réel de l'explicateur obtenait 0,15 à 0,47 ; avec les phrases, 0,70 à 0,91 (`docs/grounding_diagnosis.md`). Les scores des traces finales figurent dans `outputs/reports/demo_traces/`. Ce score mesure la proximité du texte avec la source, pas la justesse des statuts : un texte qui déclare conforme une règle en conflit obtient presque le même score. Les statuts restent garantis par le code (renvois, validateur, gouvernance). Le garde-fou complète les contrôles du code (validateur, gouvernance) ; il ne prouve pas l'exactitude factuelle. Limite assumée : seul le texte de l'explicateur passe par `ApplyGuardrail`. Les appels Converse de l'analyste n'ont pas de `guardrailConfig`, car sa sortie est structurée (idée, variantes, codes fermés) et sans prose destinée à l'utilisateur : le code la valide, et aucune phrase de l'analyste n'est affichée. Ses interventions et scores sont convertis en `GuardrailResult` dans `bedrock_client.py` et affichés à l'étape 6 de la trace.
 
 ## 5. Inventaire des ressources prévues
 
@@ -91,9 +91,9 @@ Préfixe `alphaforge-`. Seule la personne du flux C crée ou modifie des ressour
 
 | Ressource | Nom | Rôle | Création | État |
 | --- | --- | --- | --- | --- |
-| Garde-fou Bedrock | `alphaforge-guardrail` | Sujets refusés et ancrage contextuel | `scripts/setup_guardrail.py --apply` | Script prêt, non exécuté |
-| Compartiment S3 privé | `alphaforge-traces-<suffixe>` (préfixe `alphaforge-`, suffixe dérivé par SHA-256 du compte ou `--suffix`) | Une trace JSON sans secret par analyse et par explication en mode `bedrock` (US-16) | `scripts/setup_trace_bucket.py --apply`, vérification par `--check` | Script prêt, non exécuté |
-| Rôle d'exécution | Rôle de l'atelier pour le développement local ; rôle dédié seulement si hébergement | Inférence Bedrock, `ApplyGuardrail`, écriture S3 sur le seul compartiment des traces | À décider avec l'équipe | À faire |
+| Garde-fou Bedrock | `alphaforge-guardrail` | Sujets refusés et ancrage contextuel | `scripts/setup_guardrail.py --apply` | Créé et testé ; versions publiées et mesurées en section 7, version retenue communiquée dans le canal de l'équipe |
+| Compartiment S3 privé | `alphaforge-traces-<suffixe>` (préfixe `alphaforge-`, suffixe dérivé par SHA-256 du compte ou `--suffix`) | Une trace JSON sans secret par analyse et par explication en mode `bedrock` (US-16) | `scripts/setup_trace_bucket.py --apply`, vérification par `--check` | Créé, réglages vérifiés par `--check`, traces écrites lors des essais réels |
+| Rôle d'exécution | Rôle de l'atelier pour le développement local ; rôle dédié seulement si hébergement | Inférence Bedrock, `ApplyGuardrail`, écriture S3 sur le seul compartiment des traces | Aucun rôle dédié : le prototype tourne en local avec le rôle de l'atelier | Politique de référence ci-dessous, non appliquée |
 
 Réglages du compartiment des traces, appliqués par `setup_trace_bucket.py --apply` et contrôlés par `--check` :
 
@@ -105,11 +105,51 @@ Réglages du compartiment des traces, appliqués par `setup_trace_bucket.py --ap
 | Propriété des objets | `BucketOwnerEnforced` | ACL désactivées, le compte propriétaire possède tous les objets |
 | Étiquette | `Project=alphaforge`, ajoutée aux étiquettes existantes | Repérer la ressource dans le compte partagé |
 
-Toutes les lectures et écritures passent `ExpectedBucketOwner`, ce qui empêche d'agir sur un compartiment homonyme d'un autre compte. Le suffixe dérivé évite d'écrire le numéro de compte dans le nom ; ce n'est pas une protection forte (une recherche exhaustive réduirait le numéro à quelques centaines de candidats), et un numéro de compte n'est pas un identifiant d'authentification. Utiliser `--suffix` pour un nom sans lien avec le compte.
+Toutes les lectures et écritures, celles du script comme celles de `trace_store.py`, passent `ExpectedBucketOwner` (compte des identifiants courants, lu par STS et jamais affiché), ce qui empêche d'agir sur un compartiment homonyme d'un autre compte. Le suffixe dérivé évite d'écrire le numéro de compte dans le nom ; ce n'est pas une protection forte (une recherche exhaustive réduirait le numéro à quelques centaines de candidats), et un numéro de compte n'est pas un identifiant d'authentification. Utiliser `--suffix` pour un nom sans lien avec le compte.
 
 Permissions du rôle de console du flux C pour ce script : `sts:GetCallerIdentity`, `s3:CreateBucket`, `s3:ListBucket` (utilisé par `HeadBucket`), `s3:GetBucketPublicAccessBlock`, `s3:PutBucketPublicAccessBlock`, `s3:GetEncryptionConfiguration`, `s3:PutEncryptionConfiguration`, `s3:GetBucketPolicy`, `s3:PutBucketPolicy`, `s3:GetBucketOwnershipControls`, `s3:PutBucketOwnershipControls`, `s3:GetBucketTagging`, `s3:PutBucketTagging`, limitées à `arn:aws:s3:::alphaforge-traces-*`. Aucune action `Delete*` n'est nécessaire.
 
-Permissions minimales visées pour un éventuel rôle d'application (moindre privilège, pas de `AmazonBedrockFullAccess`) : `bedrock:InvokeModel` (utilisé par Converse) sur les modèles et profils choisis, `bedrock:ApplyGuardrail` sur `alphaforge-guardrail`, `s3:PutObject` sur le préfixe des traces et `s3:GetBucketPublicAccessBlock` sur le compartiment (le code vérifie les quatre options Block Public Access avant toute écriture et refuse d'écrire sinon). Aucune lecture S3 n'est nécessaire au code. Les actions de création de garde-fou (`bedrock:CreateGuardrail`, `UpdateGuardrail`, `CreateGuardrailVersion`, `ListGuardrails`, `GetGuardrail`) restent réservées au rôle de console du flux C.
+Permissions minimales d'un rôle d'application (moindre privilège, pas de `AmazonBedrockFullAccess`) : `bedrock:InvokeModel` (utilisé par Converse) sur les modèles et profils choisis, `bedrock:ApplyGuardrail` sur `alphaforge-guardrail`, `s3:PutObject` sur le préfixe des traces et `s3:GetBucketPublicAccessBlock` sur le compartiment (le code vérifie les quatre options Block Public Access avant toute écriture et refuse d'écrire sinon). `sts:GetCallerIdentity` ne demande aucune permission. Aucune lecture S3 n'est nécessaire au code. Les actions de création de garde-fou (`bedrock:CreateGuardrail`, `UpdateGuardrail`, `CreateGuardrailVersion`, `ListGuardrails`, `GetGuardrail`) restent réservées au rôle de console du flux C.
+
+Texte de référence pour un hébergement futur. Il n'est appliqué à aucun rôle : le prototype tourne en local avec le rôle de l'atelier. `<compte>`, `<id-garde-fou>` et `<suffixe>` sont à remplacer hors du dépôt. Les profils d'inférence `us.` acheminent l'appel vers plusieurs régions américaines, d'où la région `*` sur les modèles de fondation et sur le profil interrégional du garde-fou (niveau Standard). À valider avec le simulateur de politiques IAM avant usage.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "InferenceAgents",
+      "Effect": "Allow",
+      "Action": "bedrock:InvokeModel",
+      "Resource": [
+        "arn:aws:bedrock:us-east-1:<compte>:inference-profile/us.anthropic.claude-*",
+        "arn:aws:bedrock:*::foundation-model/anthropic.claude-*"
+      ]
+    },
+    {
+      "Sid": "GardeFou",
+      "Effect": "Allow",
+      "Action": "bedrock:ApplyGuardrail",
+      "Resource": [
+        "arn:aws:bedrock:us-east-1:<compte>:guardrail/<id-garde-fou>",
+        "arn:aws:bedrock:*:<compte>:guardrail-profile/us.guardrail.v1:0"
+      ]
+    },
+    {
+      "Sid": "VerificationCompartiment",
+      "Effect": "Allow",
+      "Action": "s3:GetBucketPublicAccessBlock",
+      "Resource": "arn:aws:s3:::alphaforge-traces-<suffixe>"
+    },
+    {
+      "Sid": "EcritureTraces",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::alphaforge-traces-<suffixe>/traces/*"
+    }
+  ]
+}
+```
 
 ## 6. Services AWS utilisés et pourquoi
 
