@@ -102,7 +102,7 @@ Résultat hors ligne de référence : verdict affiché après la demande, financ
 
 - **Robert** : TSLA 25 % dépasse sa limite de concentration par actif (25 % pour 22 %) ; tout cryptoactif est exclu de son profil.
 - **Amira** : TSLA 25 % met sa perte maximale historique en tension ; à 40 %, le cryptoactif dépasse sa limite. « Sans effet » : son portefeuille fictif détient déjà 15 % de NVDA et 10 % de BTC-USD.
-- **Mateo** : sa règle d'exclusion ESG (R7) exige des preuves ESG, qui ne sont pas intégrées. Le système la laisse en « information manquante » plutôt que de la déclarer conforme. Son **verdict financier**, calculé à part, est conforme pour TSLA 25 %, NVDA 15 % et XOM 15 %, et en conflit pour les deux demandes en cryptoactif, exclu de son profil.
+- **Mateo** : sa règle d'exclusion ESG (R7) exige des preuves ESG, qui ne sont pas intégrées. Le système la laisse en « information manquante » plutôt que de la déclarer conforme. L'interface affiche sous le verdict global deux pastilles, « Financier » et « ESG » : son **verdict financier**, calculé à part, est conforme pour TSLA 25 %, NVDA 15 % et XOM 15 %, et en conflit pour les deux demandes en cryptoactif, exclu de son profil.
 
 ### Mise à l'épreuve des hypothèses
 
