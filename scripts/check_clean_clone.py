@@ -53,8 +53,6 @@ SECRET_PATTERNS = (
     re.compile(r"aws_secret_access_key\s*=\s*['\"]?[A-Za-z0-9/+]{40}"),
     re.compile(r"aws_session_token\s*=\s*['\"]?[A-Za-z0-9/+=]{100,}", re.IGNORECASE),
 )
-# Clés factices volontaires des tests de masquage (jamais de vraies clés).
-SECRET_ALLOWLIST = frozenset({"AKIAABCDEFGHIJKLMNOP", "AKIAIOSFODNN7EXAMPLE"})
 EM_DASH = "\u2014"
 EMOJI = re.compile("[\U0001F300-\U0001FAFF\u2600-\u27BF]")
 SUMMARY_LINE = re.compile(r"(\d+) passed")
@@ -136,10 +134,8 @@ def scan_text(files: list[Path]) -> dict[str, list[str]]:
         except (UnicodeDecodeError, OSError):
             continue
         name = path.as_posix()
-        for pattern in SECRET_PATTERNS:
-            for match in pattern.findall(text):
-                if match not in SECRET_ALLOWLIST:
-                    found["secrets"].append(name)
+        if any(pattern.search(text) for pattern in SECRET_PATTERNS):
+            found["secrets"].append(name)
         if EM_DASH in text:
             found["em_dash"].append(name)
         if EMOJI.search(text):

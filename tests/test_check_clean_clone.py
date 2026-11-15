@@ -29,10 +29,11 @@ def test_scan_detects_real_looking_aws_key(tmp_path):
     assert ccc.scan_text([leaked])["secrets"] == [leaked.as_posix()]
 
 
-def test_scan_ignores_rule_text_and_fake_test_keys(tmp_path):
+def test_scan_ignores_rule_text_and_keys_built_at_runtime(tmp_path):
+    """Le texte de la règle 6 et une clé assemblée à l'exécution ne sont pas des clés écrites."""
     rule = _write(tmp_path / "CLAUDE.md", "never put access key IDs `AKIA...`/`ASIA...` in the repo\n")
-    fake = _write(tmp_path / "tests" / "t.py", "key = 'AKIAABCDEFGHIJKLMNOP'\n")
-    assert ccc.scan_text([rule, fake])["secrets"] == []
+    built = _write(tmp_path / "tests" / "t.py", 'key = "AKIA" + "QWERTYUIOP" + "ASDFGH"\n')
+    assert ccc.scan_text([rule, built])["secrets"] == []
 
 
 def test_scan_detects_em_dash_and_emoji(tmp_path):
