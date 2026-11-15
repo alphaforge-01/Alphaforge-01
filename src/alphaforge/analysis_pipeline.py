@@ -430,12 +430,15 @@ def explain(
     status = "ok"
     if not validation["is_valid"]:
         rejected = [r["code"] for r in validation["rejections"]]
+        rejected_slots = [f"{r['slot']}:{r['code']}" for r in validation["rejections"]]
         output = deps.render_template(brief)
         validation = deps.validate(output, brief)
         status = "fallback"
         trace[0]["status"] = "fallback"
         trace[0]["details"]["fallback_reason"] = "rejet_du_validateur"
         trace[0]["details"]["rejection_codes"] = rejected
+        # Emplacement et code de chaque rejet, sans aucun extrait du texte du modele : sert au diagnostic.
+        trace[0]["details"]["rejection_slots"] = rejected_slots
     trace.append(_step(5, "validation", "code", status, started, {
         "is_valid": validation["is_valid"], "checked_references": len(validation["checked_references"]),
         "rejection_codes": [r["code"] for r in validation["rejections"]],

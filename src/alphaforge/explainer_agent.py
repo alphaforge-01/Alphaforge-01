@@ -16,7 +16,7 @@ from .contracts import ExplainerOutput, ExplanationBrief
 from .prompt_loader import load_prompt
 from .tool_specs import ExplainerFailure
 
-PROMPT_NAME = "explainer_v1"
+PROMPT_NAME = "explainer_v2"
 PROMPT_VERSION = PROMPT_NAME
 # Pas de temperature : les modeles Claude recents la refusent (ValidationException, constate sur le compte).
 INFERENCE_CONFIG = {"maxTokens": 1500}
@@ -50,6 +50,27 @@ def parse_output(text: str, brief: ExplanationBrief, *, model_id: str, attempt: 
     ), None
 
 
+_GUIDANCE = {
+    "unknown_reference": "n'utilise que des renvois [E#], [G#], [T#] presents dans le dossier ; aucun autre crochet",
+    "number_outside_registry": "aucun chiffre ni nombre en lettres : remplace-le par le renvoi de sa preuve",
+    "too_long": "raccourcis cet emplacement (une ou deux phrases courtes)",
+    "forbidden_term": "remplace ce mot par une formulation neutre qui decrit seulement ce qui est observe",
+    "missing_rule_citation": "cite par son renvoi [G#] chaque regle en tension ou en conflit",
+    "slot_missing": "remplis tous les emplacements demandes",
+}
+
+
+def describe_rejections(rejections: list[dict[str, Any]], limit: int = 12) -> str:
+    """Retour de correction pour le modele : emplacement, code et extrait de chaque rejet, puis une consigne par code."""
+    lines = [
+        f"- {r.get('slot', '?')} : {r['code']} ({redact_text(str(r.get('excerpt', '')))[:60]})"
+        for r in rejections[:limit]
+    ]
+    codes = list(dict.fromkeys(r["code"] for r in rejections))
+    advice = [f"{code} : {_GUIDANCE[code]}" for code in codes if code in _GUIDANCE]
+    return "Rejets du validateur :\n" + "\n".join(lines) + ("\nConsignes : " + " ; ".join(advice) if advice else "")
+
+
 def explain_with_llm(
     client: BedrockClient,
     model_id: str | None,
@@ -79,9 +100,7 @@ def explain_with_llm(
                 raise ExplainerFailure(f"Validateur en erreur ({type(error).__name__}).") from error
             if verdict["is_valid"] or attempt == 2:
                 return output
-            codes = ", ".join(
-                f"{r['code']} ({redact_text(str(r.get('excerpt', '')))[:40]})" for r in verdict["rejections"][:6])
-            problem = f"Rejet du validateur : {codes}."
+            problem = describe_rejections(verdict["rejections"])
         last_problem = problem or last_problem
         if attempt == 1:
             try:
