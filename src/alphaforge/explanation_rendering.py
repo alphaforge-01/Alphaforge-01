@@ -47,6 +47,8 @@ _FOLD = str.maketrans("éèêëàâäîïôöùûüç’", "eeeeaaaiioouuuc'")
 _SENTENCE_END = ".;!?\n"
 STATUS_WINDOW_BEFORE = 30
 STATUS_WINDOW_AFTER = 50
+# Longueur minimale des mots qui nomment déjà une règle juste avant son renvoi (écarte "la", "des").
+MIN_NAMED_CHARS = 4
 FUNDING_FR = {"pro_rata": "au prorata des positions existantes"}
 MISSING_FR = "information manquante"
 NOT_DEFINED_FR = "non défini"
@@ -118,17 +120,66 @@ class _Registry:
         return f"[référence inconnue : {ref}]"
 
     def substitute(self, text: str) -> str:
-        """Remplace les renvois ; le statut d'un `[G..]` n'est pas répété s'il est déjà dit à côté."""
+        """Remplace les renvois par ce que lit l'utilisateur, sans répéter ce que le texte dit déjà.
+
+        - le statut d'un `[G..]` n'est pas répété s'il est déjà dit à côté ;
+        - si le texte vient de nommer la règle ("la volatilité [G2]", "la règle de concentration
+          par actif [G1]"), ces mots deviennent le libellé en gras au lieu d'être suivis du libellé ;
+        - un terme du glossaire placé en fin de proposition devient "(voir **Terme**)".
+        """
         text = text or ""
-
-        def replace(match: "re.Match[str]") -> str:
+        pieces: List[str] = []
+        cursor = 0
+        for match in REFERENCE_PATTERN.finditer(text):
             ref = match.group(1)
+            before = text[cursor:match.start()]
             check = self.checks.get(ref) if ref[0] == "G" else None
-            if check is not None and _status_already_stated(text, match.start(), match.end(), check["status"]):
-                return self.resolve(ref, show_status=False)
-            return self.resolve(ref)
+            if check is not None:
+                stated = _status_already_stated(text, match.start(), match.end(), check["status"])
+                named = _named_just_before(before, check["label_fr"])
+                if named:
+                    # Le texte nomme déjà la règle : on met ses mots en gras, complétés par le libellé exact.
+                    label = check["label_fr"]
+                    if before[len(before.rstrip()) - named].islower():
+                        label = label[0].lower() + label[1:]
+                    kept = before.rstrip()[:-named]
+                    status = "" if stated else f" ({STATUS_FR[check['status']]})"
+                    pieces.append(f"{kept}**{label}**{status}")
+                else:
+                    pieces.append(before + self.resolve(ref, show_status=not stated))
+            elif ref[0] == "T" and ref in self.glossary and _ends_clause(text, match.end()) \
+                    and not before.lower().rstrip().endswith("voir"):
+                pieces.append(f"{before.rstrip()} (voir {self.resolve(ref)})")
+            else:
+                pieces.append(before + self.resolve(ref))
+            cursor = match.end()
+        pieces.append(text[cursor:])
+        return "".join(pieces)
 
-        return REFERENCE_PATTERN.sub(replace, text)
+
+def _named_just_before(before: str, label: str) -> int:
+    """Nombre de caractères, à la fin de `before`, qui nomment déjà la règle `label` (0 sinon).
+
+    Reconnaît le libellé entier ("concentration par actif") ou son début d'au moins un mot long
+    ("volatilité" pour "Volatilité annuelle"), sans tenir compte des accents ni de la casse, et
+    seulement juste avant le renvoi. Un mot court ou un mot différent ne compte pas.
+    """
+    folded = before.rstrip().lower().translate(_FOLD)
+    words = label.lower().translate(_FOLD).split()
+    for count in range(len(words), 0, -1):
+        prefix = " ".join(words[:count])
+        if len(prefix) < MIN_NAMED_CHARS or not folded.endswith(prefix):
+            continue
+        cut = len(folded) - len(prefix)
+        if cut == 0 or not folded[cut - 1].isalnum():   # début de mot, pas la fin d'un autre mot
+            return len(prefix)
+    return 0
+
+
+def _ends_clause(text: str, end: int) -> bool:
+    """Vrai si rien ne suit le renvoi dans sa proposition (fin du texte ou ponctuation)."""
+    rest = text[end:].lstrip()
+    return not rest or rest[0] in ".,;:!?)"
 
 
 def _status_already_stated(text: str, start: int, end: int, status: str) -> bool:
@@ -172,7 +223,10 @@ def _details_table(brief: Mapping[str, Any], level: str, reg: _Registry) -> List
         lines += ["| Contrôle | Règle | Statut | Valeur | Seuil d'avertissement | Limite | Marge | Preuves |",
                   "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     else:
-        lines += ["| Règle | Statut | Mesure | Limite du profil |", "| --- | --- | --- | --- |"]
+        # Le seuil d'attention explique un statut "en tension" : sans lui, une mesure sous la limite
+        # affichée "en tension" paraît contradictoire.
+        lines += ["| Règle | Statut | Mesure | Seuil d'attention | Limite du profil |",
+                  "| --- | --- | --- | --- | --- |"]
     for check in checks:
         unit = check.get("unit", "pct")
         value = _format_value(check.get("value"), unit)
@@ -192,7 +246,7 @@ def _details_table(brief: Mapping[str, Any], level: str, reg: _Registry) -> List
             lines.append(f"| {check['check_id']} | {_cell(rule_text)} | {status} | {value} | {warn_text} "
                          f"| {limit_text} | {margin_text} | {evidence_text} |")
         else:
-            lines.append(f"| {_cell(check['label_fr'])} | {status} | {value} | {limit_text} |")
+            lines.append(f"| {_cell(check['label_fr'])} | {status} | {value} | {warn_text} | {limit_text} |")
     reasons = [(c["check_id"], c.get("missing_reason")) for c in checks
                if c["status"] == "missing_info" and c.get("missing_reason")]
     if reasons:

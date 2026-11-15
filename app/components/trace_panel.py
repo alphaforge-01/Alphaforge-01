@@ -98,12 +98,14 @@ def _step_lines(step: Mapping[str, Any]) -> List[str]:
         if details.get("denied_topics"):
             topics = ", ".join(texts.GUARDRAIL_TOPIC_LABELS.get(t, t) for t in details["denied_topics"])
             lines.append(texts.TRACE_GUARDRAIL_DENIED.format(topics=topics))
-        if details.get("grounding_below_threshold"):
+        if details.get("grounding_below_threshold") and not details.get("replaced_by_template"):
             lines.append(texts.TRACE_GUARDRAIL_BELOW_THRESHOLD)
         if details.get("error"):
             lines.append(texts.TRACE_GUARDRAIL_ERROR.format(error=details["error"]))
         if details.get("replaced_by_template"):
             lines.append(texts.TRACE_GUARDRAIL_REPLACED)
+        if details.get("grounding_score") is not None:
+            lines.append(texts.TRACE_GUARDRAIL_SCORE_NOTE)
     if details.get("fallback_reason"):
         lines.append(f"{texts.TRACE_REASON} : {_reason(details['fallback_reason'])}")
     elif name == "guardrail" and details.get("reason"):
@@ -118,10 +120,11 @@ def _step_lines(step: Mapping[str, Any]) -> List[str]:
 def _status_badge(step: Mapping[str, Any]) -> tuple:
     """Libellé et couleur de l'état. Une intervention du garde-fou n'est jamais "réussi" (règle 8)."""
     details = step.get("details") or {}
-    if step.get("name") == "guardrail" and (
-            details.get("action") == "intervened" or details.get("grounding_below_threshold")
-            or details.get("replaced_by_template")):
-        return texts.TRACE_STATUS_INTERVENTION, "orange"
+    if step.get("name") == "guardrail":
+        if details.get("action") == "intervened" or details.get("replaced_by_template"):
+            return texts.TRACE_STATUS_INTERVENTION, "orange"
+        if details.get("grounding_below_threshold"):   # signalé, mais le texte du modèle reste affiché
+            return texts.TRACE_STATUS_FLAGGED, "orange"
     status = step.get("status")
     return (texts.TRACE_STATUSES.get(status, status),
             "orange" if status in ("fallback", "error") else "gray")

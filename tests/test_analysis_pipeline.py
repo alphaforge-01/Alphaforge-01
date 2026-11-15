@@ -256,7 +256,32 @@ def test_explain_bedrock_valid_llm_text_is_kept_and_grounding_reflected():
     kind, source, query, answer = client.calls[0]
     from alphaforge.analysis_pipeline import _model_text
     # le garde-fou recoit les phrases du modele (limite de 5000 caracteres), pas le texte rendu complet
-    assert answer == _model_text(explanation["output"], explanation["brief"]) and "brief_id" in source
+    assert answer == _model_text(explanation["output"], explanation["brief"])
+    # la source est le dossier en phrases francaises, pas son JSON (docs/grounding_diagnosis.md)
+    from alphaforge.grounding_source import build_grounding_source
+    assert source == build_grounding_source(explanation["brief"]) and "brief_id" not in source
+    assert step6["details"]["source_kind"] == "sentences"
+    assert step6["details"]["source_chars"] == len(source)
+
+
+def test_explain_bedrock_grounding_source_falls_back_to_json(monkeypatch):
+    """Si la reecriture en phrases echoue, le controle a quand meme lieu, sur le JSON du dossier."""
+    from alphaforge import grounding_source
+
+    def broken(brief):
+        raise RuntimeError("reecriture impossible")
+
+    monkeypatch.setattr(grounding_source, "build_grounding_source", broken)
+    deps = fixture_deps()
+    result = run("robert", deps=deps)
+    client = FakeClient(grounding=guardrail("output_grounding", "none", grounding=0.82, relevance=0.9))
+    explanation = explain(
+        result, "novice", "bedrock", deps=deps, client=client, config=GUARDRAIL_CONFIG,
+        explainer_runner=lambda c, m, brief, validate: llm_output(deps, result))
+    step6 = explanation["trace"][2]
+    source = client.calls[0][1]
+    assert "brief_id" in source and step6["details"]["source_kind"] == "json"
+    assert explanation["output"]["origin"] == "llm"
 
 
 def test_explain_bedrock_runner_error_falls_back_with_reason():

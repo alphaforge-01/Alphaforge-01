@@ -416,8 +416,15 @@ TRACE_GUARDRAIL_ACTIONS = {
     "not_run": "contrôle non exécuté",
 }
 TRACE_STATUS_INTERVENTION = "intervention"
+TRACE_STATUS_FLAGGED = "signalé"
+TRACE_GUARDRAIL_SCORE_NOTE = (
+    "Le score d'ancrage mesure la proximité du texte avec le dossier, pas l'exactitude des statuts : "
+    "celle-ci vient du code (renvois vérifiés, validateur, statuts calculés par la gouvernance)."
+)
 TRACE_GUARDRAIL_DENIED = "Sujet refusé : {topics}."
-TRACE_GUARDRAIL_BELOW_THRESHOLD = "Ancrage sous le seuil : le texte du modèle n'est pas montré."
+TRACE_GUARDRAIL_BELOW_THRESHOLD = (
+    "Ancrage sous le seuil du garde-fou : signalé, sans écarter le texte (mode détection)."
+)
 TRACE_GUARDRAIL_ERROR = "Le contrôle d'ancrage a échoué ({error})."
 TRACE_GUARDRAIL_REPLACED = "Le texte du modèle a été remplacé par le gabarit."
 TRACE_SAVED = "Trace enregistrée sur S3 : {location}."
@@ -441,6 +448,7 @@ REASON_CODES_FR = {
     "rejet_du_validateur": "texte rejeté par le validateur",
     "garde_fou_indisponible": "garde-fou indisponible",
     "garde_fou_sortie": "texte refusé par le garde-fou",
+    "ancrage_insuffisant": "ancrage trop faible, sous le plancher du pipeline",
     "mode_offline": "mode hors ligne",
     "non_execute": "non exécuté",
     "bucket_non_configure": "compartiment non configuré",

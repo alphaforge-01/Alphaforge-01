@@ -1,6 +1,6 @@
 # Diagnostic de l'ancrage de l'agent explicateur
 
-Statut : diagnostic du 14 au 15 novembre 2026, mesuré sur le compte AWS de l'atelier. Branche : `fix/explainer-grounding`. Correctif proposé au flux C, pas encore branché dans le pipeline.
+Statut : diagnostic du 14 au 15 novembre 2026, mesuré sur le compte AWS de l'atelier. Le correctif 1 (source en phrases) est branché dans le pipeline depuis la branche `fix/explainer-grounding-wording` ; il reste à remesurer sur le compte, car ce branchement a été fait sans identifiants AWS.
 
 ## En bref
 
@@ -78,9 +78,9 @@ Le script mesure chaque texte (gabarit, explicateur avec `--explainer`) et son t
 
 ## Correctifs proposés (flux C, à valider par Godwin)
 
-1. **Source du contrôle.** À l'étape 6 de `explain`, remplacer `json.dumps(brief, ensure_ascii=False)` par `build_grounding_source(brief)` (import depuis `.grounding_source`). L'explicateur continue de recevoir le dossier JSON ; seule la source du contrôle change, et elle ne contient que le contenu du dossier et les avertissements fixes.
+1. **Source du contrôle (fait).** `analysis_pipeline._grounding_source` envoie `build_grounding_source(brief)` et se rabat sur le JSON si la réécriture échoue ; la trace note `source_kind` et `source_chars`. Proposition d'origine : à l'étape 6 de `explain`, remplacer `json.dumps(brief, ensure_ascii=False)` par `build_grounding_source(brief)` (import depuis `.grounding_source`). L'explicateur continue de recevoir le dossier JSON ; seule la source du contrôle change, et elle ne contient que le contenu du dossier et les avertissements fixes.
 2. **Rôle du score.** Garder le mode détection. Le plancher de 0,3 peut rester comme filet contre un texte hors sujet, mais le score ne doit ni bloquer ni être présenté comme une vérification des statuts : le témoin montre qu'il ne la fait pas.
-3. **Requête du contrôle.** Elle est écrite en dur dans `explain` ; le script en garde une copie, vérifiée par un test (`test_query_matches_pipeline_literal`). Une constante publique dans le pipeline supprimerait cette copie.
+3. **Requête du contrôle (fait en partie).** Elle est maintenant la constante `GROUNDING_QUERY` du pipeline, au texte inchangé pour que les mesures restent comparables. Constat d'origine : elle est écrite en dur dans `explain` ; le script en garde une copie, vérifiée par un test (`test_query_matches_pipeline_literal`). Une constante publique dans le pipeline supprimerait cette copie.
 4. **Plafond de jetons.** Inutile avec Sonnet. À relever (par exemple 4 000) seulement si l'explicateur passe à Haiku.
 
 ## Limites de ce diagnostic
@@ -88,3 +88,14 @@ Le script mesure chaque texte (gabarit, explicateur avec `--explainer`) et son t
 - Petit échantillon : dix textes, un seul essai chacun. Le classifieur du garde-fou n'est pas parfaitement stable d'un essai à l'autre (voir `docs/technical_documentation.md`).
 - L'indicateur lexical hors ligne n'est qu'un indice ; seuls les scores du compte comptent.
 - Le témoin ne teste que l'inversion des statuts, pas un chiffre attribué à la mauvaise règle.
+
+## Autres défauts de l'explication corrigés avec ce branchement
+
+Relevés en relisant les textes réels des traces de démonstration (`outputs/reports/demo_traces/`) et le texte de repli :
+
+- **Règle nommée deux fois.** Le modèle écrit "la règle de concentration par actif [G1]" et le renvoi était remplacé par le libellé, d'où "la règle de concentration par actif **Concentration par actif**". Le rendu met maintenant en gras les mots déjà écrits ("la règle de **concentration par actif**", "la **volatilité annuelle**") au lieu de répéter le libellé. Un terme du glossaire placé en fin de proposition devient "(voir **Terme**)".
+- **Variantes sans libellé.** Le texte de repli donnait "Mesures : 13,43 %, 19,91 %, 17 %, 53,95 % et 17 %". Chaque valeur est maintenant précédée de ce qu'elle mesure.
+- **Tableau novice.** Il ne montrait que la limite : une mesure "en tension" sous la limite paraissait contradictoire. Il montre aussi le seuil d'attention.
+- **Trace de l'interface.** Un ancrage sous le seuil du garde-fou mais au-dessus du plancher était décrit comme "le texte du modèle n'est pas montré", alors que le pipeline le garde. Le libellé dit maintenant "signalé, sans écarter le texte", et rappelle ce que le score mesure.
+
+Non fait, à tester sur le compte avant de l'activer : dire au modèle, dans le prompt, par quoi chaque renvoi est remplacé, pour qu'il n'écrive plus le nom de la règle à côté de son renvoi.

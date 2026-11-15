@@ -80,6 +80,31 @@ def test_check_reference_becomes_label_and_governance_status():
     assert "**Part défensive minimale** (conforme)" in text
 
 
+def test_rule_already_named_before_reference_is_not_repeated():
+    """Cas relevés dans les traces réelles : le modèle nomme la règle puis met son renvoi."""
+    brief = make_brief()
+    text = render_markdown(output_with(
+        summary="La règle de concentration par actif [G1] est en conflit. La volatilité [G2] reste en tension."), brief)
+    assert "La règle de **concentration par actif** est en conflit." in text
+    assert "La **volatilité annuelle** reste en tension." in text
+    assert "actif **Concentration" not in text and "volatilité **Volatilité" not in text
+
+
+def test_rule_named_elsewhere_keeps_label_and_status():
+    text = render_markdown(output_with(summary="La mesure dépasse la limite de la règle [G1]."), make_brief())
+    assert "la règle **Concentration par actif** (en conflit)." in text
+
+
+def test_trailing_glossary_term_is_introduced_by_voir():
+    text = render_markdown(output_with(summary="Comme des hauts et des bas [T1]. La [T1] compte."), make_brief("novice"))
+    assert "des bas (voir **Volatilité**)." in text and "La **Volatilité** compte." in text
+
+
+def test_novice_table_shows_attention_threshold():
+    """Une mesure "en tension" sous la limite se comprend grâce au seuil d'attention."""
+    assert "| Règle | Statut | Mesure | Seuil d'attention | Limite du profil |" in rendered("novice")
+
+
 def test_term_reference_becomes_glossary_term_and_listed():
     text = render_markdown(output_with(summary="Voir [T1]."), make_brief("novice"))
     assert "Voir **Volatilité**." in text
@@ -243,14 +268,15 @@ def test_pipe_in_text_does_not_break_table():
     brief["checks"][0]["label_fr"] = "Règle | piégée"
     text = render_markdown(render_template(brief), brief)
     row = next(line for line in text.splitlines() if line.startswith("| Règle / piégée"))
-    assert row.count("|") == 5
+    assert row.count("|") == 6   # cinq colonnes au niveau novice, dont le seuil d'attention
 
 
 def test_numbers_in_rendering_come_from_registry_checks_or_idea():
     """Tout nombre du rendu vient du registre, des contrôles, de l'idée ou des textes fixes."""
     text = rendered("novice")
     numbers = set(re.findall(r"(?<![A-Za-z])\d+(?:,\d+)?", text))
-    allowed = {"25", "21", "29", "41,25", "22", "20", "35", "30", "2021", "11", "12", "2026", "1", "2"}  # "1" et "2" : numérotation des facteurs
+    allowed = {"25", "21", "29", "41,25", "22", "20", "35", "30", "2021", "11", "12", "2026", "1", "2",
+               "16", "40"}  # "1" et "2" : numérotation des facteurs ; "16" et "40" : seuils d'attention des contrôles
     assert numbers <= allowed, numbers - allowed
 
 
