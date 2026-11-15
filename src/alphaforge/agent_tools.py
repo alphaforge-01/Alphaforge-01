@@ -65,6 +65,7 @@ MISSING_DATA_ERRORS = (InsufficientDataError, MissingPriceError, MissingFxRateEr
 
 ASSET_FACT_LIMITS = ["LM1", "LM2", "LM3", "LM5"]
 WEIGHT_LIMITS = ["LM4"]
+CORRELATION_LIMITS = ["LM1", "LM2", "LM3", "LM4"]
 COMPOSITION_LIMITS = ["LM1", "LM4"]
 CURRENCY_LIMITS = ["LM3", "LM4"]
 DELTA_METRICS = ("volatility_ann", "max_drawdown", "top_asset_weight", "defensive_share")
@@ -298,10 +299,27 @@ def _delta_entries(tool: str, before: PortfolioSnapshot, after: PortfolioSnapsho
     return entries
 
 
+def _correlation_entries(tool: str, snapshot: PortfolioSnapshot, metrics: ReturnMetrics,
+                         as_of: str) -> list[EvidenceEntry]:
+    """Preuve du plus grand groupe corrélé, absente quand la mesure est indisponible (information manquante)."""
+    value = snapshot.get("largest_correlated_group_weight")
+    if value is None:
+        return []
+    members = snapshot.get("correlated_group_members") or []
+    label = (f"Poids du plus grand groupe corrélé ({', '.join(members)})" if members
+             else "Poids du plus grand groupe corrélé (aucun groupe)")
+    return [make_entry(tool_name=tool, metric="largest_correlated_group_weight", subject=snapshot["subject"],
+                       value=value, display_value=percent_display(value), as_of=as_of,
+                       limit_ids=CORRELATION_LIMITS, period_start=metrics.period_start,
+                       period_end=metrics.period_end, n_observations=metrics.n_observations,
+                       currency=BASE_CURRENCY, source_ids=PRICE_SOURCES, label_fr=label)]
+
+
 def _portfolio_evidence(tool: str, snapshot: PortfolioSnapshot, metrics: ReturnMetrics,
                         as_of: str, capital_cad: float | None) -> list[EvidenceEntry]:
     return (_series_entries(tool, snapshot["subject"], metrics, as_of, ALL_LIMITS, capital_cad)
-            + _composition_entries(tool, snapshot, as_of))
+            + _composition_entries(tool, snapshot, as_of)
+            + _correlation_entries(tool, snapshot, metrics, as_of))
 
 
 # --- Outils ----------------------------------------------------------------------

@@ -90,7 +90,7 @@ def render_idea_panel(universe: List[Dict[str, Any]], portfolio: Mapping[str, An
     presets = [preset for preset in texts.IDEA_PRESETS if preset["ticker"] in names]
     for column, preset in zip(st.columns(len(presets) or 1), presets):
         with column:
-            st.button(preset["label"], key=f"idea_preset_{preset['ticker']}", width="stretch",
+            st.button(preset["label"], key=f"idea_preset_{preset['ticker']}_{round(preset['target_weight'] * 100)}", width="stretch",
                       on_click=on_submit, args=(make_idea(preset["ticker"], preset["target_weight"]),))
 
     _init_widgets(idea, tickers)

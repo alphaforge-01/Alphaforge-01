@@ -46,13 +46,20 @@ def render_comparison(result: Mapping[str, Any], ctx: ProofContext, names: Mappi
         after = lookup(index, metric, "portfolio_after")
         delta = lookup(index, f"{metric}_delta", "portfolio_after")
         label_col, before_col, after_col, delta_col = st.columns(widths, vertical_alignment="center")
-        label_col.markdown((after or before or {}).get("label_fr", metric))
+        # Un libellé qui nomme les titres d'un groupe serait faux pour l'autre colonne.
+        label_col.markdown(texts.METRIC_LABELS.get(metric)
+                           or (after or before or {}).get("label_fr", metric))
         for column, entry, subject in ((before_col, before, "portfolio_before"),
                                        (after_col, after, "portfolio_after")):
             with column:
                 render_value(entry, ctx, key=f"cmp_{metric}_{subject}")
                 if metric == "top_asset_weight" and top.get(subject):
                     st.caption(top[subject])
+                if metric == "largest_correlated_group_weight":
+                    snapshot = result["snapshot_before" if subject == "portfolio_before" else "snapshot_after"]
+                    members = snapshot.get("correlated_group_members")
+                    if members:
+                        st.caption(", ".join(members))
         with delta_col:
             if delta is not None:
                 render_value(delta, ctx, key=f"cmp_{metric}_delta")

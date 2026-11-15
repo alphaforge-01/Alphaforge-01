@@ -19,7 +19,7 @@ Un agent agit, le code juge, un agent explique.
 31 actifs, prix quotidiens Yahoo Finance (2021-11-12 au 2026-11-12), taux USD/CAD de la Banque du Canada, séries FRED. Prix convertis en CAD, calendrier commun, rendements sur `adj_close`. Personas et seuils : fictifs, hypothèses de l'équipe.
 
 ## Gouvernance et explicabilité
-- 6 règles financières par profil, plus une règle ESG pour une exigence ESG forte (Mateo). 4 statuts : conforme, tension, conflit, information manquante. Une donnée absente donne "information manquante", jamais "conforme".
+- 6 règles financières par profil, plus une règle ESG pour une exigence ESG forte (Mateo) et un plafond par groupe corrélé pour Amira. 4 statuts : conforme, tension, conflit, information manquante. Une donnée absente donne "information manquante", jamais "conforme".
 - Aucune preuve ESG n'existe : la règle ESG reste en "information manquante". Un verdict financier conforme n'est donc pas une vérification ESG.
 - Le validateur rejette un chiffre hors registre (même en lettres), un renvoi inconnu, une recommandation ou prévision, une règle non citée.
 - Quatre avertissements et cinq limites obligatoires, au texte fixe par niveau. Chaque preuve porte source, période, devise et limites.

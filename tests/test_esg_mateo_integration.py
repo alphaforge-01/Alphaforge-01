@@ -58,11 +58,12 @@ def test_verdicts_of_the_demo_scenarios(results):
         assert result["governance_after"]["overall_status"] == expected, key
 
 
-def test_robert_and_amira_have_no_esg_rule_and_keep_six_rules(results):
+def test_robert_and_amira_have_no_esg_rule_and_keep_their_rules(results):
     for (persona, _), result in results.items():
         if persona != "mateo":
             assert all(c["rule_type"] != "esg_exclusion" for c in result["governance_after"]["checks"])
-            assert len(result["governance_after"]["checks"]) == 6
+            # Amira a une règle de plus : le plafond par groupe corrélé (P2).
+            assert len(result["governance_after"]["checks"]) == (7 if persona == "amira" else 6)
 
 
 def test_mateo_esg_check_is_missing_info_before_and_after(results):

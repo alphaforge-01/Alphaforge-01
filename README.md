@@ -175,6 +175,7 @@ tests/            Tests automatisés (aucun appel AWS)
 - **Historique court** : cinq ans, un seul épisode de baisse marquée (2022). La volatilité est un indicateur de risque parmi d'autres.
 - **Seuils des règles** : hypothèses de l'équipe, pas des normes réglementaires.
 - **ESG** : aucune donnée ESG n'est intégrée. Pour un profil à forte préférence ESG (Mateo), la règle d'exclusion ESG rend « information manquante » au lieu d'un faux « conforme ». Pour les autres profils, un verdict « conforme » ne dit rien de l'ESG.
+- **Groupe corrélé (Amira)** : seuil de corrélation de 0,80 choisi après examen des données, mesure très sensible à la fenêtre de dates (détail dans `docs/technical_documentation.md`).
 - **Concentration en actions individuelles (R6)** : la règle compte les actions détenues directement, pas les FNB d'actions.
 - **Données publiques gratuites**, non certifiées ; valeurs FRED révisées.
 - Le garde-fou Bedrock complète les contrôles du code mais ne prouve pas l'exactitude factuelle.

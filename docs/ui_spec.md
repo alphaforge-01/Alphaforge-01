@@ -143,7 +143,8 @@ Terminé quand : la scène 1 se joue en mode `fixture` sans erreur, l'avertissem
 - [x] D6. Trace à six étapes : acteur, statut, durée, modèle, outils appelés avec paramètres et preuves, raisons de repli, scores du garde-fou, trace S3, "Ce que l'explicateur a vu" (US-13)
 - [x] D7. Test du garde-fou : requêtes prédéfinies du flux C, permises et refusées, verdict en conversation avec le résultat attendu (US-14)
 - [x] D8. Sources et méthode : provenance des données, limites fixes, hypothèse des seuils, univers des actifs (US-11)
-- [ ] D10 (P2). Deux profils côte à côte (US-19), seulement si J4 est vert
+- [x] US-18 (P2). Groupe corrélé : carte en radiographie et dans la comparaison, période, jours communs et méthode lus dans la preuve, règle R7 d'Amira, idée "40 % dans BTC-USD".
+- [ ] D10 (P2). Deux profils côte à côte (US-19) : abandonné sur décision de l'équipe
 
 Terminé quand : les scènes 1 à 5 se jouent en mode `offline` et en mode `bedrock`, et l'application est sur `main` avant dimanche 23 h 59.
 
