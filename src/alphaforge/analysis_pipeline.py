@@ -41,9 +41,11 @@ from .tool_specs import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 VALID_MODES = ("offline", "bedrock")
-# Sous ce score d'ancrage, le texte du modele est remplace par le gabarit : un ancrage aussi bas a signale, a
-# l'essai reel, une erreur de sens que le validateur ne peut pas voir (mesure rattachee a la mauvaise chose).
-# Entre ce plancher et le seuil du garde-fou, le texte reste affiche avec la mention "ancrage faible".
+# Sous ce score d'ancrage, le texte du modele reste affiche mais avec la mention "ancrage tres faible" : decision
+# de l'equipe (15 novembre), pour que l'utilisateur voie le texte de l'agent et son signal. Un ancrage aussi bas a
+# signale, a l'essai reel, une erreur de sens que le validateur ne peut pas voir (mesure rattachee a la mauvaise
+# chose) : le signal doit donc rester visible dans l'explication, pas seulement dans la trace. Le texte du modele
+# est toujours remplace par le gabarit si le garde-fou intervient (sujet refuse) ou ne rend aucun score.
 GROUNDING_FLOOR = 0.3
 # Requete fixe du controle d'ancrage (copie verifiee par un test dans scripts/diagnose_grounding.py).
 GROUNDING_QUERY = "Explique le resultat de l'analyse."
@@ -557,9 +559,13 @@ def explain(
         # aucun nombre invente). Un ancrage faible est donc signale dans la trace, sans ecarter le texte.
         guard_details["grounding_weak"] = True
     score = guardrail["grounding_score"]
-    below_floor = guardrail["action"] == "none" and score is not None and score < GROUNDING_FLOOR
     # Un controle sans score d'ancrage n'a rien verifie : le texte du modele est alors traite comme non verifiable.
-    verified = guardrail["action"] == "none" and score is not None and score >= GROUNDING_FLOOR
+    verified = guardrail["action"] == "none" and score is not None
+    very_weak = verified and score < GROUNDING_FLOOR
+    if very_weak:
+        guard_details["grounding_weak"] = True
+        guard_details["grounding_very_weak"] = True
+        guard_details["grounding_floor"] = GROUNDING_FLOOR
     if output["origin"] == "llm" and not verified:
         # Le texte du modele n'est affiche que si le garde-fou l'a verifie et ne l'a pas refuse : un sujet interdit
         # (intervention), une erreur ou un controle impossible (taille) donnent le gabarit construit par le code.
@@ -569,15 +575,16 @@ def explain(
         markdown = deps.render_markdown(output, brief)
         trace[0]["status"] = "fallback"
         trace[0]["details"]["fallback_reason"] = (
-            "garde_fou_indisponible" if unavailable else "ancrage_insuffisant" if below_floor else "garde_fou_sortie")
-        if below_floor:
-            guard_details["grounding_floor"] = GROUNDING_FLOOR
+            "garde_fou_indisponible" if unavailable else "garde_fou_sortie")
         guard_details["replaced_by_template"] = True
         if guardrail["denied_topics"]:
             guard_details["denied_topics"] = guardrail["denied_topics"]
         if cache is not None and cache_key and from_cache:
             cache.discard(cache_key)
-    elif cache is not None and cache_key and output["origin"] == "llm" and validation["is_valid"] and not from_cache:
+    elif very_weak and cache is not None and cache_key and from_cache:
+        cache.discard(cache_key)   # un texte tres peu ancre ne doit pas etre reaffiche tel quel depuis le cache
+    elif (cache is not None and cache_key and output["origin"] == "llm" and validation["is_valid"]
+          and not from_cache and not very_weak):
         cache.put(cache_key, output)
     trace.append(_step(6, "guardrail", "guardrail", guard_status, started, guard_details))
 

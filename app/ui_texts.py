@@ -502,6 +502,17 @@ TRACE_GUARDRAIL_DENIED = "Sujet refusé : {topics}."
 TRACE_GUARDRAIL_BELOW_THRESHOLD = (
     "Ancrage sous le seuil du garde-fou : signalé, sans écarter le texte (mode détection)."
 )
+TRACE_GUARDRAIL_VERY_WEAK = (
+    "Ancrage sous le plancher de {floor} : le texte du modèle est affiché, avec un signal d'ancrage très faible."
+)
+EXPLANATION_GROUNDING_WEAK = (
+    "Ancrage faible (score {score}) : ce texte est moins proche du dossier que d'habitude. Les chiffres, les statuts "
+    "et les renvois viennent du code. Vérifie le détail des contrôles avant de t'y fier."
+)
+EXPLANATION_GROUNDING_VERY_WEAK = (
+    "Ancrage très faible (score {score}) : ce texte s'éloigne nettement du dossier. Les chiffres, les statuts et les "
+    "renvois viennent du code, mais la formulation peut mal rattacher une mesure. Appuie-toi sur le détail des contrôles."
+)
 TRACE_GUARDRAIL_ERROR = "Le contrôle d'ancrage a échoué ({error})."
 TRACE_GUARDRAIL_REPLACED = "Texte du modèle remplacé par le gabarit."
 TRACE_SAVED = "Trace enregistrée sur S3 : {location}."
