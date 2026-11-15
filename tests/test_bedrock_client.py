@@ -311,3 +311,28 @@ def test_apply_guardrail_without_configuration_raises():
     with pytest.raises(BedrockError):
         client.apply_guardrail("INPUT", [])
     assert client.runtime.calls == []
+
+
+# ---- la raison fournie par AWS aide au diagnostic, masquee et tronquee ----
+
+def test_validation_error_carries_the_masked_aws_reason():
+    reason = f"inferenceConfig.temperature: parametre non pris en charge ({FAKE_ARN})"
+    client, _ = make_client([client_error("ValidationException", reason)])
+    with pytest.raises(BedrockError) as info:
+        client.converse("m", [])
+    text = str(info.value)
+    assert "ValidationException" in text and "temperature" in text
+    assert FAKE_ACCOUNT not in text and "arn:aws" not in text
+
+
+def test_aws_reason_is_truncated():
+    client, _ = make_client([client_error("ValidationException", "x" * 5000)])
+    with pytest.raises(BedrockError) as info:
+        client.converse("m", [])
+    assert len(str(info.value)) < 450
+
+
+def test_agents_never_send_a_temperature():
+    from alphaforge.analyst_agent import INFERENCE_CONFIG as analyst_config
+    from alphaforge.explainer_agent import INFERENCE_CONFIG as explainer_config
+    assert "temperature" not in analyst_config and "temperature" not in explainer_config

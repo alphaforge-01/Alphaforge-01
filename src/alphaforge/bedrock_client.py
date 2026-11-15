@@ -239,7 +239,11 @@ class BedrockClient:
                     self.retry_count += 1
                     self._sleep(self._delay(attempt))
                     continue
-                raise BedrockError(f"Erreur Bedrock sur {operation} ({code}).", code=code) from None
+                # La raison fournie par AWS (par exemple "temperature : parametre non pris en charge") est
+                # indispensable pour diagnostiquer une requete refusee. Elle est masquee puis tronquee.
+                detail = redact_text(str(error.response.get("Error", {}).get("Message", "")))[:300].strip()
+                suffix = f" : {detail}" if detail else "."
+                raise BedrockError(f"Erreur Bedrock sur {operation} ({code}){suffix}", code=code) from None
             except BotoCoreError as error:
                 raise BedrockError(f"Erreur reseau ou configuration sur {operation} : {type(error).__name__}.") from None
         raise BedrockError(f"Appel {operation} sans resultat.")  # pragma: no cover

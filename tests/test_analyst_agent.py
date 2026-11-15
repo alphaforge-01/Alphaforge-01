@@ -99,7 +99,7 @@ def test_nominal_three_turns():
     assert [t["toolSpec"]["name"] for t in first["tool_config"]["tools"]] == [
         "analyze_portfolio", "get_asset_facts", "simulate_portfolio_change", "submit_analysis"]
     assert first["tool_config"]["tools"] == TOOL_SPECS
-    assert first["inference_config"]["temperature"] == 0 and first["inference_config"] == INFERENCE_CONFIG
+    assert "temperature" not in first["inference_config"] and first["inference_config"] == INFERENCE_CONFIG
     assert [c["tool_name"] for c in toolbox.calls] == ["analyze_portfolio", "simulate_portfolio_change"]
     assert toolbox.calls[1]["params"] == IDEA
 
