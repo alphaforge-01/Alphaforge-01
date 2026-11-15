@@ -15,6 +15,7 @@ Noms seulement (voir `.env.example`). Les valeurs vivent dans le terminal dédi�
 | `ALPHAFORGE_MODE` | `bedrock` ou `offline` | Équipe |
 | `ALPHAFORGE_ANALYST_MODEL_ID` | Modèle ou profil d'inférence de l'agent analyste | Choisi après `check_aws_access.py` |
 | `ALPHAFORGE_EXPLAINER_MODEL_ID` | Modèle de l'agent explicateur (même modèle au départ) | Idem |
+| `ALPHAFORGE_CONVERSATION_MODEL_ID` | Modèle de l'agent conversationnel (issue 78), facultatif : par défaut celui de l'explicateur | Idem |
 | `ALPHAFORGE_GUARDRAIL_ID`, `ALPHAFORGE_GUARDRAIL_VERSION` | Garde-fou à appliquer | Sortie de `setup_guardrail.py --apply` |
 | `ALPHAFORGE_TRACE_BUCKET` | Compartiment S3 privé des traces | Nom affiché par `setup_trace_bucket.py --apply` ou `--check` |
 

@@ -116,6 +116,8 @@ class BedrockConfig:
     guardrail_id: str | None = None
     guardrail_version: str | None = None
     trace_bucket: str | None = None
+    # Agent conversationnel (#78) : modele a mesurer entre Haiku et Sonnet. Repli sur celui de l'explicateur.
+    conversation_model_id: str | None = None
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "BedrockConfig":
@@ -135,6 +137,7 @@ class BedrockConfig:
             guardrail_id=get("ALPHAFORGE_GUARDRAIL_ID"),
             guardrail_version=get("ALPHAFORGE_GUARDRAIL_VERSION"),
             trace_bucket=get("ALPHAFORGE_TRACE_BUCKET"),
+            conversation_model_id=get("ALPHAFORGE_CONVERSATION_MODEL_ID") or explainer,
         )
 
     @property

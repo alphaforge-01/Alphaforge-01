@@ -247,6 +247,47 @@ class ExplanationResult(TypedDict):
     brief: NotRequired[ExplanationBrief]   # dossier lu par l'explicateur, facultatif (ajout rétrocompatible)
 
 
+# ---- Agent conversationnel (issue 78) : questions de profil et "pourquoi" ----
+
+AnswerKind = Literal["profile", "xray", "explanation", "what_changes", "concept"]
+
+
+class ConversationBrief(TypedDict):     # seule entrée de l'agent conversationnel, construite par le code
+    brief_id: str
+    level: Level
+    answer_kind: AnswerKind
+    focus: list[str]                    # identifiants E#, G# ou T# mis en avant par le code
+    question: str                       # question de l'utilisateur, jamais écrite dans les traces
+    profile_context: ProfileContext | None
+    evidence: list[EvidenceEntry]
+    checks: list[RuleCheck]
+    idea: InvestmentIdea | None         # None : question sans idée analysée
+    glossary: list[dict]
+    limits: list[dict]
+    cards: list[dict]                   # fiches pédagogiques F#, vides sans accord d'un mentor
+    missing: list[str]                  # informations absentes, à dire comme telles
+
+
+class ConversationReply(TypedDict):
+    brief_id: str
+    answer: str                         # texte avec renvois [E#] [G#] [T#], aucun chiffre en clair
+    origin: Literal["llm", "template"]
+    model_id: str | None
+    prompt_version: str | None
+    attempt: int                        # 0 : texte du code
+
+
+class ConversationResult(TypedDict):
+    reply: ConversationReply
+    validation: ValidationResult
+    guardrail: GuardrailResult
+    rendered_answer: str                # renvois remplacés par les valeurs du registre
+    trace: list[TraceStep]              # réponse, validation, garde-fou
+    cited_evidence: NotRequired[list[str]]   # preuves citées par la réponse affichée (sections de l'interface)
+    cited_terms: NotRequired[list[str]]      # termes du glossaire cités
+    validation_skipped: NotRequired[str]     # raison si la validation n'a pas eu lieu : `validation` est alors neutre
+
+
 def _is_not_required(annotation: object) -> bool:
     """Vrai si l'annotation est `NotRequired[...]`, écrite en texte ou évaluée.
 

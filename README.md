@@ -55,6 +55,7 @@ Le compte AWS est un compte temporaire Workshop Studio partagé par l'équipe, r
 | `AWS_REGION` | `us-east-1` |
 | `ALPHAFORGE_MODE` | `offline`, `bedrock` ou `fixture` |
 | `ALPHAFORGE_ANALYST_MODEL_ID`, `ALPHAFORGE_EXPLAINER_MODEL_ID` | Modèle ou profil d'inférence Bedrock vérifié dans le compte |
+| `ALPHAFORGE_CONVERSATION_MODEL_ID` | Facultatif : modèle de l'agent conversationnel, par défaut celui de l'explicateur |
 | `ALPHAFORGE_GUARDRAIL_ID`, `ALPHAFORGE_GUARDRAIL_VERSION` | Garde-fou créé par `scripts/setup_guardrail.py --apply` |
 | `ALPHAFORGE_TRACE_BUCKET` | Compartiment S3 privé des traces (facultatif) |
 
