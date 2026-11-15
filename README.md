@@ -86,6 +86,8 @@ En mode `bedrock`, un texte rédigé par le modèle n'est affiché que si le gar
 .venv/Scripts/python scripts/run_scenarios.py --mode bedrock --persona robert   # agents réels (quotas partagés)
 ```
 
+Pour tout revérifier comme le jury, à partir de GitHub seulement : `.venv/Scripts/python scripts/check_clean_clone.py`. Le script clone `main` dans un dossier vide, installe `requirements.txt` dans un environnement neuf, lance les tests, les scénarios, la sensibilité (rapport identique octet pour octet au rapport versionné) et l'interface sans navigateur, et contrôle l'absence de secrets, de tirets cadratins et de fichiers interdits à la racine.
+
 `run_scenarios.py` écrit un rapport dans `outputs/reports/scenarios/` (ignoré par Git) : verdicts global, financier et ESG, contrefactuels, variantes, textes d'explication et taux de rejet du validateur.
 
 Résultat hors ligne de référence : verdict affiché après la demande, financement au prorata, données jusqu'au 12 novembre 2026.
