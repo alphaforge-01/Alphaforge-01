@@ -29,6 +29,7 @@ installation impossible.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
@@ -101,8 +102,9 @@ class Report:
 def run(command: list, cwd: Path, timeout: int = 1800) -> tuple[int, str, float]:
     """Exécute une commande ; rend (code, sortie combinée, durée)."""
     start = time.perf_counter()
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}  # accents des sous-processus lisibles
     proc = subprocess.run(command, cwd=cwd, capture_output=True, text=True, encoding="utf-8",
-                          errors="replace", timeout=timeout)
+                          errors="replace", timeout=timeout, env=env)
     return proc.returncode, (proc.stdout or "") + (proc.stderr or ""), time.perf_counter() - start
 
 

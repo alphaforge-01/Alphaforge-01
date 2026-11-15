@@ -23,7 +23,9 @@ def _write(path: Path, text: str) -> Path:
 
 
 def test_scan_detects_real_looking_aws_key(tmp_path):
-    leaked = _write(tmp_path / "src" / "config.py", "KEY = 'AKIAQWERTYUIOPASDFGH'\n")
+    # Clé factice construite à l'exécution : le fichier de test ne contient aucune forme de clé (règle 6).
+    fake_key = "AKIA" + "QWERTYUIOP" + "ASDFGH"
+    leaked = _write(tmp_path / "src" / "config.py", f"KEY = '{fake_key}'\n")
     assert ccc.scan_text([leaked])["secrets"] == [leaked.as_posix()]
 
 
