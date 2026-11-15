@@ -391,6 +391,7 @@ def main(argv: list[str] | None = None) -> int:
             if "contrôle d" in out or "application control" in out.lower():
                 print("Windows (Smart App Control) a bloqué une DLL de cet environnement. Relancer sans --fresh-env "
                       "pour réutiliser le .venv du projet, dont les fichiers sont déjà autorisés.")
+            print_summary(report)
             return EXIT_FAILURES
 
         code, out, seconds = run([str(python), "-m", "pytest", "-q", "-W", "error", "-p", "no:cacheprovider"], clone)
@@ -424,10 +425,14 @@ def main(argv: list[str] | None = None) -> int:
         elif not remove_tree(workdir):
             print(f"Dossier temporaire non supprimé, à effacer à la main : {workdir}")
 
+    print_summary(report)
+    return EXIT_OK if report.all_ok else EXIT_FAILURES
+
+
+def print_summary(report: Report) -> None:
     failed = [check.name for check in report.checks if not check.ok]
     print()
     print("Bilan : " + ("tout est vert." if not failed else f"{len(failed)} échec(s) : {', '.join(failed)}"))
-    return EXIT_OK if report.all_ok else EXIT_FAILURES
 
 
 if __name__ == "__main__":
