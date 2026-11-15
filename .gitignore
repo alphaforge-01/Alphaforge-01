@@ -45,3 +45,6 @@ secrets.*
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Copies locales de traces d'essais reels (a trier avant de commiter les traces de demonstration)
+outputs/reports/traces/

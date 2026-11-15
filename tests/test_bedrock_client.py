@@ -336,3 +336,16 @@ def test_agents_never_send_a_temperature():
     from alphaforge.analyst_agent import INFERENCE_CONFIG as analyst_config
     from alphaforge.explainer_agent import INFERENCE_CONFIG as explainer_config
     assert "temperature" not in analyst_config and "temperature" not in explainer_config
+
+
+def test_aws_reason_masks_s3_arn_without_account_and_configured_ids():
+    guardrail_id, bucket = "g" + "r4" * 4, "alphaforge-traces-" + "ab12cd34"
+    reason = f"Guardrail {guardrail_id} not found, bucket arn:aws:s3:::{bucket} unreachable"
+    config = BedrockConfig(mode="bedrock", analyst_model_id="m", guardrail_id=guardrail_id, trace_bucket=bucket)
+    client = BedrockClient(config, runtime_client=FakeRuntime([client_error("ResourceNotFoundException", reason)]),
+                           sleep=lambda s: None)
+    with pytest.raises(BedrockError) as info:
+        client.converse("m", [])
+    text = str(info.value)
+    assert guardrail_id not in text and bucket not in text and "arn:aws" not in text
+    assert "ResourceNotFoundException" in text
