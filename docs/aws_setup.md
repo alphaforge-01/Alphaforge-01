@@ -192,4 +192,6 @@ Bedrock propose des clés API à courte durée. Ce n'est pas la méthode prévue
 - Numéro de compte, ARN complets (ils contiennent le numéro de compte), URL Kiro contenant un jeton.
 - Captures ou journaux non masqués. Les scripts masquent déjà le compte et les ARN dans leurs sorties.
 
+Avant la remise, lancer `bash scripts/final_checks.sh` : il contrôle sur `origin/main` les secrets (arbre et historique), les identifiants du compte, les tirets cadratins, les emoji, les attributions d'IA dans les commits et la documentation des jeux de données. Exporter `ALPHAFORGE_GUARDRAIL_ID` avant de le lancer pour vérifier aussi que l'identifiant du garde-fou n'est pas dans le dépôt.
+
 Avant chaque commit, relire le diff indexé pour y chercher ces motifs. Si un secret a été exposé, cesser de l'utiliser et prévenir un mentor ou un organisateur ; le supprimer dans un commit ultérieur ne suffit pas.
