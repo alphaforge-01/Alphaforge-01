@@ -120,11 +120,18 @@ def _registry(result: Mapping[str, Any]) -> Dict[str, Mapping[str, Any]]:
 
 
 def _link_evidence(check: Mapping[str, Any], subject: str,
-                   registry: Mapping[str, Mapping[str, Any]]) -> List[str]:
-    """Preuves d'un contrôle : celles de la gouvernance, sinon par métrique et sujet."""
+                   registry: Mapping[str, Mapping[str, Any]],
+                   rules: Optional[Mapping[str, Mapping[str, Any]]] = None) -> List[str]:
+    """Preuves d'un contrôle : celles de la gouvernance, sinon par métrique et sujet.
+
+    `rules` (règles du profil par `rule_id`) fournit la classe d'actifs des règles R5 et R6 :
+    la preuve cherchée est alors `weight_by_asset_class.<classe>` du même sujet. Sans règle
+    ou sans preuve correspondante, la liste reste vide (rien n'est deviné).
+    """
     ids = list(check.get("evidence_ids") or [])
     if not ids:
-        metric = rule_metric(check["rule_type"])
+        params = (rules or {}).get(check.get("rule_id"), {}).get("params")
+        metric = rule_metric(check["rule_type"], params)
         if metric is not None:
             ids = [eid for eid, entry in registry.items()
                    if entry.get("metric") == metric and entry.get("subject") == subject]
@@ -135,13 +142,14 @@ def _link_evidence(check: Mapping[str, Any], subject: str,
     return sorted(set(ids), key=_numeric_key)
 
 
-def _variant_entries(result: Mapping[str, Any], registry: Mapping[str, Mapping[str, Any]]):
+def _variant_entries(result: Mapping[str, Any], registry: Mapping[str, Mapping[str, Any]],
+                     rules: Optional[Mapping[str, Mapping[str, Any]]] = None):
     entries = []
     for variant in result.get("variants") or []:
         governance = variant["governance"]
         ids: List[str] = []
         for check in governance["checks"]:
-            ids.extend(_link_evidence(check, governance["subject"], registry))
+            ids.extend(_link_evidence(check, governance["subject"], registry, rules))
         entries.append({
             "variant_id": variant["variant_id"],
             "reason_code": variant["reason_code"],
@@ -175,13 +183,14 @@ def build_brief(result: AnalysisResult, level: Level,
         raise ValueError("La gouvernance et le profil du résultat ne correspondent pas.")
 
     registry = _registry(result)
+    rules = {rule["rule_id"]: rule for rule in result["profile"]["rules"]}
     checks = []
     for check in governance["checks"]:
         item = copy.deepcopy(check)
-        item["evidence_ids"] = _link_evidence(check, governance["subject"], registry)
+        item["evidence_ids"] = _link_evidence(check, governance["subject"], registry, rules)
         checks.append(item)
 
-    variants = _variant_entries(result, registry)
+    variants = _variant_entries(result, registry, rules)
 
     # Preuves utilisées : contrôles, variantes, puis mises en avant par l'analyste.
     used = {eid for c in checks for eid in c["evidence_ids"]}

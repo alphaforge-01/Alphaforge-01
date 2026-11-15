@@ -273,12 +273,56 @@ def test_no_evidence_gives_empty_ids():
     assert all(c["evidence_ids"] == [] for c in result["checks"])
 
 
-def test_asset_class_rules_have_no_evidence_link_in_contract():
-    """Le contrat ne définit pas de métrique de preuve par classe : liste vide, pas d'invention."""
+def class_entry(evidence_id, asset_class, subject="portfolio_after"):
+    return {"evidence_id": evidence_id, "metric": f"weight_by_asset_class.{asset_class}", "subject": subject}
+
+
+def test_asset_class_rules_link_to_their_own_class_evidence():
+    crypto = make_rule("max_asset_class_weight", params={"asset_class": "crypto"}, rule_id="R5")
+    equity = make_rule("max_asset_class_weight", params={"asset_class": "equity"}, rule_id="R6")
+    entries = [class_entry("E7", "crypto"), class_entry("E8", "equity"), class_entry("E9", "etf_bond")]
+    result = evaluate(make_profile(crypto, equity), make_snapshot(), evidence=entries)
+    assert [c["evidence_ids"] for c in result["checks"]] == [["E7"], ["E8"]]
+
+
+def test_excluded_asset_class_rule_links_to_class_evidence():
+    rule = make_rule("excluded_asset_class", "max", warn=None, limit=0.0,
+                     params={"asset_class": "crypto"}, unit="bool")
+    snapshot = make_snapshot(weight_by_asset_class={"equity": 0.9, "crypto": 0.1})
+    result = evaluate(make_profile(rule), snapshot, evidence=[class_entry("E3", "crypto")])
+    assert result["checks"][0]["status"] == "conflict" and result["checks"][0]["evidence_ids"] == ["E3"]
+
+
+def test_asset_class_evidence_requires_matching_subject():
+    rule = make_rule("max_asset_class_weight", params={"asset_class": "crypto"})
+    entries = [class_entry("E1", "crypto", subject="portfolio_before"), class_entry("E2", "crypto", "variant:V1")]
+    assert evaluate(make_profile(rule), make_snapshot(subject="portfolio_after"),
+                    evidence=entries)["checks"][0]["evidence_ids"] == []
+    assert evaluate(make_profile(rule), make_snapshot(subject="variant:V1"),
+                    evidence=entries)["checks"][0]["evidence_ids"] == ["E2"]
+
+
+def test_asset_class_without_evidence_stays_empty_and_value_is_zero():
+    """Classe absente du portefeuille : le flux A ne produit aucune preuve, rien n'est inventé."""
+    rule = make_rule("max_asset_class_weight", params={"asset_class": "crypto"})
+    result = evaluate(make_profile(rule), make_snapshot(), evidence=[class_entry("E8", "equity")])
+    assert result["checks"][0]["evidence_ids"] == [] and result["checks"][0]["value"] == 0.0
+
+
+def test_old_family_metric_without_class_suffix_is_not_a_match():
     rule = make_rule("max_asset_class_weight", params={"asset_class": "crypto"})
     entries = [{"evidence_id": "E9", "metric": "weight_by_asset_class", "subject": "portfolio_after"}]
-    result = evaluate(make_profile(rule), make_snapshot(), evidence=entries)
-    assert result["checks"][0]["evidence_ids"] == []
+    assert evaluate(make_profile(rule), make_snapshot(), evidence=entries)["checks"][0]["evidence_ids"] == []
+
+
+def test_rule_metric_helper():
+    from alphaforge.governance import asset_class_metric, rule_metric
+    assert asset_class_metric("crypto") == "weight_by_asset_class.crypto"
+    assert rule_metric("max_asset_class_weight", {"asset_class": "equity"}) == "weight_by_asset_class.equity"
+    assert rule_metric("excluded_asset_class", {"asset_class": "crypto"}) == "weight_by_asset_class.crypto"
+    assert rule_metric("max_asset_class_weight") is None and rule_metric("max_asset_class_weight", {}) is None
+    assert rule_metric("max_portfolio_volatility", {"asset_class": "crypto"}) == "volatility_ann"
+    assert rule_metric("esg_exclusion") is None
 
 
 def test_rule_metrics_are_portfolio_snapshot_fields():
@@ -341,7 +385,29 @@ def test_personas_starting_portfolios_have_no_conflict_on_concentration():
         result = evaluate(entry["profile"], make_snapshot(
             top_asset_weight=0.10, volatility_ann=0.10, max_drawdown=0.10,
             defensive_share=0.7, weight_by_asset_class={"equity": 0.3, "etf_bond": 0.7}))
-        assert result["overall_status"] == "compliant", entry["profile"]["profile_id"]
+        # Mateo a une règle ESG sans preuve possible : au mieux `missing_info`, jamais `compliant`.
+        has_esg = any(r["rule_type"] == "esg_exclusion" for r in entry["profile"]["rules"])
+        assert result["overall_status"] == ("missing_info" if has_esg else "compliant"), entry["profile"]["profile_id"]
+        financial = [c for c in result["checks"] if c["rule_type"] != "esg_exclusion"]
+        assert all(c["status"] == "compliant" for c in financial)
+
+
+def test_esg_rule_is_missing_info_even_when_everything_else_is_compliant():
+    mateo = load_personas()["mateo"]["profile"]
+    result = evaluate(mateo, make_snapshot(top_asset_weight=0.10, volatility_ann=0.10, max_drawdown=0.10,
+                                           defensive_share=0.7, weight_by_asset_class={"equity": 0.3, "etf_bond": 0.7}))
+    esg = next(c for c in result["checks"] if c["rule_type"] == "esg_exclusion")
+    assert esg["status"] == "missing_info" and esg["value"] is None and esg["margin"] is None
+    assert "ESG" in esg["missing_reason"] and "impossible" in esg["missing_reason"]
+    assert esg["evidence_ids"] == [] and esg["counterfactual"] is None
+    assert result["overall_status"] == "missing_info"
+
+
+def test_esg_missing_info_does_not_hide_a_financial_conflict():
+    mateo = load_personas()["mateo"]["profile"]
+    result = evaluate(mateo, make_snapshot(top_asset_weight=0.9))
+    assert result["overall_status"] == "conflict"
+    assert next(c for c in result["checks"] if c["rule_type"] == "esg_exclusion")["status"] == "missing_info"
 
 
 def test_counterfactual_stays_none_without_simulation():

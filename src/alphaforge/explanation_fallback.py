@@ -130,6 +130,18 @@ def _factor_text(check: Mapping[str, Any], level: str, is_min: bool,
     side = "sous" if is_min else "au-delà de"
     measure = f"la mesure {evidence}" if evidence else "la mesure"
 
+    if status == "missing_info" and check.get("rule_type") == "esg_exclusion":
+        if level == "novice":
+            long = (f"Pour {topic}, aucune preuve ESG n'est disponible : la vérification est impossible. "
+                    f"L'idée n'est ni validée ni écartée sur ce point. Contrôle : {gid}.")
+            short = f"Sur {topic}, aucune preuve ESG : vérification impossible. Contrôle : {gid}."
+        else:
+            subject = topic[0].upper() + topic[1:]
+            long = (f"{subject} : aucune preuve ESG disponible, vérification impossible, statut information "
+                    f"manquante. Aucun verdict ESG, distinct des verdicts financiers. Contrôle : {gid}.")
+            short = f"{subject} : aucune preuve ESG, information manquante. Contrôle : {gid}."
+        return _fit([long, short], max_chars)
+
     if level == "novice":
         if status == "conflict":
             long = (f"Pour {topic}{term_note}, {measure} franchit la limite fixée pour ce profil. "
@@ -190,6 +202,20 @@ def _summary(brief: Mapping[str, Any], level: str, max_chars: int) -> str:
         return _fit([f"Toutes les règles évaluées sont conformes pour l'idée {idea} "
                      f"(pire statut : conforme)."], max_chars)
 
+    only_missing = all(c["status"] == "missing_info" for c in flagged)
+    if only_missing and any(c["status"] == "compliant" for c in checks):
+        # Les autres règles sont conformes : ne pas laisser croire que tout est inconnu.
+        unverified = "n'ont pas pu être vérifiés" if len(flagged) > 1 else "n'a pas pu être vérifié"
+        if level == "novice":
+            long = (f"Pour l'idée simulée sur {idea}, les autres règles évaluées sont respectées, mais "
+                    f"{refs} {unverified}. Verdict d'ensemble : {verdict}.")
+            short = f"Autres règles respectées. Vérification impossible : {refs}. Verdict : {verdict}."
+        else:
+            long = (f"Pour l'idée {idea}, les règles évaluables sont conformes. Contrôles sans verdict, "
+                    f"information manquante : {refs}. Le pire statut global est : {verdict}.")
+            short = f"Règles évaluables conformes. Sans verdict : {refs}. Pire statut : {verdict}."
+        return _fit([long, short], max_chars)
+
     if level == "novice":
         long = (f"Pour l'idée simulée sur {idea}, le verdict d'ensemble est : {verdict}. "
                 f"Points à regarder : {refs}.")
@@ -209,8 +235,9 @@ def _counterfactual(brief: Mapping[str, Any], level: str, max_chars: int) -> str
 
     if not flagged:
         if any(c["status"] == "missing_info" for c in checks):
-            return _fit(["Aucun contrefactuel n'est calculé : au moins une règle manque d'information."],
-                        max_chars)
+            return _fit(["Aucune règle évaluable n'est en tension ni en conflit : aucun contrefactuel à "
+                         "calculer. Au moins une règle manque d'information.",
+                         "Aucun contrefactuel : au moins une règle manque d'information."], max_chars)
         return _fit(["Toutes les règles évaluées sont respectées : aucun contrefactuel à calculer."],
                     max_chars)
 

@@ -90,7 +90,7 @@
         "warn_threshold": 0.65,
         "limit_threshold": 0.8,
         "unit": "pct",
-        "label_fr": "Concentration par catégorie",
+        "label_fr": "Concentration en actions individuelles",
         "origin": "persona",
         "is_assumption": true
       }

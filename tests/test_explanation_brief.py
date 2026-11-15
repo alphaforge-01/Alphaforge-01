@@ -188,13 +188,61 @@ def test_no_evidence_available_stays_empty_not_invented():
     assert [f["evidence_ids"] for f in brief["ranked_factors"]] == [[], [], []]
 
 
-def test_asset_class_rules_have_no_automatic_evidence_link():
+def class_evidence(evidence_id, asset_class, subject="portfolio_after"):
+    return entry(evidence_id, metric=f"weight_by_asset_class.{asset_class}", subject=subject)
+
+
+def test_asset_class_rules_are_linked_by_class_and_subject():
     result = robert()
-    check = make_check("G5", "tension", 0.05, rule_type="max_asset_class_weight")
-    result["governance_after"]["checks"].append(check)
-    result["evidence"]["E7"] = entry("E7", metric="weight_by_asset_class")
+    result["governance_after"]["checks"] = [
+        make_check("G5", "tension", 0.05, rule_type="excluded_asset_class"),
+        make_check("G6", "tension", 0.05, rule_type="max_asset_class_weight")]
+    result["governance_after"]["checks"][0]["rule_id"] = "R5"
+    result["governance_after"]["checks"][1]["rule_id"] = "R6"
+    result["evidence"].update({
+        "E7": class_evidence("E7", "crypto"), "E8": class_evidence("E8", "equity"),
+        "E9": class_evidence("E9", "equity", subject="portfolio_before")})
+    brief = build_brief(result, "pro")
+    by_check = {c["check_id"]: c["evidence_ids"] for c in brief["checks"]}
+    assert by_check == {"G5": ["E7"], "G6": ["E8"]}   # R5 vise la crypto, R6 les actions
+    ids = [e["evidence_id"] for e in brief["evidence"]]
+    assert {"E7", "E8"} <= set(ids) and "E9" not in ids
+
+
+def test_crypto_rule_picks_crypto_evidence_not_equity():
+    result = amira()
+    result["profile"]["rules"] = [r for r in result["profile"]["rules"] if r["rule_id"] in ("R5", "R6")]
+    result["governance_after"]["checks"] = [
+        dict(make_check("G1", "tension", 0.05, rule_type="max_asset_class_weight"), rule_id="R5"),
+        dict(make_check("G2", "tension", 0.05, rule_type="max_asset_class_weight"), rule_id="R6")]
+    result["evidence"].update({"E7": class_evidence("E7", "crypto"), "E8": class_evidence("E8", "equity")})
+    by_check = {c["check_id"]: c["evidence_ids"] for c in build_brief(result, "novice")["checks"]}
+    assert by_check == {"G1": ["E7"], "G2": ["E8"]}
+
+
+def test_asset_class_rule_without_evidence_stays_empty():
+    result = amira()
+    result["governance_after"]["checks"] = [
+        dict(make_check("G1", "compliant", 0.1, rule_type="max_asset_class_weight"), rule_id="R5")]
     brief = build_brief(result, "novice")
-    assert next(c for c in brief["checks"] if c["check_id"] == "G5")["evidence_ids"] == []
+    assert brief["checks"][0]["evidence_ids"] == []
+
+
+def test_asset_class_rule_unknown_in_profile_is_not_guessed():
+    result = robert()
+    result["governance_after"]["checks"] = [
+        dict(make_check("G1", "tension", 0.05, rule_type="max_asset_class_weight"), rule_id="R99")]
+    result["evidence"]["E7"] = class_evidence("E7", "crypto")
+    assert build_brief(result, "novice")["checks"][0]["evidence_ids"] == []
+
+
+def test_asset_class_variant_evidence_is_linked_with_variant_subject():
+    result = variant_result()
+    check = dict(make_check("G1", "compliant", 0.1, rule_type="max_asset_class_weight"), rule_id="R6")
+    result["variants"][0]["governance"]["checks"] = [check]
+    result["evidence"]["E8"] = class_evidence("E8", "equity", subject="variant:V1")
+    result["evidence"]["E9"] = class_evidence("E9", "equity", subject="portfolio_after")
+    assert build_brief(result, "novice")["variants"][0]["evidence_ids"] == ["E8"]
 
 
 def test_dangling_references_raise():

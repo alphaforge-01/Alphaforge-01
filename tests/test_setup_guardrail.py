@@ -126,9 +126,10 @@ def test_denied_topics_are_narrow_and_documented():
     for topic in topics:
         assert topic["type"] == "DENY"
         assert topic["inputAction"] == "BLOCK" and topic["outputAction"] == "BLOCK"
-        assert "Non visé" in topic["definition"]
-        assert re.search(r"fictif|fictive", topic["definition"])
+        # definitions a l'affirmatif : pas de clause negative, que le classifieur de Bedrock traite mal
+        assert "Non visé" not in topic["definition"] and "non visé" not in topic["definition"].lower()
         assert len(topic["definition"]) <= sg.MAX_TOPIC_DEFINITION
+        assert all(len(example) <= 100 for example in topic["examples"])
         assert 1 <= len(topic["examples"]) <= sg.MAX_TOPIC_EXAMPLES
 
 
@@ -291,3 +292,46 @@ def test_summarize_assessment_matches_contract():
     assert result["grounding_score"] == 0.82 and result["relevance_score"] == 0.9
     empty = sg.summarize_assessment({"action": "NONE", "assessments": []})
     assert empty["action"] == "none" and empty["denied_topics"] == []
+
+
+# ---- niveau de classification des sujets ----
+
+def test_classic_tier_is_opt_in_and_adds_no_cross_region_config():
+    config = sg.build_guardrail_config(tier="classic")
+    assert "tierConfig" not in config["topicPolicyConfig"]
+    assert "crossRegionConfig" not in config
+    assert "CLASSIC" in sg.describe_config(config)
+
+
+def test_standard_tier_is_the_default_and_sets_the_cross_region_profile():
+    config = sg.build_guardrail_config()
+    assert config["topicPolicyConfig"]["tierConfig"] == {"tierName": "STANDARD"}
+    assert config["crossRegionConfig"] == {"guardrailProfileIdentifier": sg.DEFAULT_GUARDRAIL_PROFILE}
+    text = sg.describe_config(config)
+    assert "STANDARD" in text and sg.DEFAULT_GUARDRAIL_PROFILE in text
+    assert sg.validate_config(config) == []
+
+
+def test_standard_tier_accepts_a_custom_profile():
+    config = sg.build_guardrail_config(tier="standard", profile="eu.guardrail.v1:0")
+    assert config["crossRegionConfig"]["guardrailProfileIdentifier"] == "eu.guardrail.v1:0"
+
+
+def test_standard_config_matches_the_installed_boto3_model():
+    from botocore.session import get_session
+    # Modele du service lu directement : aucun client, donc aucune recherche d'identifiants ni appel reseau.
+    shape = get_session().get_service_model("bedrock").operation_model("CreateGuardrail").input_shape
+    config = sg.build_guardrail_config(tier="standard")
+    assert set(config) <= set(shape.members)
+    assert set(config["topicPolicyConfig"]) <= set(shape.members["topicPolicyConfig"].members)
+    assert config["topicPolicyConfig"]["tierConfig"]["tierName"] in \
+        shape.members["topicPolicyConfig"].members["tierConfig"].members["tierName"].enum
+
+
+def test_simulation_with_standard_tier_makes_no_aws_call(capsys):
+    def forbidden(region):
+        raise AssertionError("aucun client AWS en simulation")
+
+    code = sg.main([], client_factory=forbidden, environ={})
+    assert code == sg.EXIT_OK
+    assert "STANDARD" in capsys.readouterr().out
