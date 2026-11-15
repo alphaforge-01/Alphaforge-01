@@ -27,9 +27,12 @@ from .bedrock_client import (
     GROUNDING_ANSWER_MAX_CHARS, BedrockClient, BedrockConfig, BedrockError, redact_text,
 )
 from .contracts import (
-    AnalysisResult, AnalystSubmission, ExplanationResult, GovernanceResult, GuardrailResult,
-    InvestmentIdea, InvestorProfile, Level, Portfolio, PortfolioSnapshot, TraceStep, Variant,
+    AnalysisResult, AnalystSubmission, ConversationBrief, ConversationReply, ConversationResult, ExplanationResult,
+    GovernanceResult, GuardrailResult, InvestmentIdea, InvestorProfile, Level, Portfolio, PortfolioSnapshot,
+    TraceStep, ValidationResult, Variant,
 )
+from .conversation_agent import MAX_QUESTION_CHARS, render_answer, reply_with_llm
+from .conversation_agent import grounding_source as conversation_grounding_source
 from .explainer_agent import PROMPT_VERSION as EXPLAINER_PROMPT_VERSION
 from .explanation_cache import ExplanationCache
 from .pipeline_deps import PipelineDeps, resolve_deps
@@ -769,3 +772,179 @@ def check_request(
         return bedrock_client.check_request_topic(text)
     except BedrockError:
         return not_run
+
+
+# ---- Agent conversationnel (issue 78) : questions de profil et "pourquoi" ----
+
+# Reponse du code quand aucun texte de repli n'est disponible (module de Samer absent) : sans chiffre ni renvoi.
+CONVERSATION_UNAVAILABLE = (
+    "Le prototype ne peut pas encore rédiger de réponse à cette question. Les données utilisées et les limites "
+    "restent affichées par le code."
+)
+
+
+def _conversation_collaborators(validate: Callable[..., Any] | None, fallback: Callable[..., Any] | None):
+    """Validateur et reponse du code (flux B). Contrats attendus :
+    ``explanation_validator.validate_reply(reply, brief) -> ValidationResult`` et
+    ``conversation_fallback.build_fallback_reply(brief) -> ConversationReply``. Absents : ``None``.
+    """
+    if validate is None:
+        try:
+            from .explanation_validator import validate_reply as validate  # type: ignore[attr-defined]
+        except ImportError:
+            validate = None
+    if fallback is None:
+        try:
+            from .conversation_fallback import build_fallback_reply as fallback  # type: ignore[import-not-found]
+        except ImportError:
+            fallback = None
+    return validate, fallback
+
+
+def _code_reply(brief: dict[str, Any], fallback: Callable[..., Any] | None) -> ConversationReply:
+    """Reponse du code : celle du flux B si elle existe et est exploitable, sinon une phrase fixe."""
+    if fallback is not None:
+        try:
+            reply = fallback(brief)
+            if isinstance(reply, dict) and isinstance(reply.get("answer"), str) and reply["answer"].strip():
+                return ConversationReply(
+                    brief_id=brief["brief_id"], answer=reply["answer"], origin="template",
+                    model_id=None, prompt_version=None, attempt=0)
+        except Exception:  # la reponse du code ne doit jamais faire planter la page
+            pass
+    return ConversationReply(brief_id=brief["brief_id"], answer=CONVERSATION_UNAVAILABLE, origin="template",
+                             model_id=None, prompt_version=None, attempt=0)
+
+
+def answer_question(
+    brief: ConversationBrief,
+    mode: str = "offline",
+    *,
+    validate: Callable[..., Any] | None = None,
+    fallback: Callable[..., Any] | None = None,
+    client: BedrockClient | None = None,
+    config: BedrockConfig | None = None,
+    runner: Callable[..., ConversationReply] | None = None,
+) -> ConversationResult:
+    """Reponse a une question de profil ou un "pourquoi" : agent Bedrock sous controle, sinon le code.
+
+    A appeler apres le routage de la conversation (garde-fou d'entree, controle local, regles, interprete) :
+    jamais pour un refus, une salutation, une liste des positions, une definition du glossaire ou une idee.
+    Le texte du modele n'est affiche que s'il passe le validateur et si le garde-fou rend un score sans
+    intervenir ; un ancrage faible est signale, sans ecarter le texte (meme regle que l'explication).
+    La question n'est jamais ecrite dans la trace. Rien n'est enregistre sur S3.
+    """
+    config = config or BedrockConfig.from_env()
+    validate, fallback = _conversation_collaborators(validate, fallback)
+    effective_mode, reason = _resolve_mode(mode, config, client)
+    if effective_mode == "bedrock" and not config.has_guardrail:
+        effective_mode, reason = "offline", "garde_fou_non_configure"   # regle 8 : aucun texte de modele sans garde-fou
+    if effective_mode == "bedrock" and validate is None:
+        effective_mode, reason = "offline", "validateur_indisponible"
+    wanted_llm = mode == "bedrock"
+
+    # Etape 1 : reponse (agent ou code)
+    started = time.perf_counter()
+    reply: ConversationReply | None = None
+    model_id: str | None = None
+    if effective_mode == "bedrock":
+        run = runner or reply_with_llm
+        try:
+            bedrock_client = client or BedrockClient(config)
+            reply = run(bedrock_client, config.conversation_model_id, brief, validate)
+            model_id = config.conversation_model_id
+        except Exception as error:  # repli sur la reponse du code, jamais de plantage
+            known = isinstance(error, (BedrockError, AgentFailure))
+            reason = f"{type(error).__name__}: {redact_text(str(error))}" if known else type(error).__name__
+            reply = None
+    if reply is None:
+        reply = _code_reply(brief, fallback)
+    details: dict[str, Any] = {
+        "answer_kind": brief.get("answer_kind"), "level": brief.get("level"), "brief_id": brief.get("brief_id"),
+        "origin": reply["origin"], "attempt": reply["attempt"],
+    }
+    if wanted_llm and reply["origin"] == "template":
+        details["fallback_reason"] = reason or "rejet_du_validateur"
+    trace = [_step(1, "explanation", "agent" if reply["origin"] == "llm" else "code",
+                   "fallback" if (wanted_llm and reply["origin"] == "template") else "ok",
+                   started, details, model_id if reply["origin"] == "llm" else None)]
+
+    # Etape 2 : validation (code)
+    started = time.perf_counter()
+    if validate is None:
+        validation = ValidationResult(is_valid=True, rejections=[], checked_references=[])
+        trace.append(_step(2, "validation", "code", "skipped", started, {"reason": "validateur_indisponible"}))
+    else:
+        try:
+            validation = validate(reply, brief)
+        except Exception as error:  # validateur en erreur : la reponse du modele n'est pas affichee
+            validation = ValidationResult(
+                is_valid=False, rejections=[{"code": "validator_error", "slot": "answer", "excerpt": type(error).__name__}],
+                checked_references=[])
+        status = "ok"
+        if not validation["is_valid"] and reply["origin"] == "llm":
+            trace[0]["details"]["rejection_codes"] = [r.get("code") for r in validation["rejections"]]
+            trace[0]["details"]["rejection_excerpts"] = _excerpts(validation["rejections"])
+            reply = _code_reply(brief, fallback)
+            try:
+                validation = validate(reply, brief)
+            except Exception:
+                validation = ValidationResult(is_valid=True, rejections=[], checked_references=[])
+            status = "fallback"
+            trace[0]["status"] = "fallback"
+            trace[0]["details"].update({"fallback_reason": "rejet_du_validateur", "origin": "template", "attempt": 0})
+        trace.append(_step(2, "validation", "code", status, started, {
+            "is_valid": validation["is_valid"], "checked_references": len(validation["checked_references"]),
+            "rejection_codes": [r.get("code") for r in validation["rejections"]],
+        }))
+
+    # Etape 3 : garde-fou (ancrage de la reponse contre le dossier, sans la question dans la source)
+    started = time.perf_counter()
+    guardrail = GuardrailResult(check="output_grounding", action="not_run", denied_topics=[],
+                                grounding_score=None, relevance_score=None, mode="detect")
+    guard_status = "skipped"
+    guard_details: dict[str, Any] = {"reason": reason if effective_mode == "offline" and reason else
+                                     "mode_offline" if effective_mode == "offline" else "non_execute"}
+    if effective_mode == "bedrock":
+        try:
+            bedrock_client = client or BedrockClient(config)
+            checked_text = render_answer(reply, brief).replace("**", "")
+            source_text, source_kind = conversation_grounding_source(brief)
+            question = brief.get("question") if isinstance(brief.get("question"), str) else ""
+            query = question[:MAX_QUESTION_CHARS].strip() or GROUNDING_QUERY
+            guardrail = bedrock_client.check_output_grounding(source_text, query, checked_text)
+            guard_status = "ok" if guardrail["action"] != "not_run" else "skipped"
+            guard_details = {
+                "action": guardrail["action"], "grounding_score": guardrail["grounding_score"],
+                "relevance_score": guardrail["relevance_score"], "mode": guardrail["mode"],
+                "checked_chars": len(checked_text), "source_kind": source_kind, "source_chars": len(source_text),
+            }
+            flags = getattr(bedrock_client, "last_grounding_flags", None)
+            if isinstance(flags, dict) and flags.get("below_threshold"):
+                guard_details["grounding_below_threshold"] = flags.get("filters", [])
+                guard_details["grounding_weak"] = True
+        except Exception as error:  # le controle est accessoire pour le code, obligatoire pour le modele
+            guard_status = "error"
+            guard_details = {"error": type(error).__name__}
+    score = guardrail["grounding_score"]
+    verified = guardrail["action"] == "none" and score is not None
+    if verified and score < GROUNDING_FLOOR:
+        guard_details.update({"grounding_weak": True, "grounding_very_weak": True, "grounding_floor": GROUNDING_FLOOR})
+    if reply["origin"] == "llm" and not verified:
+        unavailable = guardrail["action"] == "not_run" or (guardrail["action"] == "none" and score is None)
+        reply = _code_reply(brief, fallback)
+        if validate is not None:
+            try:
+                validation = validate(reply, brief)
+            except Exception:
+                validation = ValidationResult(is_valid=True, rejections=[], checked_references=[])
+        trace[0]["status"] = "fallback"
+        trace[0]["details"].update({
+            "fallback_reason": "garde_fou_indisponible" if unavailable else "garde_fou_sortie",
+            "origin": "template", "attempt": 0})
+        guard_details["replaced_by_template"] = True
+        if guardrail["denied_topics"]:
+            guard_details["denied_topics"] = guardrail["denied_topics"]
+    trace.append(_step(3, "guardrail", "guardrail", guard_status, started, guard_details))
+    return ConversationResult(reply=reply, validation=validation, guardrail=guardrail,
+                              rendered_answer=render_answer(reply, brief), trace=trace)
