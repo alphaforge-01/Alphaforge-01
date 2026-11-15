@@ -20,7 +20,7 @@ L'interface ne calcule rien. Elle lit des objets du contrat (`AnalysisResult`, `
 | US-06 | Règles en conflit, puis en tension, puis manquantes, puis conformes. Pour chacune : libellé, valeur, seuils, statut. Statut global en tête | `governance_after.checks`, `overall_status` | D4a |
 | US-07 | "Conforme à X % ou moins", ou "aucun poids testé n'est conforme". Marge pour les règles conformes | `RuleCheck.counterfactual`, `RuleCheck.margin` | D4a |
 | US-08 | Au plus deux variantes dans un encadré "Simulation" : motif, idée, statut global, statuts par règle. Mention "simulation, pas une recommandation" | `variants` | D4b |
-| US-09 | Changer de profil garde l'idée. Si la source des fonds est un titre que le nouveau profil ne détient pas, elle repasse à "au prorata" avec un message | état de session | D4b |
+| US-09 | Changer de profil remet la simulation à zéro : fil vidé, idée oubliée, sélecteurs par défaut (choix de l'équipe, remplace la reprise de l'idée). Une idée dont la source des fonds n'est pas détenue par le profil est financée au prorata, avec un message | état de session | D4b |
 | US-10 | Curseur Novice / Pro (barre latérale et accueil, avec, sur l'accueil, une bulle au survol de chaque niveau qui montre un passage réel). Seconde bascule instantanée. Badge "texte de repli" si le gabarit est utilisé | `explain(result, level)`, `output.origin`, `rendered_markdown` | D5 |
 | US-11 | Bouton "Vérifier" sur chaque chiffre : libellé, valeur, outil, sources, période, devise, transformation, nombre d'observations, limites. Sous l'explication, la liste des preuves citées, chacune vérifiable | `EvidenceEntry`, `validation.checked_references`, `limits`, `data/raw/sources_metadata.csv` | D5 |
 | US-12 | Avertissement en haut de chaque page et dans la barre latérale. Limites au texte fixe du niveau. Faits, hypothèses et simulations dans des zones distinctes | `limits[].text_novice`, `limits[].text_pro` | D1, D5 |
@@ -88,7 +88,7 @@ En mode `fixture`, les profils et les portefeuilles viennent aussi des fixtures 
 
 La radiographie avant toute idée (`get_xray`) n'utilise que du code déterministe : l'outil `analyze_portfolio` du flux A, passé par la `ToolBox` du flux C pour enregistrer les preuves, puis `evaluate` du flux B. Aucun agent n'est appelé, le résultat est le même en `offline` et en `bedrock`. De même, les faits sur l'actif de l'idée (`get_asset_facts`, outil du flux A) ne dépendent pas du profil : ils montrent que la même idée donne les mêmes chiffres de l'actif pour tous les profils (US-09).
 
-L'analyse d'une idée est gardée en cache par profil : revenir à un profil déjà vu est instantané. En modes `offline` et `fixture`, l'idée gardée est réanalysée automatiquement au changement de profil. En mode `bedrock`, aucun agent n'est lancé sans demande explicite (quotas partagés) : un message dans le chat, "Simuler" ou une idée en un clic demandent à la fois l'analyse et l'explication ; un changement de profil ou de mode affiche "Analyser cette idée pour ce profil" ; un changement de niveau, ou l'ouverture de la page après ce changement, affiche "Rédiger l'explication (niveau X)" tant que l'explication de ce niveau n'est ni en cache ni en échec. Ces demandes sont remises à faux au changement de profil ou de mode, et après usage. Un curseur ne lance jamais rien. En `offline`, l'explication par gabarit est produite sans clic.
+L'analyse d'une idée est gardée en cache par profil : refaire pour un profil une idée déjà analysée est instantané. Changer de profil remet la simulation à zéro (fil, idée, sélecteurs) : rien d'un profil précédent ne reste affiché. En mode `bedrock`, aucun agent n'est lancé sans demande explicite (quotas partagés) : un message dans le chat, "Simuler" ou une idée en un clic demandent à la fois l'analyse et l'explication ; un changement de mode affiche "Analyser cette idée pour ce profil" ; un changement de niveau, ou l'ouverture de la page après ce changement, affiche "Rédiger l'explication (niveau X)" tant que l'explication de ce niveau n'est ni en cache ni en échec. Ces demandes sont remises à faux au changement de profil ou de mode, et après usage. Un curseur ne lance jamais rien. En `offline`, l'explication par gabarit est produite sans clic.
 
 Le mode choisi dans la barre latérale est transmis au pipeline par la configuration (`BedrockConfig` avec `mode` surchargé) : choisir Bedrock fonctionne même si l'application a été lancée sans `ALPHAFORGE_MODE=bedrock`.
 
@@ -111,8 +111,8 @@ Le mode choisi dans la barre latérale est transmis au pipeline par la configura
 | `mode` | "offline", "bedrock" ou "fixture" |
 | `profile_id` | "robert", "amira", "mateo" ou "custom" |
 | `custom_persona` | persona (profil et portefeuille) construit, ou absent ; retiré au changement de mode |
-| `chat_history` | fil de la conversation : demandes, réglages manuels, notes (profil, mode), refus, questions, réponses. Chaque réponse garde sa clé d'analyse complète (mode, profil, portefeuille, idée) et le nom de son profil : une réponse ancienne montre toujours son propre verdict |
-| `idea` | dernière `InvestmentIdea` soumise, conservée au changement de profil. Si sa source des fonds n'est pas détenue par le nouveau profil, l'idée est financée au prorata pour ce profil, avec un message |
+| `chat_history` | fil de la conversation : demandes, réglages manuels, notes (mode), refus, questions, réponses. Chaque réponse garde sa clé d'analyse complète (mode, profil, portefeuille, idée) et le nom de son profil : une réponse ancienne montre toujours son propre verdict |
+| `idea` | dernière `InvestmentIdea` soumise, oubliée au changement de profil. Si sa source des fonds n'est pas détenue par le profil, l'idée est financée au prorata, avec un message |
 | `level` | "novice" ou "pro", prérempli par le profil et repris de lui après un changement de mode |
 | `xray_cache`, `analysis_cache`, `explanation_cache` | résultats par `(mode, profil, portefeuille)`, `(mode, profil, portefeuille, idée)` et `(mode, run_id, niveau)` |
 | `xray_failures`, `analysis_failures`, `explanation_failures` | échecs mémorisés aux mêmes clés, avec un bouton "Réessayer" pour les erreurs (quotas Bedrock partagés) |
@@ -154,7 +154,7 @@ Terminé quand : la scène 1 se joue en mode `fixture` sans erreur, l'avertissem
 
 ### Sprint 2 : dimanche (S3 et S4), jusqu'au gel (J5, 18 h 30)
 
-- [x] D4b. Sélecteurs complets (actif de l'univers, poids de 1 à 100 %, source des fonds avec le poids actuel du titre), variantes dans un encadré "Simulation", changement de profil qui garde l'idée (US-04, US-08, US-09)
+- [x] D4b. Sélecteurs complets (actif de l'univers, poids de 1 à 100 %, source des fonds avec le poids actuel du titre), variantes dans un encadré "Simulation", changement de profil qui remet la simulation à zéro (US-04, US-08, US-09)
 - [x] D5. Explication : bascule novice/pro qui ne relance que l'explicateur, cache par niveau, origine du texte (agent ou gabarit), preuves citées cliquables, limites dans le texte fixe du flux B (US-10, US-11, US-12)
 - [x] D6. Trace à six étapes : acteur, statut, durée, modèle, outils appelés avec paramètres et preuves, raisons de repli, scores du garde-fou, trace S3, "Ce que l'explicateur a vu" (US-13)
 - [x] D7. Test du garde-fou : requêtes prédéfinies du flux C, permises et refusées, verdict en conversation avec le résultat attendu (US-14)

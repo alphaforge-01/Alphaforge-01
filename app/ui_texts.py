@@ -69,8 +69,6 @@ CHAT_EXAMPLES = (
 )
 CHAT_MANUAL_CHANGE = "Paramètres modifiés : {idea}"
 CHAT_CHOICE = "Choix : {choice}"
-CHAT_PROFILE_CHANGED = "Profil actif : {name}. L'idée en cours est reprise pour ce profil."
-CHAT_PROFILE_CHOSEN = "Profil actif : {name}."
 CHAT_MODE_CHANGED = "Source des données : {mode}."
 CHAT_UNDERSTOOD = "Idée simulée : {idea}."
 CHAT_PREVIOUS = "Idée précédente : {idea}."
