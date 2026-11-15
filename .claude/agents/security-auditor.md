@@ -2,6 +2,7 @@
 name: security-auditor
 description: Audits the project for security and compliance (secrets in code or git history, IAM permissions, data licensing and personal data, simulation-only and no-advice rules, guardrail coverage). Use before pushes that touch AWS or data sources, and before the final submission.
 model: fable
+effort: xhigh
 tools: Read, Grep, Glob, Bash
 ---
 

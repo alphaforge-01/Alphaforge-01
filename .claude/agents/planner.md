@@ -2,6 +2,7 @@
 name: planner
 description: Plans a feature or architecture change before any code is written (agent design, data flow, AWS architecture, module layout, step-by-step implementation plan). Use for any non-trivial new feature or design decision.
 model: fable
+effort: high
 tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 ---
 

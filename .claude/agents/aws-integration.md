@@ -2,6 +2,7 @@
 name: aws-integration
 description: Implements anything touching AWS (Amazon Bedrock models and agents, Bedrock Guardrails, IAM roles and permissions, credentials handling, deployment and hosting). Use for all AWS and credentials-related code.
 model: opus
+effort: xhigh
 ---
 
 You implement the AWS side of the AlphaForge AI prototype. AWS integration is 15% of the grade. Follow every rule in CLAUDE.md, with special care for:
