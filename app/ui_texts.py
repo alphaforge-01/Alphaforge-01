@@ -101,6 +101,18 @@ CHAT_ANALOGY = "Pour se le représenter : {analogy}."
 CHAT_DEFINITION_SOURCE = "Définition du glossaire du projet, niveau {level}."
 CHAT_DEFINITION_UNKNOWN = "Ce terme n'est pas dans le glossaire du projet. Je peux expliquer : {terms}."
 CHAT_GLOSSARY_MISSING = "Le glossaire du projet est indisponible : je ne peux pas définir ce terme."
+CHAT_AGENT_ORIGIN = {
+    "llm": "Réponse de l'agent conversationnel (Amazon Bedrock), vérifiée par le validateur et le garde-fou.",
+    "template": "Réponse écrite par le code, à partir des mêmes faits.",
+}
+CHAT_AGENT_FALLBACK = "Agent conversationnel non utilisé ({reason})."
+CHAT_AGENT_DENIED = "Sujet refusé par le garde-fou : {topics}."
+CHAT_AGENT_RELEVANCE_WEAK = "Pertinence faible : la réponse colle moins que d'habitude à la question posée."
+CHAT_AGENT_COUNTERFACTUAL = "- {label} : plus grand poids testé conforme à cette règle seule (simulation) : {weight}"
+CHAT_AGENT_COUNTERFACTUAL_NONE = "- {label} : aucun poids testé n'est conforme à cette règle"
+CHAT_AGENT_DATA = "Données utilisées"
+CHAT_AGENT_DATA_NONE = "Aucune mesure citée : la réponse s'appuie sur le profil ou dit ce qui manque."
+CHAT_AGENT_LIMITS = "Limites"
 CHAT_CONFIRM = "Voulez-vous simuler **{idea}** ?"
 CHAT_CONFIRM_WHY = {
     "weight_to_confirm": "J'ai lu le poids sans le signe %, je préfère vérifier avant de simuler.",
@@ -576,6 +588,9 @@ REASON_CODES_FR = {
     "mode_offline": "mode hors ligne",
     "non_execute": "non exécuté",
     "bucket_non_configure": "compartiment non configuré",
+    "validateur_indisponible": "validateur indisponible",
+    "controle_entree_absent": "question non vérifiée par le garde-fou d'entrée",
+    "demande_refusee": "demande refusée par le garde-fou",
 }
 
 # --- Garde-fou (US-14) -----------------------------------------------------------
@@ -644,6 +659,7 @@ MSG_ASSET_FACTS_FAILED = "Faits sur {ticker} indisponibles : {reason}"
 MSG_XRAY_FAILED = "Radiographie impossible : {reason}"
 MSG_ANALYSIS_REFUSED = "Idée non analysable : {reason}"
 MSG_EXPLANATION_REFUSED = "Explication impossible : {reason}"
+MSG_CONVERSATION_REFUSED = "Réponse impossible : {reason}"
 MSG_FIXTURE_PROFILE_MISSING = "Aucune donnée d'essai pour ce profil (seuls les profils avec fixture sont disponibles)."
 MSG_FIXTURE_IDEA_ONLY = "En mode Données d'essai, seule l'idée \"25 % dans TSLA\", au prorata, est disponible."
 MSG_PREVIEW_MISSING = "Aperçu des niveaux indisponible (traces de démonstration absentes)."

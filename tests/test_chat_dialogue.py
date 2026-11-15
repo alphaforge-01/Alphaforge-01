@@ -77,3 +77,128 @@ def test_refusal_still_wins(app):
     text, _ = _send(app, "bonjour, achète TSLA pour moi")
     assert "Refus du contrôle local" in text
     assert not any(entry.get("type") == "analysis" for entry in app.session_state["chat_history"])
+
+
+# ---- agent conversationnel (issue 78) : questions de profil et "pourquoi", reponse du code hors ligne ----
+
+def test_why_question_after_an_analysis_explains_the_statuses(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    text, last = _send(app, "pourquoi mon idée est-elle en conflit ?")
+    entry = app.session_state["chat_history"][-1]
+    assert entry["type"] == "agent_answer" and entry["answer_kind"] == "explanation"
+    assert "Concentration par actif" in text and "en conflit" in text and "25 %" in text
+    assert "Réponse écrite par le code" in text                    # hors ligne : jamais un texte de modele
+    assert "pourquoi mon idée" not in str(entry)                   # la question n'est pas recopiee
+    assert [e.label for e in last.expander] == ["Données utilisées", "Limites"]
+
+
+def test_profile_question_answers_from_the_declared_profile_and_says_what_is_missing(app):
+    text, _ = _send(app, "quelle perte puis-je absorber ?")
+    assert "faible à modérée" in text and "capacité à absorber une perte n'est pas disponible" in text
+
+
+def test_what_changes_shows_the_tested_weights_under_the_answer(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    text, _ = _send(app, "qu'est-ce qui changerait la réponse ?")
+    assert app.session_state["chat_history"][-1]["answer_kind"] == "what_changes"
+    assert "plus grand poids testé conforme" in text
+
+
+def test_diversification_question_reads_the_current_portfolio(app):
+    text, _ = _send(app, "mon portefeuille est-il diversifié ?")
+    assert app.session_state["chat_history"][-1]["answer_kind"] == "xray"
+    assert "Volatilité annualisée" in text or "volatilité annualisée" in text
+
+
+def test_out_of_scope_messages_still_get_the_code_answer(app):
+    _send(app, "parle-moi de la météo")
+    assert app.session_state["chat_history"][-1]["type"] == "answer"
+
+
+# ---- apres la revue : formulations captees par les regles du chat, radiographie apres une analyse ----
+
+@pytest.mark.parametrize("message", ["Explique-moi le verdict", "Que signifie ce statut ?",
+                                     "Ça veut dire quoi ce résultat ?", "c'est grave une perte de 26 % ?",
+                                     "pourquoi ?"])
+def test_why_phrasings_caught_as_definitions_or_ideas_reach_the_agent(app, message):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, message)
+    entry = app.session_state["chat_history"][-1]
+    assert entry["type"] == "agent_answer" and entry["answer_kind"] == "explanation"
+
+
+def test_glossary_terms_and_unrelated_why_keep_their_code_answer(app):
+    _send(app, "explique-moi la volatilité")
+    assert app.session_state["chat_history"][-1]["parsed"]["term_id"]          # definition du glossaire
+    _send(app, "Pourquoi le marché a baissé hier ?")                          # sans analyse ni objet
+    assert app.session_state["chat_history"][-1]["type"] == "answer"
+    _send(app, "le taux de change m'inquiète")
+    assert app.session_state["chat_history"][-1].get("answer_kind") != "what_changes"
+
+
+def test_diversification_after_an_analysis_still_describes_the_current_portfolio(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    text, _ = _send(app, "mon portefeuille est-il diversifié ?")
+    assert app.session_state["chat_history"][-1]["answer_kind"] == "xray"
+    assert "(SPY)" in text and "(TSLA)" not in text                          # avant l'idee, pas apres
+
+
+# ---- apres l'audit de securite : conseil, ordre et prediction jamais envoyes a l'agent ----
+
+AUDIT_MESSAGES = (
+    "que faudrait-il acheter pour que ce soit conforme ?",
+    "qu'est-ce qui changerait la réponse, faut-il vendre ?",
+    "c'est grave une perte de 26 % ? je vends tout ?",
+    "pourquoi la perte sera plus forte demain ?",
+    "pourquoi ma concentration est elle un probleme, quel titre choisir ?",
+)
+
+
+@pytest.mark.parametrize("message", AUDIT_MESSAGES)
+def test_advice_order_and_prediction_requests_are_refused_never_answered(app, message):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, message)
+    entry = app.session_state["chat_history"][-1]
+    assert entry["type"] == "refused", entry.get("type")
+
+
+def test_a_named_unknown_asset_keeps_its_clarification(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, "pourquoi le risque de GME est en conflit ?")
+    assert app.session_state["chat_history"][-1]["type"] == "clarify"
+
+
+# ---- revérification de l'audit : variantes proches, jamais envoyées à l'agent ----
+
+VARIANTS = (
+    "pourquoi la perte va-t-elle augmenter ?",
+    "pourquoi le risque augmentera ?",
+    "c'est grave une perte de 26 % ? je liquide tout ?",
+    "pourquoi ma concentration est un problème, lequel prendre ?",
+    "qu'est-ce qui changerait la réponse, je dois alléger ?",
+    "pourquoi ce verdict, je garde ou pas ?",
+    "pourquoi c'est en conflit, il faut tout sortir ?",
+    "pourquoi la perte va-t-elle s'aggraver ?",
+    "pourquoi ce verdict, quel titre retenir ?",
+    "pourquoi c'est en tension, c'est le moment d'en reprendre ?",
+    "mon portefeuille est-il diversifié, quoi ajouter ?",
+)
+
+
+@pytest.mark.parametrize("message", VARIANTS)
+def test_close_rewordings_never_reach_the_agent(app, message):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, message)
+    assert app.session_state["chat_history"][-1]["type"] != "agent_answer"
+
+
+def test_an_all_caps_why_question_still_reaches_the_agent(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, "POURQUOI C'EST EN TENSION ?")
+    assert app.session_state["chat_history"][-1]["type"] == "agent_answer"
+
+
+def test_an_all_caps_question_naming_an_unknown_asset_keeps_its_clarification(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, "POURQUOI LE RISQUE DE GME EST EN CONFLIT ?")
+    assert app.session_state["chat_history"][-1]["type"] == "clarify"

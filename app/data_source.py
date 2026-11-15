@@ -314,6 +314,30 @@ def get_asset_facts(mode: str, ticker: str, portfolio: Dict[str, Any]) -> Dict[s
     return {"evidence": toolbox.evidence(), "data": tool_result["data"]}
 
 
+def classify_question(text: str, has_analysis: bool = False) -> Optional[str]:
+    """Type de question pour l'agent conversationnel (issue 78), ou None. Règles sans modèle."""
+    routing = _src_module("question_routing", texts.MSG_PIPELINE_NOT_READY)
+    return routing.classify_question(text, has_analysis=has_analysis)
+
+
+def build_conversation_brief(question: str, answer_kind: str, level: str, profile: Dict[str, Any],
+                             result: Optional[Dict[str, Any]] = None,
+                             xray: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Dossier de l'agent conversationnel : faits déjà calculés par le code (analyse, radiographie, profil)."""
+    module = _src_module("conversation_brief", texts.MSG_PIPELINE_NOT_READY)
+    try:
+        return module.build_conversation_brief(question, answer_kind, level, profile, result=result, xray=xray)
+    except ValueError as exc:
+        raise DataUnavailable(texts.MSG_CONVERSATION_REFUSED.format(reason=exc)) from exc
+
+
+def answer_question(mode: str, brief: Dict[str, Any], request_check: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """ConversationResult : agent Bedrock sous contrôle (validateur, garde-fou), sinon réponse du code."""
+    pipeline = _src_module("analysis_pipeline", texts.MSG_PIPELINE_NOT_READY)
+    return pipeline.answer_question(brief, _pipeline_mode(mode), config=_pipeline_config(mode),
+                                    request_check=request_check)
+
+
 def check_request(mode: str, text: str) -> Dict[str, Any]:
     """GuardrailResult d'une requête prédéfinie (sujets refusés du garde-fou Bedrock)."""
     pipeline = _src_module("analysis_pipeline", texts.MSG_PIPELINE_NOT_READY)

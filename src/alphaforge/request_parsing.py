@@ -77,6 +77,8 @@ _REFUSAL_PATTERNS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         r"\b(achete|vends)-moi\b",
         # Ordre d'achat relié par une conjonction ("..., et achète TSLA").
         r",\s*(et|puis|alors|ensuite)\s+(achete|achetes|achetez)\b",
+        # "je vends tout ?" : une transaction réelle demandée en passant (constaté à l'audit de l'agent).
+        r"\bje\s+(vends|achete)\s+(tout|maintenant|immediatement)\b",
     )),
     (RETURN_PREDICTION, (
         r"\b(va|vont)(-t-(il|elle))?\s+(rapporter|doubler|tripler|monter|baisser|remonter|grimper|chuter"
@@ -89,6 +91,9 @@ _REFUSAL_PATTERNS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         r"\bquel(le)?s?\s+sera\b",
         r"\bquel(le)?s?\s+(rendement|performance|cours|prix)\s+(aura|auront|fera|feront)\b",
         r"\bl'an\s+prochain\b|\bl'annee\s+prochaine\b",
+        # Prémisse d'avenir dans une question ("pourquoi la perte sera plus forte demain ?").
+        r"\b(sera|seront)\b.*\b(demain|bientot|prochain\w*)\b",
+        r"\b(va|vont)(-t-(il|elle))?\s+(augmenter|diminuer|empirer|s'aggraver)\b",
     )),
     (PERSONALIZED_ADVICE, (
         r"\b(dois-je|devrais-je|je\s+devrais|que\s+dois-je)\b",
@@ -99,6 +104,10 @@ _REFUSAL_PATTERNS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         r"\bcomment\s+en\s+profiter\b",
         r"\bvu\s+ma\s+situation\b",
         r"\bmeilleur\s+(placement|actif|titre)\b",
+        # "faut-il vendre ?", "que faudrait-il acheter ?", "quel titre choisir ?" (constaté à l'audit de l'agent).
+        r"\b(faut[- ]il|faudrait[- ]il)\s+(acheter|vendre|investir|garder|choisir|ajouter|alleger|prendre)\b",
+        r"\bquel(le)?s?\s+(titre|actif|action|placement|fonds)s?\s+(choisir|prendre|acheter)\b",
+        r"\b(que|quoi)\s+(vendre|choisir)\b",
     )),
 )
 

@@ -1,0 +1,100 @@
+"""Routage des questions vers l'agent conversationnel (issue 78) : regles sans modele."""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from alphaforge.question_routing import classify_question  # noqa: E402
+
+
+@pytest.mark.parametrize("text,kind", [
+    ("Pourquoi mon idée est-elle en conflit ?", "explanation"),
+    ("c'est grave une perte de 26 % ?", "explanation"),
+    ("Explique-moi ce verdict", "explanation"),
+    ("Qu'est-ce qui changerait la réponse ?", "what_changes"),
+    ("que faudrait-il pour que ce soit conforme ?", "what_changes"),
+    ("Quel est mon horizon ?", "profile"),
+    ("Quelle perte puis-je absorber ?", "profile"),
+    ("quelle est ma tolérance au risque ?", "profile"),
+    ("Mon portefeuille est-il diversifié ?", "xray"),
+    ("mon portefeuille est-il risqué ?", "xray"),
+    ("POURQUOI c’est en tension ?", "explanation"),     # majuscules et apostrophe typographique
+])
+def test_questions_are_routed_to_the_right_kind(text, kind):
+    assert classify_question(text) == kind
+
+
+@pytest.mark.parametrize("text", [
+    "hey", "parle-moi de la météo", "quels sont mes actifs actuels ?", "quel est mon portefeuille actuel ?",
+    "composition de mon portefeuille", "", "   ", None, "Pourquoi le marché a baissé hier ?",
+    "le taux de change de mon portefeuille m'inquiète", "que veut dire Sharpe ?", "pourquoi ?",
+])
+def test_other_messages_are_left_to_the_code(text):
+    assert classify_question(text) is None
+
+
+def test_a_bare_why_targets_the_result_only_after_an_analysis():
+    assert classify_question("pourquoi ?") is None
+    assert classify_question("pourquoi ?", has_analysis=True) == "explanation"
+    assert classify_question("Pourquoi le marché a baissé hier ?", has_analysis=True) is None
+
+
+@pytest.mark.parametrize("text", [
+    "que faudrait-il acheter pour que ce soit conforme ?", "qu'est-ce qui changerait la réponse, faut-il vendre ?",
+    "c'est grave une perte de 26 % ? je vends tout ?", "pourquoi la perte sera plus forte demain ?",
+    "pourquoi ma concentration est elle un probleme, quel titre choisir ?", "que me conseilles-tu ?",
+])
+def test_transactional_or_predictive_messages_never_reach_the_agent(text):
+    assert classify_question(text, has_analysis=True) is None
+
+
+def test_the_barrier_keeps_ordinary_profile_questions():
+    assert classify_question("quel est mon horizon d'investissement ?") == "profile"
+
+
+VARIANTS = (
+    "pourquoi la perte va-t-elle augmenter ?",
+    "pourquoi le risque augmentera ?",
+    "c'est grave une perte de 26 % ? je liquide tout ?",
+    "pourquoi ma concentration est un problème, lequel prendre ?",
+    "qu'est-ce qui changerait la réponse, je dois alléger ?",
+    "pourquoi ce verdict, je garde ou pas ?",
+    "pourquoi c'est en conflit, il faut tout sortir ?",
+    "pourquoi la perte va-t-elle s'aggraver ?",
+    "pourquoi ce verdict, quel titre retenir ?",
+    "pourquoi c'est en tension, c'est le moment d'en reprendre ?",
+    "mon portefeuille est-il diversifié, quoi ajouter ?",
+)
+
+
+@pytest.mark.parametrize("text", VARIANTS)
+def test_close_rewordings_are_never_routed(text):
+    assert classify_question(text, has_analysis=True) is None
+
+
+def test_a_decimal_comma_does_not_split_the_question():
+    assert classify_question("pourquoi un poids de 0,25 met la règle en conflit ?") == "explanation"
+
+
+FRESH_REWORDINGS = (
+    "pourquoi mon idée est en conflit et je garde ou pas",
+    "mon portefeuille est-il diversifié ou faut il ajouter de l'or",
+    "pourquoi la volatilité est un risque à l'avenir ?",
+    "pourquoi ce verdict sinon je prends quoi",
+    "pourquoi ce verdict - je garde ?",
+    "c'est grave une perte de 26 % je liquide",
+    "quel risque puis-je accepter pour gagner plus",
+)
+
+
+@pytest.mark.parametrize("text", FRESH_REWORDINGS)
+def test_fresh_rewordings_found_at_the_final_check_are_never_routed(text):
+    assert classify_question(text, has_analysis=True) is None
+
+
+def test_joining_words_without_a_new_subject_keep_a_single_clause():
+    assert classify_question("pourquoi la volatilité et la perte sont en tension ?") == "explanation"
