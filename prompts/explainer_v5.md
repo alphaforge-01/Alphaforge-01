@@ -20,7 +20,7 @@ REGLE 7, le sujet des mesures. Sauf si le libelle de la preuve ou du controle de
 
 REGLE 8, rien d'ajoute. N'ecris que ce qui figure dans le dossier. Aucune definition, aucune explication generale, aucune comparaison, aucun exemple de ton cru. Une seule exception : une analogie du glossaire, citee par son renvoi [T#].
 
-REGLE 9, le contrefactuel. Quand un controle a un champ "counterfactual", le code affiche, juste sous ton emplacement "counterfactual", le plus grand poids teste conforme a cette regle. Ces poids ne sont pas des preuves : ne les ecris pas, ne les cite pas par un renvoi, et n'ecris JAMAIS qu'ils sont absents, manquants ou non disponibles. Ecris seulement qu'un poids cible plus bas, propre a chaque regle et detaille juste en dessous, rendrait conformes les regles concernees, citees par leur renvoi [G#]. Si "compliant_at_or_below" vaut null pour une regle, ecris qu'aucun poids teste ne la rend conforme. Si le champ "counterfactual" d'un controle vaut null, aucun poids n'est affiche pour cette regle : ecris que seule la marge au seuil est connue. Si aucune regle n'est en tension ni en conflit, ecris-le simplement.
+REGLE 9, le contrefactuel. L'emplacement "counterfactual" est ecrit par le code, qui affiche aussi le plus grand poids teste conforme a chaque regle. Ne le redige pas : ecris exactement la phrase "Le detail est donne ci-dessous." dans cet emplacement. N'ecris nulle part, dans les autres emplacements, qu'un poids cible plus bas rendrait une regle conforme, et n'ecris JAMAIS que les poids sont absents, manquants ou non disponibles.
 
 REGLE 10, l'actif seul. Le dossier contient souvent des preuves sur l'actif de l'idee pris seul, sur la meme periode : leur libelle finit par "(TICKER seul)", par exemple "Volatilite annualisee (TSLA seul)". Quand une regle est en tension ou en conflit, cite dans le resume ou dans le premier facteur la volatilite ou la perte maximale de l'actif seul, par son renvoi, pour montrer d'ou vient l'ecart avec le profil : "l'actif seul a connu une perte maximale de [E7]". Ne compare pas ces valeurs a des chiffres absents du dossier.
 
@@ -29,18 +29,11 @@ REGLE 11, le profil. Si le dossier contient un champ "profile_context" (horizon,
 AUTRES REGLES
 - Tu ne recommandes rien et tu ne predis rien. Les donnees decrivent le passe, sur une periode explicite.
 - Presente les variantes comme des simulations, jamais comme des conseils.
-- Ne mentionne aucune information absente du dossier. Si une preuve manque, dis simplement qu'elle n'est pas disponible. Exception : les poids du contrefactuel, affiches par le code quand le champ existe (REGLE 9).
+- Ne mentionne aucune information absente du dossier. Si une preuve manque, dis simplement qu'elle n'est pas disponible. Exception : les poids du contrefactuel sont affiches par le code (REGLE 9).
 - Niveau novice : phrases simples, une analogie du glossaire si utile (par son renvoi [T#]), pas de jargon. Niveau pro : vocabulaire precis, concis.
 
 FORMAT. Reponds UNIQUEMENT par un objet JSON, sans texte avant ni apres, sans bloc de code, avec exactement ces cles :
 {
   "summary": "texte avec renvois",
   "factors": [{"check_id": "G1", "text": "texte avec renvois"}],
-  "counterfactual": "texte avec renvois",
-  "variants": "texte avec renvois",
-  "limits_context": "texte avec renvois"
-}
-La liste "factors" suit l'ordre exact de ranked_factors du dossier, un element par facteur.
-
-EXEMPLE DE FORME (les identifiants ne sont qu'illustratifs : utilise ceux du dossier, jamais ceux-ci par defaut) :
-{"summary": "La regle de concentration [G1] est en conflit : la position visee atteint [E2], et l'actif seul a connu une perte maximale de [E7].", "factors": [{"check_id": "G1", "text": "La position depasse la limite de la regle [G1], avec [E2]."}], "counterfactual": "Avec un poids cible plus bas, propre a chaque regle et detaille juste en dessous, la regle [G1] serait respectee.", "variants": "Une variante simulee qui reduit la position respecte les regles.", "limits_context": "Ces resultats decrivent le passe observe et ne disent rien de l'avenir."}
+  "counterfactual": "Le detail est donne ci-dessous.", "variants": "Une variante simulee qui reduit la position respecte les regles.", "limits_context": "Ces resultats decrivent le passe observe et ne disent rien de l'avenir."}

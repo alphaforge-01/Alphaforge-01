@@ -361,12 +361,12 @@ def test_a_reply_with_a_link_is_retried_and_the_second_reply_is_kept():
 
 # ---- prompt v5 : contrefactuel affiche par le code, actif seul, contexte du profil ----
 
-def test_prompt_v5_forbids_calling_counterfactual_weights_unavailable():
+def test_prompt_v5_leaves_the_counterfactual_slot_to_the_code():
     prompt = load_prompt("explainer_v5")
-    assert "REGLE 9" in prompt and "JAMAIS qu'ils sont absents, manquants ou non disponibles" in prompt
-    assert "seule la marge au seuil est connue" in prompt and "toujours affiches" not in prompt
+    assert "REGLE 9" in prompt and 'ecris exactement la phrase "Le detail est donne ci-dessous."' in prompt
+    assert "JAMAIS que les poids sont absents, manquants ou non disponibles" in prompt
     # l'exemple ne doit plus pointer vers une preuve de poids qui n'existe pas
-    assert "Sous le poids indique en [E5]" not in prompt
+    assert "Sous le poids indique en [E5]" not in prompt and "propre a chaque regle" not in prompt
     assert "REGLE 10" in prompt and "(TSLA seul)" in prompt
     assert "REGLE 11" in prompt and "profile_context" in prompt
     assert chr(0x2014) not in prompt

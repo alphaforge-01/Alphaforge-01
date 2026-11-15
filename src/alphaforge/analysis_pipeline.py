@@ -470,10 +470,17 @@ def explain(
                         f"{type(error).__name__}: {redact_text(str(error))}" if known else type(error).__name__)
     if output is None:
         output = deps.render_template(brief)
+    elif output["origin"] == "llm" and not from_cache:
+        # L'emplacement du contrefactuel est ecrit par le code, jamais par le modele : sa phrase decrit un affichage
+        # du code (poids detailles dessous), absent du dossier, et le controle d'ancrage la juge non fondee (mesure
+        # sur Amira : texte entier a 0,11, puis 0,58 sans cet emplacement). Celle du gabarit est fondee par construction.
+        output = {**output, "counterfactual": deps.render_template(brief)["counterfactual"]}
     details: dict[str, Any] = {
         "level": level, "origin": output["origin"], "attempt": output["attempt"], "brief_id": brief["brief_id"],
         "from_cache": from_cache,
     }
+    if output["origin"] == "llm":
+        details["slots_written_by_code"] = ["counterfactual"]
     wanted_llm = mode == "bedrock"
     if wanted_llm and output["origin"] == "template":
         details["fallback_reason"] = fallback_reason or "rejet_du_validateur"
