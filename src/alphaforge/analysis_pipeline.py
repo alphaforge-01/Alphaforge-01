@@ -156,6 +156,37 @@ def scripted_sequence(toolbox: ToolBox, idea: InvestmentIdea) -> AnalystOutcome:
     return AnalystOutcome(submission=submission, actor="code", turns=0, stop_reason="scripted")
 
 
+ASSET_FACT_METRICS = ("volatility_ann", "max_drawdown")
+
+
+def _ensure_asset_facts(toolbox: ToolBox, ticker: str) -> tuple[list[str], str]:
+    """Preuves de l'actif de l'idee pris seul (volatilite, perte maximale), pour le dossier d'explication.
+
+    Sans elles, l'explication ne cite que des mesures du portefeuille et ne peut pas dire d'ou vient l'ecart
+    avec le profil. Reprend l'appel de l'analyste s'il existe, sinon le code appelle ``get_asset_facts``.
+    Budget epuise ou outil en echec : aucune preuve ajoutee, l'analyse continue.
+    Rend (identifiants de preuves, origine : "agent", "code" ou "absent").
+    """
+    found, caller = None, "absent"
+    for result in toolbox.results:
+        if (result["tool_name"] == "get_asset_facts" and result["status"] == "ok"
+                and (result.get("params") or {}).get("ticker") == ticker):
+            found, caller = result, "agent"
+            break
+    if found is None and toolbox.calls_used < toolbox.max_calls:
+        result = toolbox.call("get_asset_facts", {"ticker": ticker})
+        if result["status"] == "ok":
+            found, caller = result, "code"
+    if found is None:
+        return [], "absent"
+    ids = [e["evidence_id"] for e in found.get("evidence", []) or [] if e.get("metric") in ASSET_FACT_METRICS]
+    return ids, caller
+
+
+def _with_asset_facts(highlights: list[str], asset_fact_ids: list[str]) -> list[str]:
+    return highlights + [e for e in asset_fact_ids if e not in highlights]
+
+
 def _load_limits(deps: PipelineDeps, limit_ids: list[str]) -> list[dict]:
     """Catalogue des limites du resultat, au format ``{limit_id, text_novice, text_pro}``.
 
@@ -269,6 +300,7 @@ def run_analysis(
         raise AnalysisError("Budget d'appels d'outils epuise avant la simulation de l'idee.") from error
     if simulation is None:
         raise AnalysisError("La simulation de l'idee n'a pas abouti : aucun resultat exploitable.")
+    asset_fact_ids, asset_facts_caller = _ensure_asset_facts(toolbox, idea["ticker"])
     snapshot_before, snapshot_after = _snapshots_from_simulation(simulation)
     snapshot_before = {**snapshot_before, "subject": "portfolio_before"}
     snapshot_after = {**snapshot_after, "subject": "portfolio_after"}
@@ -281,6 +313,7 @@ def run_analysis(
     details: dict[str, Any] = {
         "tool_calls": list(toolbox.calls), "turns": outcome.turns, "stop_reason": outcome.stop_reason,
         "mode_requested": mode, "mode_effective": "bedrock" if outcome.actor == "agent" else "offline",
+        "asset_facts": {"ticker": idea["ticker"], "caller": asset_facts_caller, "evidence_ids": asset_fact_ids},
     }
     if fallback_reason and mode == "bedrock":
         details["fallback_reason"] = fallback_reason
@@ -335,7 +368,10 @@ def run_analysis(
     submission = AnalystSubmission(
         understood_idea=idea,
         variants=[{"reason_code": v["reason_code"], "idea": v["idea"]} for v in variants],
-        highlight_evidence_ids=[e for e in outcome.submission.get("highlight_evidence_ids", []) if e in evidence][:MAX_HIGHLIGHTS],
+        # au plus MAX_HIGHLIGHTS choisies par l'analyste, puis les faits de l'actif ajoutes par le code
+        highlight_evidence_ids=_with_asset_facts(
+            [e for e in outcome.submission.get("highlight_evidence_ids", []) if e in evidence][:MAX_HIGHLIGHTS],
+            [e for e in asset_fact_ids if e in evidence]),
         unsupported_requests=list(outcome.submission.get("unsupported_requests", [])),
     )
     as_of_value = as_of or next((e["as_of"] for e in evidence.values() if e.get("as_of")), None) or "inconnue"
@@ -624,12 +660,12 @@ def _scope_evidence_labels(evidence: dict[str, Any]) -> None:
     """
     for entry in evidence.values():
         subject = str(entry.get("subject", ""))
-        for prefix, suffix in _SCOPE_SUFFIX:
-            if subject.startswith(prefix):
-                label = str(entry.get("label_fr", ""))
-                if suffix not in label:
-                    entry["label_fr"] = label + suffix
-                break
+        suffix = next((s for prefix, s in _SCOPE_SUFFIX if subject.startswith(prefix)), None)
+        if suffix is None and entry.get("tool_name") == "get_asset_facts" and subject:
+            suffix = f" ({subject} seul)"   # faits de l'actif pris seul, pas du portefeuille
+        label = str(entry.get("label_fr", ""))
+        if suffix and suffix not in label:
+            entry["label_fr"] = label + suffix
 
 
 def _excerpts(rejections: list[dict[str, Any]], limit: int = 8) -> list[str]:

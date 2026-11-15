@@ -99,7 +99,7 @@ def test_offline_result_shape_and_trace():
     assert trace[1]["actor"] == "code" and trace[2]["actor"] == "code"
     assert all(t["status"] == "ok" for t in trace)
     assert [c["tool_name"] for c in trace[0]["details"]["tool_calls"]] == [
-        "analyze_portfolio", "simulate_portfolio_change"]
+        "analyze_portfolio", "simulate_portfolio_change", "get_asset_facts"]
 
 
 def test_robert_conflict_amira_compliant_same_asset_figures():
@@ -151,7 +151,7 @@ def test_runner_failure_falls_back_to_scripted_sequence(error, name):
     assert step["details"]["stop_reason"] == "scripted"
     # la trace ne garde que les appels de la sequence scriptee, pas ceux de l'agent echoue
     assert [c["tool_name"] for c in step["details"]["tool_calls"]] == [
-        "analyze_portfolio", "simulate_portfolio_change"]
+        "analyze_portfolio", "simulate_portfolio_change", "get_asset_facts"]
     assert result["governance_after"]["overall_status"] == "conflict"
 
 
@@ -454,3 +454,69 @@ def test_variants_go_back_through_governance():
 def test_compliant_run_has_no_variants_with_variants_supported():
     deps = replace(fixture_deps(), is_fixture=False, supports_variants=True)
     assert run("amira", deps=deps)["variants"] == []
+
+
+# ---- faits de l'actif seul dans le dossier (P1-7) ----
+
+def _robert_inputs():
+    import json
+    from pathlib import Path
+    fixtures = Path(__file__).parent / "fixtures"
+    load = lambda name: json.loads((fixtures / name).read_text(encoding="utf-8"))
+    return load("profile_robert.json"), load("portfolio_robert.json"), load("idea_tsla_25.json")
+
+
+def _deps_with_asset_facts():
+    """Bouchons, mais avec de vraies preuves d'actif (le bouchon d'origine n'en rend aucune)."""
+    from dataclasses import replace
+    from alphaforge.evidence import make_entry
+    from alphaforge.fixture_collaborators import fixture_deps
+
+    def facts(ticker, as_of=None):
+        common = dict(tool_name="get_asset_facts", subject=ticker, as_of="2026-11-12", limit_ids=["LM2"],
+                      period_start="2021-11-12", period_end="2026-11-12", n_observations=1227, currency="CAD")
+        entries = [make_entry(metric="volatility_ann", value=0.59, display_value="59 %", **common),
+                   make_entry(metric="max_drawdown", value=0.69, display_value="69 %", **common),
+                   make_entry(metric="total_return", value=0.3, display_value="30 %", **common)]
+        for number, entry in enumerate(entries, start=901):
+            entry["evidence_id"] = f"E{number}"
+        return {"tool_name": "get_asset_facts", "call_id": "fixture-call", "params": {"ticker": ticker},
+                "status": "ok", "error_message": None, "data": {"ticker": ticker}, "evidence": entries}
+
+    return replace(fixture_deps(), get_asset_facts=facts)
+
+
+def test_asset_facts_of_the_idea_reach_the_brief_with_a_scoped_label():
+    from alphaforge.analysis_pipeline import run_analysis
+    from alphaforge.bedrock_client import BedrockConfig
+    from alphaforge.fixture_collaborators import fixture_deps
+
+    deps = _deps_with_asset_facts()
+    profile, portfolio, idea = _robert_inputs()
+    result = run_analysis(profile, portfolio, idea, deps=deps, config=BedrockConfig())
+    facts = result["trace"][0]["details"]["asset_facts"]
+    assert facts["ticker"] == idea["ticker"].upper() and facts["caller"] == "code" and facts["evidence_ids"]
+    calls = [c for c in result["trace"][0]["details"]["tool_calls"] if c["tool_name"] == "get_asset_facts"]
+    assert len(calls) == 1
+    for evidence_id in facts["evidence_ids"]:
+        assert evidence_id in result["submission"]["highlight_evidence_ids"]
+        assert result["evidence"][evidence_id]["label_fr"].endswith(f"({facts['ticker']} seul)")
+    brief = deps.build_brief(result, "novice")
+    assert set(facts["evidence_ids"]) <= {e["evidence_id"] for e in brief["evidence"]}
+
+
+def test_asset_facts_reuse_the_analyst_call_and_never_break_on_an_exhausted_budget():
+    from alphaforge.analysis_pipeline import _ensure_asset_facts, _with_asset_facts
+    from alphaforge.tool_specs import ToolBox
+
+    deps = _deps_with_asset_facts()
+    _, portfolio, idea = _robert_inputs()
+    ticker = idea["ticker"].upper()
+    box = ToolBox(deps, portfolio, as_of=None, capital_cad=None)
+    box.call("get_asset_facts", {"ticker": ticker})
+    ids, caller = _ensure_asset_facts(box, ticker)
+    assert caller == "agent" and box.calls_used == 1 and ids == ["E901", "E902"]   # rendement cumule exclu
+
+    full = ToolBox(deps, portfolio, as_of=None, capital_cad=None, max_calls=0)
+    assert _ensure_asset_facts(full, ticker) == ([], "absent")
+    assert _with_asset_facts(["E1", "E2"], ["E2", "E9"]) == ["E1", "E2", "E9"]

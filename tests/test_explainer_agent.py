@@ -134,11 +134,11 @@ def test_first_attempt_success():
     client = ScriptedClient([reply(json.dumps(good_slots()), extra_blocks=[{"reasoningContent": {"x": 1}}])])
     output = explain_with_llm(client, MODEL, BRIEF, accept)
     assert output["origin"] == "llm" and output["attempt"] == 1
-    assert output["model_id"] == MODEL and output["prompt_version"] == "explainer_v4"
+    assert output["model_id"] == MODEL and output["prompt_version"] == "explainer_v5"
     assert len(client.calls) == 1
     call = client.calls[0]
     assert call["tool_config"] is None and "toolConfig" not in call["kwargs"]
-    assert call["system"] == load_prompt("explainer_v4") and call["system"]
+    assert call["system"] == load_prompt("explainer_v5") and call["system"]
     assert call["inference_config"] == INFERENCE_CONFIG
     user_text = call["messages"][0]["content"][0]["text"]
     assert call["messages"][0]["role"] == "user"
@@ -229,7 +229,7 @@ def test_describe_rejections_is_bounded_and_masks_secrets():
 
 
 def test_prompt_v2_states_the_validator_rules():
-    prompt = load_prompt("explainer_v4")
+    prompt = load_prompt("explainer_v5")
     for needle in ("REGLE 1", "REGLE 2", "REGLE 3", "REGLE 4", "REGLE 5", "max_chars_per_slot", "[LM1]", "il faut"):
         assert needle in prompt
     assert chr(0x2014) not in prompt   # regle 1 : aucun tiret cadratin dans le prompt
@@ -274,7 +274,7 @@ def test_trace_records_the_slot_of_each_rejection_without_any_model_text():
 
 
 def test_prompt_v4_forbids_naming_variants_by_identifier():
-    prompt = load_prompt("explainer_v4")
+    prompt = load_prompt("explainer_v5")
     assert "REGLE 6" in prompt and "V1" in prompt and "UNE seule phrase" in prompt
 
 
@@ -319,7 +319,7 @@ def test_guardrail_checks_only_the_model_sentences_not_the_long_rendered_text():
 
 
 def test_prompt_v4_states_the_scope_of_measures_and_forbids_additions():
-    prompt = load_prompt("explainer_v4")
+    prompt = load_prompt("explainer_v5")
     assert "REGLE 7" in prompt and "PORTEFEUILLE ENTIER" in prompt and "de la position" in prompt
     assert "REGLE 8" in prompt and "rien d'ajoute" in prompt
 
@@ -357,3 +357,20 @@ def test_a_reply_with_a_link_is_retried_and_the_second_reply_is_kept():
     assert len(client.calls) == 2 and output["attempt"] == 2 and "https" not in output["summary"]
     feedback = client.calls[1]["messages"][-1]["content"][0]["text"]
     assert "lien, une image ou du HTML" in feedback
+
+
+# ---- prompt v5 : contrefactuel affiche par le code, actif seul, contexte du profil ----
+
+def test_prompt_v5_forbids_calling_counterfactual_weights_unavailable():
+    prompt = load_prompt("explainer_v5")
+    assert "REGLE 9" in prompt and "JAMAIS qu'ils sont absents, manquants ou non disponibles" in prompt
+    # l'exemple ne doit plus pointer vers une preuve de poids qui n'existe pas
+    assert "Sous le poids indique en [E5]" not in prompt
+    assert "REGLE 10" in prompt and "(TSLA seul)" in prompt
+    assert "REGLE 11" in prompt and "profile_context" in prompt
+    assert chr(0x2014) not in prompt
+
+
+def test_explainer_uses_prompt_v5():
+    from alphaforge import explainer_agent
+    assert explainer_agent.PROMPT_NAME == "explainer_v5"
