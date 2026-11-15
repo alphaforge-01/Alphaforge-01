@@ -4,7 +4,7 @@ Statut : diagnostic hors ligne fait le 14 novembre 2026, mesuré sur le compte A
 
 ## En bref
 
-1. **La cause du score bas est confirmée : c'est la source JSON.** Avec le même contenu écrit en phrases, le texte réel de l'explicateur passe de 0,42 et 0,15 à 0,83 et 0,73 (seuil du garde-fou : 0,5).
+1. **La cause du score bas est confirmée : c'est la source JSON.** Avec le même contenu écrit en phrases, le texte réel de l'explicateur passe de 0,15 à 0,42 à une plage de 0,73 à 0,92 (seuil du garde-fou : 0,5). Sur la scène 2 simulée avec la configuration réelle, le texte novice d'Amira passe de 0,27, qui le ferait remplacer par le gabarit, à 0,82.
 2. **Mais le contrôle d'ancrage ne repère pas un verdict faux.** Un texte qui déclare toutes les règles conformes obtient presque le même score que le texte juste, avec les deux sources. Le score mesure surtout la proximité de vocabulaire et de sujet, pas la justesse des statuts.
 3. **Conséquence :** passer à la source en phrases évite de remplacer à tort le texte du modèle par le gabarit, mais le score ne doit pas être présenté comme une preuve d'exactitude ni servir à bloquer. La fidélité reste garantie par le code : renvois, validateur, statuts calculés par la gouvernance.
 
@@ -42,7 +42,7 @@ La source en phrases (`src/alphaforge/grounding_source.py`) réécrit le même d
 
 ## Mesure sur le compte
 
-Conditions : compte de l'atelier (rôle `WSParticipantRole`), `us-east-1`, garde-fou `alphaforge-guardrail` version 5 (ancrage et pertinence au seuil 0,5, mode détection), requête fixe du pipeline. Idée : 25 % de TSLA au prorata. Le témoin est le même texte avec toutes les règles déclarées conformes. Coût : 32 appels `ApplyGuardrail` et 4 appels Converse.
+Conditions : compte de l'atelier (rôle `WSParticipantRole`), `us-east-1`, garde-fou `alphaforge-guardrail` version 5 (ancrage et pertinence au seuil 0,5, mode détection), requête fixe du pipeline. Idée : 25 % de TSLA au prorata. Le témoin est le même texte avec toutes les règles déclarées conformes. Coût total : 40 appels `ApplyGuardrail` et 6 appels Converse.
 
 **Texte du gabarit (fidèle par construction)**
 
@@ -58,12 +58,21 @@ Conditions : compte de l'atelier (rôle `WSParticipantRole`), `us-east-1`, garde
 
 Chez Mateo, le témoin change peu le sens (ses statuts sont "conforme" et "information manquante", les mots remplacés sont dans une négation) : ses lignes ne testent pas le témoin.
 
-**Texte réel de l'explicateur** (modèle `us.anthropic.claude-haiku-5-5`, prompt `explainer_v4`, sorties acceptées par le validateur)
+**Texte réel d'un explicateur** (modèle `us.anthropic.claude-haiku-5-5`, choisi avant de connaître la configuration réelle ; prompt `explainer_v4`, sorties acceptées par le validateur)
 
 | Cas | JSON, texte juste | JSON, témoin faux | Phrases, texte juste | Phrases, témoin faux |
 | --- | --- | --- | --- | --- |
 | Robert, novice | 0,42 | 0,52 | 0,83 | 0,80 |
 | Robert, pro | 0,15 | 0,18 | 0,73 | 0,74 |
+
+**Simulation de la scène 2 avec la configuration réelle** (Amira, 25 % de TSLA ; explicateur `us.anthropic.claude-sonnet-5-5`, celui des traces de `outputs/reports/demo_traces/`, prompt `explainer_v4`, plafond de 2 500 jetons ; réponses complètes en environ 1 100 jetons, acceptées par le validateur)
+
+| Niveau | Source JSON (pipeline actuel) | Source en phrases | Témoin faux, JSON | Témoin faux, phrases |
+| --- | --- | --- | --- | --- |
+| Novice | 0,27 | 0,82 | 0,27 | 0,82 |
+| Pro | 0,33 | 0,92 | 0,33 | 0,91 |
+
+Avec le pipeline actuel, le texte novice (0,27, sous le plancher de 0,3) serait remplacé par le gabarit, et le texte pro (0,33) affiché avec la mention d'ancrage faible. Les traces réelles d'Amira enregistrées par l'équipe donnent 0,42 et 0,40 : le score varie d'un texte à l'autre, mais reste sous le seuil avec la source JSON. Avec la source en phrases, les deux textes dépassent nettement le seuil. Le témoin faux obtient exactement les mêmes scores.
 
 Lecture :
 
@@ -71,7 +80,7 @@ Lecture :
 - Avec la source en phrases, le gabarit gagne en moyenne 0,2 point de score, et le texte du modèle dépasse le seuil dans les deux cas.
 - Le témoin faux n'est nettement pénalisé que dans un cas sur six utiles (Robert, pro, gabarit, source en phrases : 0,28 contre 0,63). Avec la source JSON, il obtient même parfois un score plus haut que le texte juste.
 
-**Autre constat : réponses tronquées.** Avec ce modèle, la réponse contient un bloc de raisonnement (environ 5 500 caractères) avant le JSON. Au plafond actuel de 2 500 jetons de sortie (`INFERENCE_CONFIG` de `explainer_agent.py`), les deux premiers appels se sont arrêtés sur `max_tokens`, JSON incomplet. À 8 000 jetons, les deux appels ont abouti avec environ 2 100 jetons de sortie. Le modèle a été choisi d'après `tests/test_bedrock_hardening.py` : l'identifiant réellement configuré par le flux C reste à confirmer.
+**Autre constat, seulement avec Haiku : réponses tronquées.** Les traces de l'équipe montrent que l'explicateur configuré est `us.anthropic.claude-sonnet-5-5` (Haiku sert à l'analyste). Avec Haiku comme explicateur, la réponse contient un bloc de raisonnement d'environ 5 500 caractères avant le JSON : au plafond de 2 500 jetons, les deux premiers appels se sont arrêtés sur `max_tokens`, JSON incomplet ; à 8 000 jetons, ils ont abouti avec environ 2 100 jetons. Avec Sonnet, la réponse tient en environ 1 100 jetons : pas de troncature.
 
 Pour refaire la mesure avec des identifiants locaux, dans le terminal dédié, après `aws sts get-caller-identity` :
 
@@ -86,7 +95,7 @@ Le script mesure chaque texte contre les deux sources, plus le témoin négatif.
 
 1. **Source du contrôle.** À l'étape 6 de `explain`, remplacer `json.dumps(brief, ensure_ascii=False)` par `build_grounding_source(brief)`. L'explicateur continue de recevoir le dossier JSON ; seule la source du contrôle change, et elle ne contient que le contenu du dossier.
 2. **Rôle du score.** Garder le mode détection. Le plancher de 0,3 peut rester comme filet contre un texte hors sujet, mais le score ne doit ni bloquer ni être présenté comme une vérification des statuts : le témoin montre qu'il ne la fait pas.
-3. **Plafond de jetons de l'explicateur.** Le relever (par exemple 4 000) ou désactiver le raisonnement du modèle si l'API le permet, après avoir confirmé le modèle configuré.
+3. **Plafond de jetons de l'explicateur.** Inutile avec Sonnet. À relever (par exemple 4 000) seulement si l'explicateur passe à Haiku.
 
 ## Limites de ce diagnostic
 
