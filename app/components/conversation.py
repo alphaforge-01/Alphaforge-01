@@ -134,7 +134,14 @@ def _render_answer(entry: Mapping[str, Any], index: int, on_ask: Optional[Callab
 
 
 def _render_agent_answer(entry: Mapping[str, Any]) -> None:
-    """Réponse de l'agent conversationnel (issue 78) : texte, origine, signaux du garde-fou, données et limites."""
+    """Réponse de l'agent conversationnel (issue 78) : texte, origine, signaux du garde-fou, données et limites.
+
+    Entrée du fil `{"type": "agent_answer", ...}` écrite par `session._agent_answer` : `answer_kind`,
+    `rendered` (texte, renvois remplacés), `origin` ("llm" ou "template"), `fallback_reason`, `guard`
+    (détails du garde-fou : `grounding_weak`, `grounding_very_weak`, `grounding_score`, `relevance_weak`),
+    `evidence` (preuves citées), `limits` (textes), `counterfactuals` (`label`, `weight`, `none`).
+    La question n'y est jamais recopiée.
+    """
     st.markdown(escape_dollars(entry.get("rendered", "")))
     origin = entry.get("origin", "template")
     guard = entry.get("guard") or {}

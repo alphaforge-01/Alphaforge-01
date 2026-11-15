@@ -206,14 +206,14 @@ def ask(text: Optional[str] = None) -> None:
     if parsed["status"] == "refused":
         _append({"role": "assistant", "type": "refused", "by": "local", "topics": [parsed["reason"]],
                  "guard_action": guard.get("action")})
+    elif kind := _agent_kind(text, parsed, analysed):
+        # Question de profil ou "pourquoi" : agent conversationnel, sous contrôle (issue 78). Les refus passent
+        # avant ; _agent_kind écarte idées, confirmations, salutations et termes du glossaire.
+        _append(_agent_answer(text, kind, persona, guard))
     elif parsed["status"] == "clarify":
         _append({"role": "assistant", "type": "clarify", "parsed": parsed})
     elif parsed["status"] == "confirm":
         _append({"role": "assistant", "type": "confirm", "parsed": parsed})
-    elif parsed["status"] == "answer" and parsed.get("answer_kind") in ("out_of_scope", "portfolio") \
-            and data_source.classify_question(text):
-        # Question de profil ou "pourquoi" : agent conversationnel, sous contrôle (issue 78).
-        _append(_agent_answer(text, data_source.classify_question(text), persona, guard))
     elif parsed["status"] == "answer":
         entry: Dict[str, Any] = {"role": "assistant", "type": "answer", "parsed": parsed}
         if parsed.get("answer_kind") == "portfolio":
@@ -229,15 +229,46 @@ def ask(text: Optional[str] = None) -> None:
         _append_analysis(guard.get("action"), persona)
 
 
+def _agent_kind(text: str, parsed: Dict[str, Any], analysed: bool) -> Optional[str]:
+    """Type de question pour l'agent, seulement pour ce que les règles du chat n'ont pas su traiter.
+
+    Jamais pour un refus, une idée, une confirmation, une salutation, un terme du glossaire ou la liste des
+    positions demandée comme telle. Une définition sans terme connu ("explique-moi le verdict") et une
+    question lue comme une idée sans actif ("c'est grave une perte de 26 % ?") peuvent être reprises.
+    """
+    status, answer_kind = parsed["status"], parsed.get("answer_kind")
+    eligible = (
+        (status == "answer" and answer_kind in ("out_of_scope", "portfolio"))
+        or (status == "answer" and answer_kind == "definition" and parsed.get("term_id") is None)
+        or (status == "clarify" and parsed.get("reason") == "unknown_asset")
+    )
+    if not eligible:
+        return None
+    kind = data_source.classify_question(text, has_analysis=analysed)
+    if status == "clarify" and kind != "explanation":
+        return None
+    return kind
+
+
 def _latest_analysis(persona: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Dernière analyse déjà calculée pour l'idée courante et ce profil, sans nouvel appel."""
     analysed = any(entry.get("type") == "analysis" for entry in st.session_state.chat_history)
     if st.session_state.idea is None or not analysed:
         return None
-    effective = idea_panel.effective_idea(st.session_state.idea, persona["portfolio"])[0]
-    key = (st.session_state.mode, fingerprint(persona["profile"]), fingerprint(persona["portfolio"]),
-           fingerprint(effective))
-    return st.session_state.analysis_cache.get(key)
+    return st.session_state.analysis_cache.get(_analysis_entry_key(persona, st.session_state.idea))
+
+
+def _xray_or_none(persona: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Radiographie du portefeuille fictif (code seul), depuis le cache si possible ; indisponible : None."""
+    key = (st.session_state.mode, fingerprint(persona["profile"]), fingerprint(persona["portfolio"]))
+    if key in st.session_state.xray_cache:
+        return st.session_state.xray_cache[key]
+    try:
+        st.session_state.xray_cache[key] = data_source.get_xray(
+            st.session_state.mode, persona["profile"], persona["portfolio"])
+    except data_source.DataUnavailable:   # la réponse se contente alors du profil
+        return None
+    return st.session_state.xray_cache[key]
 
 
 def _agent_answer(text: str, kind: str, persona: Dict[str, Any], guard: Dict[str, Any]) -> Dict[str, Any]:
@@ -245,13 +276,10 @@ def _agent_answer(text: str, kind: str, persona: Dict[str, Any], guard: Dict[str
     mode = st.session_state.mode
     level = st.session_state.level or "novice"
     try:
-        xray_cache_key = (mode, fingerprint(persona["profile"]), fingerprint(persona["portfolio"]))
-        xray = st.session_state.xray_cache.get(xray_cache_key)
-        if xray is None:
-            xray = data_source.get_xray(mode, persona["profile"], persona["portfolio"])
-            st.session_state.xray_cache[xray_cache_key] = xray
-        brief = data_source.build_conversation_brief(
-            text, kind, level, persona["profile"], result=_latest_analysis(persona), xray=xray)
+        result = _latest_analysis(persona)
+        # La radiographie ne sert qu'aux questions sur le portefeuille actuel, ou quand aucune analyse n'existe.
+        xray = _xray_or_none(persona) if (kind == "xray" or result is None) else None
+        brief = data_source.build_conversation_brief(text, kind, level, persona["profile"], result=result, xray=xray)
         conversation = data_source.answer_question(mode, brief, guard)
     except data_source.DataUnavailable as exc:
         return {"role": "assistant", "type": "info", "text": str(exc)}
@@ -261,6 +289,7 @@ def _agent_answer(text: str, kind: str, persona: Dict[str, Any], guard: Dict[str
                 "text": texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__)}
     evidence = {entry["evidence_id"]: entry for entry in brief["evidence"]}
     checks = {check["check_id"]: check for check in brief["checks"]}
+    steps = {step["name"]: step.get("details") or {} for step in conversation["trace"]}
     counterfactuals = [
         {"label": checks[ref]["label_fr"], "weight": (checks[ref]["counterfactual"] or {}).get("display_value"),
          "none": (checks[ref]["counterfactual"] or {}).get("compliant_at_or_below") is None}
@@ -269,8 +298,8 @@ def _agent_answer(text: str, kind: str, persona: Dict[str, Any], guard: Dict[str
     return {
         "role": "assistant", "type": "agent_answer", "answer_kind": kind,
         "rendered": conversation["rendered_answer"], "origin": conversation["reply"]["origin"],
-        "fallback_reason": conversation["trace"][0]["details"].get("fallback_reason"),
-        "guard": dict(conversation["trace"][2]["details"]),
+        "fallback_reason": steps.get("explanation", {}).get("fallback_reason"),
+        "guard": dict(steps.get("guardrail", {})),
         "evidence": [evidence[ref] for ref in conversation.get("cited_evidence", []) if ref in evidence],
         "limits": [limit["text"] for limit in brief["limits"]],
         "counterfactuals": counterfactuals,

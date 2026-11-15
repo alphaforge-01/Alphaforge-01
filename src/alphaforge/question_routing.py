@@ -21,16 +21,21 @@ def _normalize(text: str) -> str:
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
 
+# Mots qui rattachent une question au resultat affiche : sans eux, "pourquoi le marche a baisse ?" reste hors sujet.
+_OBJECT = r"(idee|verdict|conflit|tension|regle|statut|portefeuille|risque|perte|volatilite|concentration|conforme|resultat|reponse)"
+
 # Ordre de priorite : ce qui changerait la reponse, puis le "pourquoi", puis le profil, puis le portefeuille.
 _RULES: Tuple[Tuple[AnswerKind, re.Pattern], ...] = (
     ("what_changes", re.compile(
-        r"(qu'est-ce qui|qu'est ce qui|que faudrait-il|qu'est-ce qu'il faudrait|ce qui)\b.*\b(chang|conforme)"
+        r"(qu'est-ce qui|qu'est ce qui|que faudrait-il|qu'est-ce qu'il faudrait|ce qui)\b.*"
+        r"\b(changer|changerait|changeraient|changement|conforme)\b"
         r"|\brendre (mon idee |l'idee |le portefeuille )?conforme"
         r"|\bpour (que ce soit|que ca soit|etre) conforme"
         r"|\bchanger (le|la|ce|cette) (verdict|statut|resultat|reponse)")),
     ("explanation", re.compile(
-        r"\bpourquoi\b|\bc'est grave\b|\best-ce grave\b|\bca veut dire quoi\b|\bque (veut dire|signifie)\b"
-        r"|\bexplique(-moi|z)?\b.*\b(verdict|conflit|tension|resultat|statut|regle)"
+        r"\bpourquoi\b.*\b" + _OBJECT + r"|\b(c'est|est-ce) grave\b"
+        r"|\bexplique(-moi|z|z-moi)?\b.*\b(verdict|conflit|tension|resultat|statut|regle|reponse)\b"
+        r"|\b(que veut dire|que signifie|veut dire quoi)\b.*\b(verdict|conflit|tension|resultat|statut|regle|reponse)\b"
         r"|\ben (conflit|tension)\b")),
     ("profile", re.compile(
         r"\bmon (horizon|profil|objectif)\b|\bma (tolerance|capacite|preference)\b|\bmes (preferences|objectifs)\b"
@@ -40,14 +45,20 @@ _RULES: Tuple[Tuple[AnswerKind, re.Pattern], ...] = (
         r"\bdiversifi|\bconcentr|\bexposition\b"
         r"|\bmon portefeuille est(-il)? (risque|equilibre|prudent)|\b(risque|volatilite|perte maximale) de mon portefeuille\b")),
 )
+_BARE_WHY = re.compile(r"^\W*pourquoi\W*$|\bpourquoi (ca|cela|c'est)\b")
 
 
-def classify_question(text: str) -> Optional[AnswerKind]:
-    """Type de question pour l'agent conversationnel, ou `None` si aucune regle ne la reconnait."""
+def classify_question(text: str, *, has_analysis: bool = False) -> Optional[AnswerKind]:
+    """Type de question pour l'agent conversationnel, ou `None` si aucune regle ne la reconnait.
+
+    `has_analysis` : une idee a deja ete analysee. Un "pourquoi ?" sans objet ne vise alors que ce resultat.
+    """
     if not isinstance(text, str) or not text.strip():
         return None
     normalized = _normalize(text)
     for kind, pattern in _RULES:
         if pattern.search(normalized):
             return kind
+    if has_analysis and _BARE_WHY.search(normalized):
+        return "explanation"
     return None

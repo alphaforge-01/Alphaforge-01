@@ -113,3 +113,31 @@ def test_diversification_question_reads_the_current_portfolio(app):
 def test_out_of_scope_messages_still_get_the_code_answer(app):
     _send(app, "parle-moi de la météo")
     assert app.session_state["chat_history"][-1]["type"] == "answer"
+
+
+# ---- apres la revue : formulations captees par les regles du chat, radiographie apres une analyse ----
+
+@pytest.mark.parametrize("message", ["Explique-moi le verdict", "Que signifie ce statut ?",
+                                     "Ça veut dire quoi ce résultat ?", "c'est grave une perte de 26 % ?",
+                                     "pourquoi ?"])
+def test_why_phrasings_caught_as_definitions_or_ideas_reach_the_agent(app, message):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, message)
+    entry = app.session_state["chat_history"][-1]
+    assert entry["type"] == "agent_answer" and entry["answer_kind"] == "explanation"
+
+
+def test_glossary_terms_and_unrelated_why_keep_their_code_answer(app):
+    _send(app, "explique-moi la volatilité")
+    assert app.session_state["chat_history"][-1]["parsed"]["term_id"]          # definition du glossaire
+    _send(app, "Pourquoi le marché a baissé hier ?")                          # sans analyse ni objet
+    assert app.session_state["chat_history"][-1]["type"] == "answer"
+    _send(app, "le taux de change m'inquiète")
+    assert app.session_state["chat_history"][-1].get("answer_kind") != "what_changes"
+
+
+def test_diversification_after_an_analysis_still_describes_the_current_portfolio(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    text, _ = _send(app, "mon portefeuille est-il diversifié ?")
+    assert app.session_state["chat_history"][-1]["answer_kind"] == "xray"
+    assert "(SPY)" in text and "(TSLA)" not in text                          # avant l'idee, pas apres

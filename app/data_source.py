@@ -314,10 +314,10 @@ def get_asset_facts(mode: str, ticker: str, portfolio: Dict[str, Any]) -> Dict[s
     return {"evidence": toolbox.evidence(), "data": tool_result["data"]}
 
 
-def classify_question(text: str) -> Optional[str]:
+def classify_question(text: str, has_analysis: bool = False) -> Optional[str]:
     """Type de question pour l'agent conversationnel (issue 78), ou None. Règles sans modèle."""
     routing = _src_module("question_routing", texts.MSG_PIPELINE_NOT_READY)
-    return routing.classify_question(text)
+    return routing.classify_question(text, has_analysis=has_analysis)
 
 
 def build_conversation_brief(question: str, answer_kind: str, level: str, profile: Dict[str, Any],

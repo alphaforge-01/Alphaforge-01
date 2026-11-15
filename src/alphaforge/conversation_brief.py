@@ -49,7 +49,9 @@ def _xray_parts(xray: Mapping[str, Any], level: Level) -> Dict[str, Any]:
     from .explanation_brief import _glossary_for, load_glossary
     from .reference_texts import merge_mandatory_limits
 
-    evidence = [copy.deepcopy(entry) for entry in (xray.get("evidence") or {}).values()]
+    # Portefeuille actuel seulement : une radiographie de donnees d'essai peut contenir des valeurs apres l'idee.
+    evidence = [copy.deepcopy(entry) for entry in (xray.get("evidence") or {}).values()
+                if entry.get("subject", "portfolio_before") == "portfolio_before"]
     checks = copy.deepcopy((xray.get("governance") or {}).get("checks") or [])
     field = "text_novice" if level == "novice" else "text_pro"
     limits = [{"limit_id": item["limit_id"], "text": item[field]}
@@ -86,7 +88,10 @@ def build_conversation_brief(
     from .explanation_brief import build_brief, build_profile_context
     from .reference_texts import mandatory_limits
 
-    if result is not None:
+    if answer_kind == "xray" and xray is not None:
+        # Le portefeuille fictif actuel, meme apres une analyse : le dossier d'une analyse decrit l'apres-idee.
+        parts = _xray_parts(xray, level)
+    elif result is not None:
         explanation_brief = build_brief(result, level)   # type: ignore[arg-type]
         parts = {key: copy.deepcopy(explanation_brief[key]) for key in ("evidence", "checks", "idea", "glossary", "limits")}
         parts["ranked"] = explanation_brief["ranked_factors"]

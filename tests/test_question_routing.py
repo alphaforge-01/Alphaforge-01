@@ -30,7 +30,14 @@ def test_questions_are_routed_to_the_right_kind(text, kind):
 
 @pytest.mark.parametrize("text", [
     "hey", "parle-moi de la météo", "quels sont mes actifs actuels ?", "quel est mon portefeuille actuel ?",
-    "composition de mon portefeuille", "", "   ", None,
+    "composition de mon portefeuille", "", "   ", None, "Pourquoi le marché a baissé hier ?",
+    "le taux de change de mon portefeuille m'inquiète", "que veut dire Sharpe ?", "pourquoi ?",
 ])
 def test_other_messages_are_left_to_the_code(text):
     assert classify_question(text) is None
+
+
+def test_a_bare_why_targets_the_result_only_after_an_analysis():
+    assert classify_question("pourquoi ?") is None
+    assert classify_question("pourquoi ?", has_analysis=True) == "explanation"
+    assert classify_question("Pourquoi le marché a baissé hier ?", has_analysis=True) is None
