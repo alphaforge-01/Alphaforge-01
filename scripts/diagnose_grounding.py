@@ -15,17 +15,19 @@ Modes :
 - par défaut : hors ligne, aucun appel réseau. Mesures lexicales : part des mots, des
   statuts et des chiffres du texte que l'on retrouve tels quels dans chaque source ;
 - ``--apply`` : appelle réellement ``ApplyGuardrail`` (quota partagé), pour chaque cas et
-  chaque source : sur le texte du gabarit, puis sur un témoin négatif (le même texte avec
-  toutes les règles déclarées conformes), soit au plus 4 appels par cas. Le témoin vérifie
-  qu'une source plus lisible ne rend pas le contrôle indulgent.
+  chaque source : sur le texte du gabarit, puis sur un témoin négatif (le même texte où les
+  règles en conflit ou en tension sont déclarées conformes), soit au plus 4 appels par cas.
+  Le témoin vérifie qu'une source plus lisible ne rend pas le contrôle indulgent.
   Exige ALPHAFORGE_GUARDRAIL_ID et ALPHAFORGE_GUARDRAIL_VERSION ;
 - ``--explainer`` (avec ``--apply``) : fait aussi rédiger le texte par l'agent explicateur
-  sur Bedrock (au plus 2 appels Converse par cas), pour mesurer le vrai texte du modèle.
+  sur Bedrock (au plus 2 appels Converse par cas), et mesure ce texte et son témoin contre
+  les deux sources : au plus 8 appels ``ApplyGuardrail`` par cas.
   Exige aussi ALPHAFORGE_EXPLAINER_MODEL_ID.
 
 Budget : au plus 6 cas (3 personas x 2 niveaux, idée fixe "25 % dans TSLA au prorata").
-Aucun texte de prompt, de dossier ni aucun secret n'est affiché : seulement des scores et
-des compteurs. Simulation éducative sur des profils et portefeuilles fictifs.
+Une erreur Bedrock pendant le contrôle arrête le script (quota partagé : pas de nouvelle
+tentative). Aucun texte de prompt, de dossier ni aucun secret n'est affiché : seulement des
+scores et des compteurs. Simulation éducative sur des profils et portefeuilles fictifs.
 
 Usage, depuis la racine du projet (pour --apply : dans le terminal qui contient les
 identifiants temporaires, après ``aws sts get-caller-identity``) ::
@@ -34,7 +36,7 @@ identifiants temporaires, après ``aws sts get-caller-identity``) ::
     python scripts/diagnose_grounding.py --apply
     python scripts/diagnose_grounding.py --apply --explainer --personas robert
 
-Codes de sortie : 0 succès, 2 configuration ou budget.
+Codes de sortie : 0 succès, 1 erreur Bedrock, 2 configuration, persona inconnu ou budget.
 """
 from __future__ import annotations
 
@@ -51,16 +53,19 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from alphaforge.analysis_pipeline import _model_text, run_analysis  # noqa: E402
 from alphaforge.bedrock_client import (  # noqa: E402
-    GROUNDING_ANSWER_MAX_CHARS, GROUNDING_SOURCE_MAX_CHARS, BedrockClient, BedrockConfig, redact_text,
+    GROUNDING_ANSWER_MAX_CHARS, GROUNDING_SOURCE_MAX_CHARS, BedrockClient, BedrockConfig, BedrockError,
+    redact_text,
 )
 from alphaforge.grounding_source import build_grounding_source  # noqa: E402
 from alphaforge.pipeline_deps import resolve_deps  # noqa: E402
 from alphaforge.profiles import load_personas  # noqa: E402
 
 EXIT_OK = 0
+EXIT_BEDROCK_ERROR = 1
 EXIT_CONFIG_ERROR = 2
 MAX_CASES = 6
-# Même requête fixe que l'étape 6 du pipeline (analysis_pipeline.explain).
+# Même requête fixe que l'étape 6 du pipeline (analysis_pipeline.explain), écrite en dur
+# là-bas : un test vérifie que les deux restent identiques.
 QUERY = "Explique le resultat de l'analyse."
 IDEA = {"ticker": "TSLA", "target_weight": 0.25, "funding_source": "pro_rata", "funding_ticker": None}
 LEVELS = ("novice", "pro")
@@ -107,15 +112,17 @@ def build_cases(persona_ids: List[str]) -> List[Dict[str, Any]]:
     return cases
 
 
-def falsify(text: str) -> str:
-    """Témoin négatif : le même texte, mais toutes les règles déclarées conformes.
+FALSE_STATUS = re.compile(r"\b(?:en )?(?:conflits?|tensions?)\b", re.IGNORECASE)
 
-    Une source plus lisible ne doit pas rendre le contrôle indulgent : le score de ce
-    texte faux doit rester nettement sous celui du texte juste.
+
+def falsify(text: str) -> str:
+    """Témoin négatif : le même texte, règles en conflit ou en tension déclarées conformes.
+
+    Les mentions "information manquante" ne sont pas modifiées. Une source plus lisible ne
+    doit pas rendre le contrôle indulgent : le score de ce texte faux devrait rester
+    nettement sous celui du texte juste.
     """
-    for wrong in ("en conflit", "en tension", "conflit", "tension"):
-        text = text.replace(wrong, "conforme")
-    return text
+    return FALSE_STATUS.sub("conforme", text)
 
 
 def grounding_scores(client: BedrockClient, source: str, checked: str) -> str:
@@ -135,7 +142,10 @@ def llm_text(client: BedrockClient, config: BedrockConfig, case: Dict[str, Any])
     try:
         output = explain_with_llm(client, config.explainer_model_id, case["brief"], case["validate"])
     except Exception as error:  # un échec du modèle est un résultat du diagnostic, pas une panne
-        print(f"    explicateur indisponible : {type(error).__name__}: {redact_text(str(error))}")
+        # Seul le message d'une erreur Bedrock est affiché (déjà expurgé) : celui d'un échec de
+        # l'explicateur cite des extraits du texte du modèle.
+        detail = f": {redact_text(str(error))}" if isinstance(error, BedrockError) else ""
+        print(f"    explicateur indisponible : {type(error).__name__}{detail}")
         return None
     if not case["validate"](output, case["brief"])["is_valid"]:
         print("    texte de l'explicateur rejeté par le validateur : cas ignoré")
@@ -152,7 +162,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                         help="avec --apply, fait aussi rédiger le texte par l'explicateur Bedrock")
     args = parser.parse_args(argv)
 
-    persona_ids = [name.strip() for name in args.personas.split(",") if name.strip()]
+    persona_ids = list(dict.fromkeys(name.strip() for name in args.personas.split(",") if name.strip()))
+    unknown = [name for name in persona_ids if name not in load_personas()]
+    if unknown or not persona_ids:
+        print(f"Persona inconnu ou absent : {', '.join(unknown) or '-'}.")
+        return EXIT_CONFIG_ERROR
     if len(persona_ids) * len(LEVELS) > MAX_CASES:
         print(f"Budget dépassé : au plus {MAX_CASES} cas.")
         return EXIT_CONFIG_ERROR
@@ -170,7 +184,18 @@ def main(argv: Optional[List[str]] = None) -> int:
             return EXIT_CONFIG_ERROR
         client = BedrockClient(config)
 
-    for case in build_cases(persona_ids):
+    try:
+        run_cases(build_cases(persona_ids), client, config, explainer=args.explainer)
+    except BedrockError as error:
+        print(f"Erreur Bedrock, arrêt du diagnostic : {redact_text(str(error))}")
+        return EXIT_BEDROCK_ERROR
+    return EXIT_OK
+
+
+def run_cases(cases: List[Dict[str, Any]], client: Optional[BedrockClient], config: Optional[BedrockConfig],
+              *, explainer: bool) -> None:
+    """Affiche, pour chaque cas, chaque texte contre chaque source (et les scores si client)."""
+    for case in cases:
         sources = {"json": json.dumps(case["brief"], ensure_ascii=False),
                    "phrases": build_grounding_source(case["brief"])}
         template_text = _model_text(case["template"], case["brief"])
@@ -178,10 +203,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         if client is not None and falsify(template_text) != template_text:
             texts["gabarit faussé (témoin)"] = falsify(template_text)
         print(f"\n== {case['persona']} | niveau {case['level']} ==")
-        if args.explainer:
+        if explainer:
             generated = llm_text(client, config, case)
             if generated:
                 texts["explicateur"] = generated
+                if falsify(generated) != generated:
+                    texts["explicateur faussé (témoin)"] = falsify(generated)
         for text_name, checked in texts.items():
             print(f"  texte {text_name} ({len(checked)} caractères)")
             for source_name, source in sources.items():
@@ -194,7 +221,6 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(line)
                 if report["examples_missing"]:
                     print(f"      mots absents (extrait) : {', '.join(report['examples_missing'])}")
-    return EXIT_OK
 
 
 if __name__ == "__main__":
