@@ -21,6 +21,11 @@ Conventions (hypothèses de l'équipe, voir `profiles.py` pour les seuils) :
   mais défavorable prime sur une information manquante, et l'information
   manquante prime sur "conforme" : l'absence de donnée ne vaut jamais conformité.
   Sans aucune règle, le résultat global est `missing_info`.
+- Verdicts séparés (P1-9) : `overall_status` reste le pire statut de toutes les règles. S'y ajoutent
+  `financial_status` (règles financières seulement) et `esg_status` (règles `esg_exclusion` seulement),
+  avec les mêmes priorités. Une famille sans règle vaut `None` : pas de verdict ESG inventé pour un profil
+  sans règle ESG. Tant qu'aucune preuve ESG n'existe, la règle ESG rend toujours `missing_info`,
+  donc `esg_status` ne vaut jamais `compliant`. `split_verdicts` lit aussi les anciens résultats.
 - Le contrefactuel (balayage du poids avec `simulate_fn`) est calculé par
   `counterfactual.py` (B5) pour les contrôles en tension ou en conflit, seulement si
   `simulate_fn` et `idea` sont fournis. Sinon, ou si la simulation est indisponible,
@@ -235,6 +240,41 @@ def worst_status(statuses: Iterable[str]) -> RuleStatus:
     return max(statuses, key=lambda s: STATUS_SEVERITY[s])  # type: ignore[return-value]
 
 
+ESG_RULE_TYPES = frozenset({"esg_exclusion"})
+
+
+def is_esg_rule_type(rule_type: Any) -> bool:
+    """Vrai pour un type de règle ESG. Toutes les autres règles sont financières."""
+    return rule_type in ESG_RULE_TYPES
+
+
+def partition_statuses(checks: Iterable[Mapping[str, Any]]):
+    """`(statut financier, statut ESG)` : pire statut de chaque famille de contrôles.
+
+    Une famille sans contrôle donne `None` : aucun verdict n'est inventé pour un profil sans règle ESG
+    (ou sans règle financière). Mêmes priorités que le verdict global (`STATUS_SEVERITY`).
+    """
+    financial, esg = [], []
+    for check in checks:
+        (esg if is_esg_rule_type(check.get("rule_type")) else financial).append(check["status"])
+    return (worst_status(financial) if financial else None, worst_status(esg) if esg else None)
+
+
+def split_verdicts(governance: Mapping[str, Any]) -> Dict[str, Optional[str]]:
+    """Les trois verdicts d'un `GovernanceResult`, aussi pour un ancien résultat sans les champs P1-9.
+
+    Rend `{"overall": ..., "financial": ..., "esg": ...}`. `financial` et `esg` sont recalculés depuis
+    `checks` quand il y en a (source de vérité), sinon lus dans `financial_status` et `esg_status`, sinon
+    `None`. `overall` est `overall_status` tel quel, sans recalcul. À utiliser pour afficher deux verdicts.
+    """
+    checks = governance.get("checks") or []
+    if checks:
+        financial, esg = partition_statuses(checks)
+    else:
+        financial, esg = governance.get("financial_status"), governance.get("esg_status")
+    return {"overall": governance.get("overall_status"), "financial": financial, "esg": esg}
+
+
 def evaluate(
     profile: InvestorProfile,
     snapshot: Mapping[str, Any],
@@ -267,9 +307,12 @@ def evaluate(
         for i, rule in enumerate(profile.get("rules") or [], start=1)
     ]
     _attach_counterfactuals(profile, checks, simulate_fn, idea)
+    financial_status, esg_status = partition_statuses(checks)
     return {
         "profile_id": profile["profile_id"],
         "subject": subject,
-        "overall_status": worst_status(c["status"] for c in checks),
+        "overall_status": worst_status(c["status"] for c in checks),   # inchangé : toutes les règles
         "checks": checks,
+        "financial_status": financial_status,
+        "esg_status": esg_status,
     }
