@@ -203,9 +203,9 @@ Mateo est en « information manquante » dès son portefeuille de départ : la r
 - **Garde-fou** : il complète les contrôles du code mais ne prouve pas l'exactitude factuelle ; l'ancrage est en mode détection. Mesuré dans le compte, il refuse toutes les demandes interdites testées, mais classe parfois une question historique légitime comme une prédiction (faux refus) ; le classifieur n'est pas parfaitement stable d'un essai à l'autre. Le niveau Standard traite les demandes dans une autre région américaine (profil interrégional), acceptable ici puisque les données sont publiques ou fictives.
 - **Agents réels** : le premier essai réel a validé le repli et les traces S3, pas encore la rédaction par les agents (correction du paramètre `temperature` en cours) ; le mode `bedrock` dépend du compte temporaire de l'atelier, des modèles actifs et des quotas partagés.
 
-- **Groupe corrélé (R7 d'Amira)** : la mesure est le poids du plus grand groupe de titres dont la corrélation des rendements quotidiens en CAD atteint 0,80 (corrélation de Pearson, liaison simple, toute la période disponible, au moins 60 jours communs). Le seuil de 0,80 et les seuils de la règle (tension à 35 %, conflit à 50 %) sont des hypothèses de l'équipe, **choisies après examen des données** : ce choix n'est donc pas indépendant des résultats. La corrélation décrit le passé, elle ne prédit rien, et la liaison simple peut réunir des titres peu corrélés entre eux par chaînage. Seule Amira a cette règle ; Robert et Mateo voient la mesure en radiographie sans règle associée.
+- **Groupe corrélé (R8 d'Amira)** : la mesure est le poids du plus grand groupe de titres dont la corrélation des rendements quotidiens en CAD atteint 0,80 (corrélation de Pearson, liaison simple, toute la période disponible, au moins 60 jours communs). Le seuil de 0,80 et les seuils de la règle (tension à 35 %, conflit à 50 %) sont des hypothèses de l'équipe, **choisies après examen des données** : ce choix n'est donc pas indépendant des résultats. La corrélation décrit le passé, elle ne prédit rien, et la liaison simple peut réunir des titres peu corrélés entre eux par chaînage. Seule Amira a cette règle ; Robert et Mateo voient la mesure en radiographie sans règle associée.
 
-  Test de sensibilité du seuil de corrélation (période du 15 nov. 2021 au 12 nov. 2026, 1227 jours communs) :
+  Test de sensibilité du seuil de corrélation (période du 12 nov. 2021, date de base, au 12 nov. 2026, 1227 rendements communs) :
 
   | Seuil de corrélation | Amira avant l'idée | Amira avec 40 % dans BTC-USD | Lecture |
   | --- | --- | --- | --- |
@@ -213,6 +213,8 @@ Mateo est en « information manquante » dès son portefeuille de départ : la r
   | 0,8 (retenu) | 30 % (QQQ et SPY, corrélation 0,95) | 43,3 % (BTC-USD et ETH-USD, corrélation 0,84) | l'idée fait apparaître un groupe crypto et met la règle en tension |
 
   Au seuil de 0,8, la paire BTC-USD et ETH-USD (0,84) est proche de la coupure : une autre fenêtre de dates pourrait la séparer.
+
+  La mesure dépend aussi fortement de la fenêtre. Avec le même seuil, le portefeuille de départ d'Amira atteint 60 % (conflit, au-delà de 50 %) lorsque la période s'arrête au 30 juin 2022 ou au 29 décembre 2023 (AAPL, MSFT, NVDA, QQQ et SPY), 45 % au 28 juin 2024 (tension), 40 % au 30 juin 2025 et 30 % sur la fenêtre complète. L'histoire « conforme avant l'idée, en tension après » vaut donc pour la fenêtre qui se termine en 2026, en plus du choix du seuil après examen des données.
 
 ### 6.3 Améliorations envisagées
 

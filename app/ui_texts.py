@@ -232,8 +232,7 @@ XRAY_METRICS = (
     "largest_correlated_group_weight",
 )
 XRAY_CORRELATION = (
-    "Groupe corrélé : période du {start} au {end}, {count} jours communs, en {currency}. "
-    "Description du passé, pas une prévision."
+    "Groupe corrélé : période du {start} au {end}, {count} jours communs, en {currency}."
 )
 # Sujet d'une preuve, pour distinguer avant, après et variantes.
 SUBJECT_LABELS = {
@@ -336,6 +335,8 @@ RESULT_MODE_FALLBACK = (
     "scriptée a pris le relais, avec les mêmes outils et la même gouvernance."
 )
 # Mesures comparées avant et après, dans cet ordre.
+# Libellés génériques des mesures qui ont des membres propres à chaque colonne ou qui peuvent manquer.
+METRIC_LABELS = {"largest_correlated_group_weight": "Poids du plus grand groupe corrélé"}
 COMPARE_METRICS = XRAY_METRICS
 VARIANTS_TITLE = "Variantes simulées"
 VARIANTS_NOTICE = (

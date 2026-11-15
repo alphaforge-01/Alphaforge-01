@@ -108,3 +108,19 @@ def test_robert_et_mateo_nont_pas_la_regle_mais_ont_la_mesure():
         entry = load_personas()[persona]
         assert all(r["rule_type"] != "max_correlated_group_weight" for r in entry["profile"]["rules"])
         assert build_snapshot(entry["portfolio"], "portfolio_before")["largest_correlated_group_weight"] is not None
+
+
+def test_correlation_exactement_au_seuil_est_un_lien():
+    # B = 2A : corrélation 1, donc un seuil de 1 relie encore A et B (comparaison inclusive).
+    weight, members = largest_correlated_group(returns(), {"A": 0.5, "B": 0.5}, threshold=1.0)
+    assert members == ["A", "B"] and weight == pytest.approx(1.0)
+
+
+def test_pas_de_preuve_quand_la_mesure_est_absente():
+    from alphaforge.agent_tools import _correlation_entries
+    from alphaforge.metrics import compute_return_metrics
+
+    idx = pd.date_range("2024-01-01", periods=70, freq="B")
+    metrics = compute_return_metrics(pd.Series([0.001, -0.001] * 35, index=idx), "2023-12-29")
+    snapshot = {"subject": "portfolio_before", "largest_correlated_group_weight": None}
+    assert _correlation_entries("analyze_portfolio", snapshot, metrics, "2024-04-01") == []

@@ -98,7 +98,7 @@
             "is_assumption": true
           },
           {
-            "rule_id": "R7",
+            "rule_id": "R8",
             "rule_type": "max_correlated_group_weight",
             "params": {},
             "direction": "max",

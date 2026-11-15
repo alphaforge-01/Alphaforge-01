@@ -50,6 +50,7 @@ def render_metric_cards(index: Mapping[str, Dict[str, Any]], snapshot: Mapping[s
         "max_drawdown": drawdown_caption(index, subject),
         "top_asset_weight": (texts.XRAY_TOP_ASSET.format(ticker=snapshot["top_asset"])
                              if snapshot.get("top_asset") else None),
+        "largest_correlated_group_weight": ", ".join(snapshot.get("correlated_group_members") or []) or None,
     }
     metrics = list(texts.XRAY_METRICS)
     for start in range(0, len(metrics), 4):
@@ -57,7 +58,7 @@ def render_metric_cards(index: Mapping[str, Dict[str, Any]], snapshot: Mapping[s
         for column, metric in zip(st.columns(4), row):
             with column:
                 render_card(lookup(index, metric, subject), ctx, key=f"{key_prefix}_{metric}",
-                            caption=captions.get(metric))
+                            label=texts.METRIC_LABELS.get(metric), caption=captions.get(metric))
 
 
 def _weight_rows(index: Mapping[str, Dict[str, Any]], snapshot: Mapping[str, Any], field: str,
