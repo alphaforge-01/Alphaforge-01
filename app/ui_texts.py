@@ -106,8 +106,9 @@ CHAT_AGENT_ORIGIN = {
     "template": "Réponse écrite par le code, à partir des mêmes faits.",
 }
 CHAT_AGENT_FALLBACK = "Agent conversationnel non utilisé ({reason})."
+CHAT_AGENT_DENIED = "Sujet refusé par le garde-fou : {topics}."
 CHAT_AGENT_RELEVANCE_WEAK = "Pertinence faible : la réponse colle moins que d'habitude à la question posée."
-CHAT_AGENT_COUNTERFACTUAL = "- {label} : plus grand poids testé conforme à cette règle seule : {weight}"
+CHAT_AGENT_COUNTERFACTUAL = "- {label} : plus grand poids testé conforme à cette règle seule (simulation) : {weight}"
 CHAT_AGENT_COUNTERFACTUAL_NONE = "- {label} : aucun poids testé n'est conforme à cette règle"
 CHAT_AGENT_DATA = "Données utilisées"
 CHAT_AGENT_DATA_NONE = "Aucune mesure citée : la réponse s'appuie sur le profil ou dit ce qui manque."

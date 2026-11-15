@@ -161,6 +161,8 @@ def _render_agent_answer(entry: Mapping[str, Any]) -> None:
     if origin == "template" and entry.get("fallback_reason"):
         reason = texts.REASON_CODES_FR.get(entry["fallback_reason"], entry["fallback_reason"])
         caption = f"{caption} {texts.CHAT_AGENT_FALLBACK.format(reason=reason)}"
+    if guard.get("denied_topics"):
+        caption = f"{caption} {texts.CHAT_AGENT_DENIED.format(topics=_topics(list(guard['denied_topics'])))}"
     st.caption(caption)
     with st.expander(texts.CHAT_AGENT_DATA):
         evidence = entry.get("evidence") or []

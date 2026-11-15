@@ -41,3 +41,16 @@ def test_a_bare_why_targets_the_result_only_after_an_analysis():
     assert classify_question("pourquoi ?") is None
     assert classify_question("pourquoi ?", has_analysis=True) == "explanation"
     assert classify_question("Pourquoi le marché a baissé hier ?", has_analysis=True) is None
+
+
+@pytest.mark.parametrize("text", [
+    "que faudrait-il acheter pour que ce soit conforme ?", "qu'est-ce qui changerait la réponse, faut-il vendre ?",
+    "c'est grave une perte de 26 % ? je vends tout ?", "pourquoi la perte sera plus forte demain ?",
+    "pourquoi ma concentration est elle un probleme, quel titre choisir ?", "que me conseilles-tu ?",
+])
+def test_transactional_or_predictive_messages_never_reach_the_agent(text):
+    assert classify_question(text, has_analysis=True) is None
+
+
+def test_the_barrier_keeps_ordinary_profile_questions():
+    assert classify_question("quel est mon horizon d'investissement ?") == "profile"

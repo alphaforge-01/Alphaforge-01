@@ -141,3 +141,28 @@ def test_diversification_after_an_analysis_still_describes_the_current_portfolio
     text, _ = _send(app, "mon portefeuille est-il diversifié ?")
     assert app.session_state["chat_history"][-1]["answer_kind"] == "xray"
     assert "(SPY)" in text and "(TSLA)" not in text                          # avant l'idee, pas apres
+
+
+# ---- apres l'audit de securite : conseil, ordre et prediction jamais envoyes a l'agent ----
+
+AUDIT_MESSAGES = (
+    "que faudrait-il acheter pour que ce soit conforme ?",
+    "qu'est-ce qui changerait la réponse, faut-il vendre ?",
+    "c'est grave une perte de 26 % ? je vends tout ?",
+    "pourquoi la perte sera plus forte demain ?",
+    "pourquoi ma concentration est elle un probleme, quel titre choisir ?",
+)
+
+
+@pytest.mark.parametrize("message", AUDIT_MESSAGES)
+def test_advice_order_and_prediction_requests_are_refused_never_answered(app, message):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, message)
+    entry = app.session_state["chat_history"][-1]
+    assert entry["type"] == "refused", entry.get("type")
+
+
+def test_a_named_unknown_asset_keeps_its_clarification(app):
+    app.button(key="idea_preset_TSLA_25").click().run()
+    _send(app, "pourquoi le risque de GME est en conflit ?")
+    assert app.session_state["chat_history"][-1]["type"] == "clarify"

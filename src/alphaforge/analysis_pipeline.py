@@ -875,9 +875,12 @@ def answer_question(
         effective_mode, reason = "offline", "garde_fou_non_configure"   # regle 8 : aucun texte de modele sans garde-fou
     if effective_mode == "bedrock" and validate is None:
         effective_mode, reason = "offline", "validateur_indisponible"
-    if effective_mode == "bedrock" and (request_check is None or request_check.get("action") != "none"):
-        # Regle 8 : la question doit avoir passe le garde-fou d'entree avant d'atteindre le modele.
-        refused = request_check is not None and request_check.get("action") == "intervened"
+    if effective_mode == "bedrock" and (request_check is None or request_check.get("action") != "none"
+                                        or request_check.get("denied_topics")):
+        # Regle 8 : la question doit avoir passe le garde-fou d'entree avant d'atteindre le modele. Un sujet
+        # refuse detecte compte comme un refus, meme si le garde-fou passait un jour en mode detection.
+        refused = request_check is not None and (
+            request_check.get("action") == "intervened" or bool(request_check.get("denied_topics")))
         effective_mode, reason = "offline", "demande_refusee" if refused else "controle_entree_absent"
     wanted_llm = mode == "bedrock"
 

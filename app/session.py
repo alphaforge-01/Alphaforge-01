@@ -184,7 +184,7 @@ def ask(text: Optional[str] = None) -> None:
     except Exception:  # le contrôle reste affiché comme non exécuté, la demande continue
         LOGGER.exception("Contrôle du garde-fou impossible")
         guard = {"action": "not_run", "denied_topics": []}
-    if guard.get("action") == "intervened":
+    if guard.get("action") == "intervened" or guard.get("denied_topics"):
         _append({"role": "assistant", "type": "refused", "by": "guardrail",
                  "topics": list(guard.get("denied_topics") or [])})
         return
@@ -240,7 +240,9 @@ def _agent_kind(text: str, parsed: Dict[str, Any], analysed: bool) -> Optional[s
     eligible = (
         (status == "answer" and answer_kind in ("out_of_scope", "portfolio"))
         or (status == "answer" and answer_kind == "definition" and parsed.get("term_id") is None)
-        or (status == "clarify" and parsed.get("reason") == "unknown_asset")
+        # Lue comme une idée sans actif ("c'est grave une perte de 26 % ?") ; un actif inconnu nommé
+        # ("le risque de GME") garde la demande de précision, qui dit qu'il n'est pas dans l'univers.
+        or (status == "clarify" and parsed.get("reason") == "unknown_asset" and not parsed.get("unknown_tokens"))
     )
     if not eligible:
         return None

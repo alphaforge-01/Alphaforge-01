@@ -45,6 +45,11 @@ _RULES: Tuple[Tuple[AnswerKind, re.Pattern], ...] = (
         r"\bdiversifi|\bconcentr|\bexposition\b"
         r"|\bmon portefeuille est(-il)? (risque|equilibre|prudent)|\b(risque|volatilite|perte maximale) de mon portefeuille\b")),
 )
+# Seconde barrière, après le contrôle local : un message qui parle d'acheter, de vendre, de choisir un titre ou de
+# l'avenir n'est jamais envoyé à l'agent, même si le contrôle local l'a laissé passer.
+_NEVER_TO_AGENT = re.compile(
+    r"\b(achet\w*|vend(s|re|ez|ons|u|ue|ant|rait)?|choisir|faut-il|demain|bientot|sera|seront|futur\w*|prevoi\w*"
+    r"|predi\w*|conseil\w*|recommand\w*)\b")
 _BARE_WHY = re.compile(r"^\W*pourquoi\W*$|\bpourquoi (ca|cela|c'est)\b")
 
 
@@ -56,6 +61,8 @@ def classify_question(text: str, *, has_analysis: bool = False) -> Optional[Answ
     if not isinstance(text, str) or not text.strip():
         return None
     normalized = _normalize(text)
+    if _NEVER_TO_AGENT.search(normalized):
+        return None
     for kind, pattern in _RULES:
         if pattern.search(normalized):
             return kind
