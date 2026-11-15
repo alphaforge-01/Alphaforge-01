@@ -10,7 +10,7 @@ Question servie : **« Mon portefeuille fictif correspond-il à mon profil, et q
 
 1. L'utilisateur choisit un profil fictif (Amira, Mateo, Robert, ou un profil construit par cases et curseurs, sans aucune donnée personnelle).
 2. Il voit la **radiographie** du portefeuille fictif : volatilité, perte maximale historique, concentration, exposition aux devises, part défensive.
-3. Il soumet une **idée**, en une phrase (« porter TSLA à 25 % ») ou par les boutons et réglages. La phrase est traduite par des règles déterministes, sans modèle de langage : une demande ambiguë reçoit une question, une demande interdite (ordre, conseil personnalisé, prédiction) est refusée.
+3. Il soumet une **idée**, en une phrase (« porter TSLA à 25 % ») ou par les boutons et réglages. La phrase est traduite par des règles déterministes, sans modèle de langage : une demande ambiguë reçoit une question, un poids écrit sans « % » ou une relance (« et à 10 % ? ») est proposé en confirmation, une demande interdite (ordre, conseil personnalisé, prédiction) est refusée. La conversation répond aussi, par le code, aux salutations, à « quels sont mes actifs ? » et à « c'est quoi la volatilité ? » (glossaire). Mesure sur 60 phrases : `scripts/measure_dialogue.py` (45 sur 60 aujourd'hui).
 4. Le système simule l'avant/après, applique les **règles du profil** (conforme, tension, conflit, information manquante), donne le **contrefactuel** (« conforme à X % ou moins ») et des **variantes** simulées.
 5. Un **agent explicateur** rédige l'explication en niveau novice ou pro ; chaque chiffre renvoie à une **preuve** (source, période, devise, transformation, limites) que l'on peut ouvrir.
 
@@ -75,12 +75,12 @@ bash scripts/run_app_bedrock.sh                              # interface en mode
 
 `run_app_bedrock.sh` charge le `.env`, vérifie les réglages et la connexion AWS sans afficher aucune valeur, puis lance l'interface sur 127.0.0.1. Sous Windows, définir `ALPHAFORGE_MODE=bedrock` dans le terminal et lancer Streamlit comme dans le démarrage rapide.
 
-En mode `bedrock`, un texte rédigé par le modèle n'est affiché que si le garde-fou l'a vérifié. Le contrôle d'ancrage compare les phrases du modèle à une source rédigée en phrases françaises à partir du seul dossier d'explication (`grounding_source.py`). Sous le plancher de 0,3, ou si le garde-fou intervient ou échoue, l'interface affiche l'explication du gabarit construite par le code, et la trace dit pourquoi. Mesures et méthode : [docs/grounding_diagnosis.md](docs/grounding_diagnosis.md).
+En mode `bedrock`, un texte rédigé par le modèle n'est affiché que si le garde-fou l'a vérifié. Le contrôle d'ancrage compare les phrases du modèle à une source rédigée en phrases françaises à partir du seul dossier d'explication (`grounding_source.py`). Si le garde-fou intervient (sujet refusé), échoue ou ne rend aucun score, l'interface affiche l'explication du gabarit construite par le code, et la trace dit pourquoi. Un ancrage faible est un signal, pas un blocage : le texte du modèle reste affiché avec l'avertissement « ancrage faible » (de 0,3 à 0,5) ou « ancrage très faible » (sous 0,3). Mesures et méthode : [docs/grounding_diagnosis.md](docs/grounding_diagnosis.md).
 
 ## Reproduire les résultats
 
 ```bash
-.venv/Scripts/python -m pytest -q -W error                   # plus de 2 200 tests, sans AWS
+.venv/Scripts/python -m pytest -q -W error                   # plus de 2 400 tests, sans AWS
 .venv/Scripts/python scripts/run_scenarios.py                # 3 personas x les 5 boutons de l'interface, hors ligne
 .venv/Scripts/python scripts/run_sensitivity.py              # mise à l'épreuve des hypothèses, hors ligne
 .venv/Scripts/python scripts/run_scenarios.py --mode bedrock --persona robert   # agents réels (quotas partagés)
