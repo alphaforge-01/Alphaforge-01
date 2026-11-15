@@ -61,7 +61,7 @@ EVIDENCE_METRICS: dict[str, dict[str, str]] = {
     "top_asset_weight": {"unit": "pct", "label_fr": "Poids du plus gros actif",
                          "transformation": "Poids le plus élevé du portefeuille fictif."},
     "defensive_share": {"unit": "pct", "label_fr": "Part défensive",
-                        "transformation": "Poids des obligations et de l'or (classes etf_bond et etf_commodity). Hypothèse de l'équipe."},
+                        "transformation": "Poids des FNB d'obligations et des FNB de matières premières (l'or dans cet univers). Hypothèse de l'équipe."},
     "largest_correlated_group_weight": {
         "unit": "pct", "label_fr": "Poids du plus grand groupe corrélé",
         "transformation": ("Somme des poids du plus grand groupe de titres dont la corrélation des rendements "
