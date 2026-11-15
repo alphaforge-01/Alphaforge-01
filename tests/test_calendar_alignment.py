@@ -107,3 +107,24 @@ def test_weekend_crypto_moves_accumulate_into_monday_return():
     wide = pivot_on_calendar(prices, _cal("2024-01-05", "2024-01-08"), ["BTC-USD"])
     returns = wide.pct_change().iloc[1:]
     assert returns.loc["2024-01-08", "BTC-USD"] == pytest.approx(0.32), "132/100 - 1 = 0.32"
+
+
+def test_alignment_summary_exposes_return_minimums():
+    from alphaforge.calendar_alignment import alignment_summary
+    from alphaforge.metrics import MIN_OBSERVATIONS_FOR_ANNUAL_RETURN, MIN_OBSERVATIONS_FOR_VOLATILITY
+
+    summary = alignment_summary()
+    assert summary["min_returns_for_volatility"] == MIN_OBSERVATIONS_FOR_VOLATILITY
+    assert summary["min_returns_for_annual_return"] == MIN_OBSERVATIONS_FOR_ANNUAL_RETURN
+    assert summary["volatility_available"] is True
+    assert summary["annual_return_available"] is True
+
+
+def test_alignment_summary_flags_short_history():
+    from alphaforge.calendar_alignment import aligned_cad_prices, alignment_summary
+
+    as_of = aligned_cad_prices().index[10].date().isoformat()
+    summary = alignment_summary(as_of)
+    assert summary["n_return_days"] == 10
+    assert summary["volatility_available"] is False
+    assert summary["annual_return_available"] is False

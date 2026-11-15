@@ -188,7 +188,12 @@ def periods_per_year(variant: Variant) -> int:
 
 
 def variant_snapshot(portfolio: Mapping, subject: str, variant: Variant) -> tuple[dict, dict]:
-    """Instantané de la variante et description de la période (début, fin, observations)."""
+    """Instantané de la variante et description de la période (début, fin, observations).
+
+    Lève `metrics.InsufficientDataError` si la variante compte moins de 60 rendements
+    (`MIN_OBSERVATIONS_FOR_VOLATILITY`), par exemple une fenêtre hebdomadaire d'un an. Les
+    variantes du rapport en comptent toutes au moins 244.
+    """
     snapshot = dict(build_snapshot(portfolio, subject, as_of=variant.as_of))
     weights = portfolio_weights(portfolio)
     held = [ticker for ticker in weights.index if weights[ticker] > ZERO_WEIGHT]
