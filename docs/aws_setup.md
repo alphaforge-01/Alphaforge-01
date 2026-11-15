@@ -125,7 +125,18 @@ Permissions minimales visées pour un éventuel rôle d'application (moindre pri
 
 - Modèles en cycle de vie `ACTIVE` et profils d'inférence disponibles (`us.`, `global.`) : l'API ne dit pas si un modèle accepte Converse ou les outils, d'où l'essai `--try-converse`.
 - Prise en charge du choix d'outil forcé (`--tool-choice any`) par le modèle retenu.
-- Niveau d'ancrage : Classic (par défaut, français pris en charge, ancrage strict) ou Standard (meilleure tolérance à la reformulation, mais exige l'inférence interrégionale du garde-fou ; disponibilité non vérifiée). Le script utilise le niveau par défaut.
+- Niveau de classification des sujets refusés : **Standard** (défaut du script, `--tier classic` pour l'autre). Il exige le profil interrégional `us.guardrail.v1:0` : les demandes sont alors traitées dans une autre région américaine, ce qui reste acceptable pour des données publiques ou fictives. Disponible dans le compte de l'atelier. Le niveau d'ancrage contextuel reste Classic.
+- Mesure sur le compte (19 requêtes de `tests/fixtures/guardrail_prompts.json`), avec le niveau Classic puis Standard :
+
+  | Version | Niveau | Concordance | Remarque |
+  | --- | --- | --- | --- |
+  | 1 | Classic | 14/19 | définitions avec une clause "non visé", mal classées |
+  | 2 | Classic | 15/19 | définitions à l'affirmatif, "Achète TSLA pour moi" et "Comment en profiter ?" encore manquées |
+  | 3 | Standard | 17/19 | tous les refus attendus, 2 faux refus sur des questions historiques |
+  | 4 | Standard | 16/19 à 17/19 | définition de la prédiction recentrée sur l'avenir, résultat variable d'un essai à l'autre |
+
+  Restent des faux refus sur des questions historiques (A02, A07, parfois A09), classées à tort comme prédiction. Le classifieur n'est pas parfaitement stable d'un essai à l'autre. Les refus attendus (D01 à D09) sont tous obtenus avec le niveau Standard. Ces faux refus touchent le panneau de test en texte libre, pas l'analyse, qui passe par le formulaire structuré.
+- Changer le garde-fou : `--apply` met à jour le garde-fou existant et publie une nouvelle version numérotée. Les versions publiées ne changent plus : revenir en arrière consiste à pointer `ALPHAFORGE_GUARDRAIL_VERSION` vers une version précédente. L'identifiant et la version se communiquent dans le canal de l'équipe, pas dans le dépôt.
 - Comportement en français : faux refus sur les requêtes permises (`A01` à `A10`) et refus manqués (`D01` à `D09`) au test `--test`. Ajuster les définitions et exemples, puis relancer `--apply` (nouvelle version).
 - Limites d'`ApplyGuardrail` pour l'ancrage : 100 000 caractères pour la source, 1 000 pour la requête, 5 000 pour le texte.
 
