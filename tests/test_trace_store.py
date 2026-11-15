@@ -47,8 +47,9 @@ class FakeS3:
         self._head_error, self._put_error = head_error, put_error
         self.head_calls, self.puts = 0, []
 
-    def get_public_access_block(self, Bucket):
+    def get_public_access_block(self, Bucket, **kwargs):
         self.head_calls += 1
+        self.head_kwargs = kwargs
         if self._head_error:
             raise self._head_error
         return {"PublicAccessBlockConfiguration": dict(self._config)}
@@ -204,3 +205,46 @@ def test_written_body_contains_no_key_or_account_number():
     TraceStore("bucket-test", s3).save(build_trace_document(data))
     body = s3.puts[0]["Body"].decode("utf-8")
     assert FAKE_KEY not in body and FAKE_ACCOUNT not in body and FAKE_ARN not in body
+
+
+# ---- proprietaire attendu du compartiment (ExpectedBucketOwner) ----
+
+FAKE_OWNER = "1111" + "2222" + "3333"   # construit a l'execution : aucun numero a 12 chiffres dans la source
+OTHER_OWNER = "4444" + "5555" + "6666"
+
+
+class FakeSTS:
+    def __init__(self, account=FAKE_OWNER, error=None):
+        self.account, self.error, self.calls = account, error, 0
+
+    def get_caller_identity(self):
+        self.calls += 1
+        if self.error:
+            raise self.error
+        return {"Account": self.account}
+
+
+def test_every_s3_call_carries_the_expected_bucket_owner_read_once_from_sts():
+    s3, sts = FakeS3(), FakeSTS()
+    store = TraceStore("bucket-test", s3, sts_client=sts)
+    store.save(build_trace_document(analysis()))
+    store.save(build_trace_document(analysis()))
+    assert s3.head_kwargs == {"ExpectedBucketOwner": FAKE_OWNER}
+    assert all(put["ExpectedBucketOwner"] == FAKE_OWNER for put in s3.puts)
+    assert sts.calls == 1
+
+
+def test_an_unreadable_owner_refuses_the_write_without_leaking_the_account():
+    s3 = FakeS3()
+    arn = f"arn:aws:sts::{FAKE_OWNER}:assumed-role/atelier/session"
+    error = ClientError({"Error": {"Code": "ExpiredToken", "Message": f"Compte {FAKE_OWNER}, {arn}"}}, "GetCallerIdentity")
+    store = TraceStore("bucket-test", s3, sts_client=FakeSTS(error=error))
+    with pytest.raises(TraceStoreError) as caught:
+        store.save(build_trace_document(analysis()))
+    assert s3.puts == [] and FAKE_OWNER not in str(caught.value) and "arn:" not in str(caught.value)
+
+
+def test_an_explicit_owner_skips_sts():
+    s3 = FakeS3()
+    TraceStore("bucket-test", s3, expected_owner=OTHER_OWNER).save(build_trace_document(analysis()))
+    assert s3.puts[0]["ExpectedBucketOwner"] == OTHER_OWNER

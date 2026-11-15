@@ -19,7 +19,8 @@ from .tool_specs import ExplainerFailure
 PROMPT_NAME = "explainer_v4"
 PROMPT_VERSION = PROMPT_NAME
 # Pas de temperature : les modeles Claude recents la refusent (ValidationException, constate sur le compte).
-INFERENCE_CONFIG = {"maxTokens": 2500}
+# 4000 jetons : Haiku tronquait parfois sa reponse a 2500 (stopReason max_tokens, constate). Plafond de cout borne.
+INFERENCE_CONFIG = {"maxTokens": 4000}
 _STRING_SLOTS = ("summary", "counterfactual", "variants", "limits_context")
 # Lien, image ou HTML dans le texte du modele : l'interface rend le Markdown, donc un lien ou une image distante
 # serait affiche ou chargee. Le texte d'une explication est du texte simple. Constate a l'audit : le validateur
