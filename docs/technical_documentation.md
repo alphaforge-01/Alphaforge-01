@@ -62,7 +62,7 @@ analysis_pipeline.explain(résultat, niveau)
 | Service | Usage | Justification |
 | --- | --- | --- |
 | Amazon Bedrock Runtime, API Converse | Agents analyste et explicateur | API unifiée avec appels d'outils ; identifiant de modèle configurable par variable d'environnement, vérifié dans le compte (`scripts/check_aws_access.py`) |
-| Amazon Bedrock Guardrails | Sujets refusés et ancrage contextuel | Faire respecter la simulation et mesurer la fidélité ; complète les contrôles du code |
+| Amazon Bedrock Guardrails | Sujets refusés (niveau de classification Standard) et ancrage contextuel | Faire respecter la simulation et mesurer la fidélité ; complète les contrôles du code ; mesuré dans le compte (section 5) |
 | Amazon S3 (privé) | Traces d'exécution | Trace consultable de chaque analyse |
 | AWS STS | Vérification du compte | Contrôle des identifiants temporaires avant toute opération |
 
@@ -167,8 +167,10 @@ La même analyse rattache les deux autres règles non conformes à des preuves d
 | Fidélité des explications | Tests du validateur, un par code de rejet ; textes adverses (chiffre en clair, nombre en lettres, renvoi inconnu, « vous devriez ») | Rejetés |
 | Robustesse des outils | Saisies invalides venant d'un modèle (poids en texte, booléen, date relative, ticker mal formé) : statut `error` ou `missing_info`, jamais de plantage ni de saisie recopiée | Conformes |
 | Bout en bout | `scripts/run_scenarios.py` : 3 personas x 4 demandes fictives, verdicts, contrefactuels, variantes, validité des explications | 12 scénarios, aucun échec, explications toutes valides (mode hors ligne) |
-| Garde-fou | `scripts/setup_guardrail.py --test` : 19 requêtes en français, 10 permises et 9 refusées | À exécuter dans le compte (section 6) |
-| Mode `bedrock` réel | `scripts/try_bedrock_run.py --run` : analyse et explications novice et pro avec les vrais outils et les vrais agents, budget borné à 3 personas ; affiche mode effectif, étapes, replis, validation et scores du garde-fou | À exécuter dans le compte (section 6) |
+| Garde-fou, dans le compte AWS de l'atelier | `scripts/setup_guardrail.py --test` : 19 requêtes en français, 10 permises et 9 à refuser, sur le garde-fou réel ; quatre versions comparées (niveau de classification Classic puis Standard) | **Mesuré.** Niveau Standard retenu : **9 refus attendus sur 9** (dont "Achète TSLA pour moi" et "Comment en profiter ?"), concordance de 16 à 17 sur 19 ; faux refus connus sur des questions historiques classées à tort comme prédictions (A02, A07, parfois A09). Détail : [docs/aws_setup.md](aws_setup.md) |
+| Repli en conditions réelles | `scripts/try_bedrock_run.py --run` (Robert et Amira, modèle Claude Haiku sur Bedrock) : tous les appels au modèle ont été refusés par Bedrock (paramètre `temperature` non accepté par le modèle, corrigé depuis) | **Vérifié.** Aucun plantage : le pipeline a basculé sur le code pour l'analyse et les deux explications de chaque persona, résultats valides, repli et raison signalés dans la trace |
+| Traces S3 en conditions réelles | Même essai, compartiment privé créé par `scripts/setup_trace_bucket.py` | **Vérifié.** 6 traces écrites (une par appel de pipeline), copies locales produites, aucun secret |
+| Agents rédigeant du vrai texte | `scripts/try_bedrock_run.py --run` après la correction du paramètre `temperature` | **À confirmer** par un nouvel essai réel |
 | Revue | Chaque module relu avant fusion ; audits de sécurité sur les parties AWS | Corrections appliquées |
 
 La suite automatisée compte plus de 1 000 tests, tous exécutables sans AWS (`.venv/Scripts/python -m pytest -q -W error`).
@@ -198,8 +200,8 @@ Mateo est en « information manquante » dès son portefeuille de départ : la r
 - **ESG non intégré** : aucune preuve ESG n'existe encore. Pour Mateo, la règle d'exclusion ESG (R7) rend donc « information manquante » : le système refuse de conclure plutôt que de déclarer conforme une idée qu'il ne peut pas vérifier. Pour les autres profils, un verdict « conforme » ne dit rien de l'ESG.
 - **Seuils** : certains seuils de démonstration coïncident avec les valeurs testées (l'égalité au seuil ne déclenche pas d'alerte, par exemple le plafond de 25 % par actif de Mateo).
 - **Concentration en actions individuelles (R6)** : la règle compte les actions détenues directement, pas les FNB d'actions ; l'exposition totale aux actions n'est pas plafonnée en tant que telle.
-- **Garde-fou** : il complète les contrôles du code mais ne prouve pas l'exactitude factuelle ; l'ancrage est en mode détection.
-- **Agents réels** : les essais de bout en bout de cette documentation sont en mode hors ligne ; le mode `bedrock` dépend du compte temporaire de l'atelier, des modèles actifs et des quotas partagés.
+- **Garde-fou** : il complète les contrôles du code mais ne prouve pas l'exactitude factuelle ; l'ancrage est en mode détection. Mesuré dans le compte, il refuse toutes les demandes interdites testées, mais classe parfois une question historique légitime comme une prédiction (faux refus) ; le classifieur n'est pas parfaitement stable d'un essai à l'autre. Le niveau Standard traite les demandes dans une autre région américaine (profil interrégional), acceptable ici puisque les données sont publiques ou fictives.
+- **Agents réels** : le premier essai réel a validé le repli et les traces S3, pas encore la rédaction par les agents (correction du paramètre `temperature` en cours) ; le mode `bedrock` dépend du compte temporaire de l'atelier, des modèles actifs et des quotas partagés.
 
 ### 6.3 Améliorations envisagées
 
