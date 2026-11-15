@@ -159,7 +159,12 @@ def test_suffix_is_not_split():
 
 
 def test_question_without_idea():
-    assert parse("Explique-moi la volatilité").reason == rp.NOT_AN_IDEA
+    # Avant le lot 1 du dialogue (#78), cette question recevait "not_an_idea" ; c'est maintenant
+    # une définition du glossaire, produite par le code. Un message sans rapport reste hors périmètre.
+    result = parse("Explique-moi la volatilité")
+    assert (result.status, result.answer_kind, result.term_id) == (rp.ANSWER, rp.ANSWER_DEFINITION, "T1")
+    other = parse("Parle-moi de la météo")
+    assert (other.status, other.answer_kind, other.reason) == (rp.ANSWER, rp.ANSWER_OUT_OF_SCOPE, rp.NOT_AN_IDEA)
 
 
 def test_weight_out_of_range():
@@ -228,3 +233,139 @@ def test_normalize_keeps_positions():
     text = "Été à Montréal \u2019"
     assert len(rp.normalize(text)) == len(text)
     assert rp.normalize("Énergie") == "energie"
+
+
+# ---------- dialogue, lot 1 (#78) : réponses du code, confirmations, relances ----------
+
+PREVIOUS = {"ticker": "NVDA", "target_weight": 0.25, "funding_source": "pro_rata", "funding_ticker": None}
+
+
+@pytest.mark.parametrize("text,kind,term", [
+    ("hey", rp.ANSWER_GREETING, None),
+    ("Bonjour !", rp.ANSWER_GREETING, None),
+    ("que peux-tu faire ?", rp.ANSWER_GREETING, None),
+    ("quels sont mes actifs actuels ?", rp.ANSWER_PORTFOLIO, None),
+    ("qu'est-ce que je détiens ?", rp.ANSWER_PORTFOLIO, None),
+    ("c'est quoi la volatilité ?", rp.ANSWER_DEFINITION, "T1"),
+    ("volatilité ?", rp.ANSWER_DEFINITION, "T1"),
+    ("c'est quoi l'ESG ?", rp.ANSWER_DEFINITION, "T6"),
+    ("explique-moi la diversification", rp.ANSWER_DEFINITION, "T3"),
+    ("explique la volatilité de mon portefeuille", rp.ANSWER_DEFINITION, "T1"),
+    ("c'est quoi un ETF ?", rp.ANSWER_DEFINITION, None),
+    ("parle-moi de la météo", rp.ANSWER_OUT_OF_SCOPE, None),
+])
+def test_conversation_answers(text, kind, term):
+    result = parse(text)
+    assert (result.status, result.answer_kind, result.term_id) == (rp.ANSWER, kind, term)
+    assert result.idea is None
+
+
+@pytest.mark.parametrize("text,ticker,weight", [
+    ("0.25 NVIDIA", "NVDA", 0.25),
+    ("0,25 de NVDA", "NVDA", 0.25),
+    ("mets un quart en NVIDIA", "NVDA", 0.25),
+    ("trois quarts en TSLA", "TSLA", 0.75),
+    ("la moitié en AAPL", "AAPL", 0.5),
+])
+def test_weight_without_percent_is_only_proposed(text, ticker, weight):
+    result = parse(text)
+    assert result.status == rp.CONFIRM and result.reason == rp.WEIGHT_TO_CONFIRM
+    assert (result.idea["ticker"], result.idea["target_weight"]) == (ticker, weight)
+
+
+def test_bare_integer_stays_a_question_with_its_value_first():
+    result = parse("25 NVDA")
+    assert (result.status, result.reason) == ("clarify", rp.MISSING_WEIGHT)
+    assert result.suggested_weights[0] == 0.25
+    assert len(set(result.suggested_weights)) == len(result.suggested_weights)
+
+
+def test_percent_weight_still_gives_an_idea():
+    assert parse("NVIDIA 25%").idea["target_weight"] == 0.25
+    assert parse("25% NVIDIA").status == "idea"
+
+
+@pytest.mark.parametrize("text,status,weight", [
+    ("et à 10 % ?", rp.CONFIRM, 0.10),
+    ("plutôt 15 %", rp.CONFIRM, 0.15),
+    ("10 %", rp.CONFIRM, 0.10),
+    ("et 0,1 ?", rp.CONFIRM, 0.10),
+])
+def test_follow_up_reuses_last_idea(text, status, weight):
+    result = rp.parse_request(text, UNIVERSE, previous_idea=PREVIOUS)
+    assert (result.status, result.reason) == (status, rp.FOLLOW_UP)
+    assert (result.idea["ticker"], result.idea["target_weight"], result.idea["funding_source"]) == \
+        ("NVDA", weight, "pro_rata")
+
+
+def test_follow_up_keeps_funding_ticker():
+    previous = {"ticker": "TSLA", "target_weight": 0.2, "funding_source": "from_ticker", "funding_ticker": "SPY"}
+    result = rp.parse_request("et à 10 % ?", UNIVERSE, previous_idea=previous)
+    assert result.idea == {"ticker": "TSLA", "target_weight": 0.1, "funding_source": "from_ticker",
+                           "funding_ticker": "SPY"}
+
+
+def test_follow_up_without_previous_idea_asks_for_the_asset():
+    result = parse("et à 10 % ?")
+    assert (result.status, result.reason) == ("clarify", rp.UNKNOWN_ASSET)
+
+
+def test_follow_up_out_of_range_weight_is_a_question():
+    result = rp.parse_request("et à 150 % ?", UNIVERSE, previous_idea=PREVIOUS)
+    assert (result.status, result.reason) == ("clarify", rp.WEIGHT_OUT_OF_RANGE)
+
+
+@pytest.mark.parametrize("text,topic", [
+    ("bonjour, achète TSLA", rp.ORDER_EXECUTION),
+    ("salut, vends tout", rp.ORDER_EXECUTION),
+    ("hey, est-ce que TSLA va monter ?", rp.RETURN_PREDICTION),
+    ("c'est quoi la volatilité ? et que dois-je acheter ?", rp.PERSONALIZED_ADVICE),
+    ("mes actifs sur mon vrai compte", rp.ORDER_EXECUTION),
+])
+def test_refusal_wins_over_greeting_definition_and_portfolio(text, topic):
+    assert (parse(text).status, parse(text).reason) == ("refused", topic)
+
+
+def test_refusal_wins_over_follow_up():
+    result = rp.parse_request("et à 10 %, achète pour moi", UNIVERSE, previous_idea=PREVIOUS)
+    assert result.status == "refused"
+
+
+def test_common_acronyms_are_not_unknown_assets():
+    assert parse("c'est quoi l'ESG ?").unknown_tokens == ()
+
+
+def test_every_term_keyword_maps_to_glossary():
+    glossary = json.loads((PROJECT_ROOT / "src" / "alphaforge" / "reference" / "glossary.json")
+                          .read_text(encoding="utf-8"))
+    assert set(rp.TERM_KEYWORDS) == {term["term_id"] for term in glossary["terms"]}
+
+
+@pytest.mark.parametrize("text", [
+    "réduis de 5 %", "et 5 % de plus ?", "encore 5 %", "10 % en moins", "ajoute 5 %", "et si je vendais 10 % ?",
+])
+def test_relative_follow_up_is_never_turned_into_a_total_weight(text):
+    """Relecture : un écart relatif ne doit jamais devenir un poids total deviné."""
+    result = rp.parse_request(text, UNIVERSE, previous_idea=PREVIOUS)
+    assert result.status != "idea" and result.idea is None
+    if result.status == "clarify" and result.reason == rp.RELATIVE_WEIGHT:
+        assert result.tickers == ("NVDA",)
+
+
+@pytest.mark.parametrize("text", [
+    "NVDA, place 10 %",
+    "Simule 10 % de NVDA, ouvre la radiographie",
+])
+def test_comma_does_not_create_false_refusals(text):
+    """Relecture : des idées valides avant le lot 1 ne deviennent pas des refus."""
+    assert parse(text).status != "refused"
+
+
+def test_order_after_comma_and_conjunction_is_refused():
+    assert parse("c'est quoi la volatilité, et achète TSLA").status == "refused"
+
+
+def test_non_whole_decimal_proposes_rounding_first():
+    result = parse("0,333 NVDA")
+    assert (result.status, result.reason) == ("clarify", rp.MISSING_WEIGHT)
+    assert result.suggested_weights[0] == 0.33

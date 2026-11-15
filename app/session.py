@@ -191,7 +191,10 @@ def ask(text: Optional[str] = None) -> None:
     try:
         universe = data_source.get_universe()
         held = idea_panel.held_tickers(persona["portfolio"])
-        parsed = data_source.parse_request(text, universe, held)
+        # Contexte des relances ("et à 10 % ?") : la dernière idée analysée, jamais le texte des messages.
+        analysed = any(entry.get("type") == "analysis" for entry in st.session_state.chat_history)
+        previous = st.session_state.idea if analysed else None
+        parsed = data_source.parse_request(text, universe, held, previous)
     except data_source.DataUnavailable as exc:
         _append({"role": "assistant", "type": "info", "text": str(exc)})
         return
@@ -205,6 +208,18 @@ def ask(text: Optional[str] = None) -> None:
                  "guard_action": guard.get("action")})
     elif parsed["status"] == "clarify":
         _append({"role": "assistant", "type": "clarify", "parsed": parsed})
+    elif parsed["status"] == "confirm":
+        _append({"role": "assistant", "type": "confirm", "parsed": parsed})
+    elif parsed["status"] == "answer":
+        entry: Dict[str, Any] = {"role": "assistant", "type": "answer", "parsed": parsed}
+        if parsed.get("answer_kind") == "portfolio":
+            # Positions du portefeuille fictif, lues telles quelles (aucun calcul ici).
+            names = {asset["ticker"]: asset.get("name") or asset["ticker"] for asset in universe}
+            entry["portfolio_label"] = persona["portfolio"].get("label_fr") or texts.CHAT_PORTFOLIO_DEFAULT
+            entry["positions"] = [{"ticker": position["ticker"], "weight": position["weight"],
+                                   "name": names.get(position["ticker"], position["ticker"])}
+                                  for position in persona["portfolio"].get("positions", [])]
+        _append(entry)
     else:
         _set_idea(parsed["idea"])
         _append_analysis(guard.get("action"), persona)

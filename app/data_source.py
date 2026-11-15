@@ -327,10 +327,22 @@ DEMO_TRACES_DIR = PROJECT_ROOT / "outputs" / "reports" / "demo_traces"
 PREVIEW_PERSONAS = ("robert", "amira")
 
 
-def parse_request(text: str, universe: List[Dict[str, Any]], held_tickers: List[str]) -> Dict[str, Any]:
-    """Demande en langage naturel -> idée, question de clarification ou refus (règles déterministes)."""
+def parse_request(text: str, universe: List[Dict[str, Any]], held_tickers: List[str],
+                  previous_idea: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Demande en langage naturel -> idée, idée à confirmer, réponse du code, question ou refus.
+
+    Règles déterministes, sans modèle. `previous_idea` : dernière idée analysée, pour les relances.
+    """
     request_parsing = _src_module("request_parsing", texts.MSG_PIPELINE_NOT_READY)
-    return dataclasses.asdict(request_parsing.parse_request(text, universe, held_tickers=held_tickers))
+    return dataclasses.asdict(request_parsing.parse_request(
+        text, universe, held_tickers=held_tickers, previous_idea=previous_idea))
+
+
+@functools.lru_cache(maxsize=1)
+def get_glossary() -> Dict[str, Dict[str, Any]]:
+    """Glossaire fermé du projet (flux B), par identifiant de terme. Lu tel quel, jamais complété."""
+    explanation_brief = _src_module("explanation_brief", texts.MSG_PIPELINE_NOT_READY)
+    return {term["term_id"]: term for term in explanation_brief.load_glossary()}
 
 
 @functools.lru_cache(maxsize=4)

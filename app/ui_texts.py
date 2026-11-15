@@ -66,13 +66,47 @@ SIM_MANUAL = "Réglages manuels"
 CHAT_PLACEHOLDER = "Ex. : Et si je mettais 25 % dans TSLA ?"
 CHAT_WELCOME = (
     "Décrivez une idée à simuler sur ce portefeuille fictif : un actif, un poids visé, "
-    "et si vous voulez le titre vendu pour la financer."
+    "et si vous voulez le titre vendu pour la financer. Vous pouvez aussi me demander ce que "
+    "contient le portefeuille, ou ce que veut dire un terme."
 )
 CHAT_EXAMPLES = (
     "Et si je mettais 25 % dans TSLA ?",
     "Ajoute 10 % de BTC en vendant XIU.TO",
-    "Et si j'ajoutais du Tesla ?",
+    "Quels sont mes actifs ?",
+    "C'est quoi la volatilité ?",
 )
+# Réponses produites par le code (aucun texte de modèle) pour les messages qui ne sont pas une idée.
+CHAT_GREETING = (
+    "Bonjour ! Je vérifie si une idée de placement est cohérente avec le profil fictif choisi, "
+    "chiffres et sources à l'appui, sans jamais vous dire quoi acheter. Vous pouvez par exemple me demander :"
+)
+CHAT_HELP_EXAMPLES = (
+    "Et si je mettais 25 % dans TSLA ?",
+    "Quels sont mes actifs ?",
+    "C'est quoi la volatilité ?",
+)
+CHAT_OUT_OF_SCOPE = (
+    "Je ne sais pas répondre à cette question. Je peux simuler une idée sur ce portefeuille fictif, "
+    "décrire ses positions ou expliquer un terme du glossaire. Par exemple :"
+)
+CHAT_PORTFOLIO_TITLE = "Positions du {label}, avec leur poids actuel :"
+CHAT_PORTFOLIO_DEFAULT = "portefeuille fictif"
+CHAT_PORTFOLIO_LINE = "- **{ticker}** ({name}) : {weight}"
+CHAT_PORTFOLIO_HINT = (
+    "Pour les risques mesurés sur ce portefeuille (volatilité, perte maximale), activez "
+    "« Afficher la radiographie du portefeuille »."
+)
+CHAT_DEFINITION = "**{term}** : {definition}."
+CHAT_ANALOGY = "Pour se le représenter : {analogy}."
+CHAT_DEFINITION_SOURCE = "Définition du glossaire du projet, niveau {level}."
+CHAT_DEFINITION_UNKNOWN = "Ce terme n'est pas dans le glossaire du projet. Je peux expliquer : {terms}."
+CHAT_GLOSSARY_MISSING = "Le glossaire du projet est indisponible : je ne peux pas définir ce terme."
+CHAT_CONFIRM = "Voulez-vous simuler **{idea}** ?"
+CHAT_CONFIRM_WHY = {
+    "weight_to_confirm": "J'ai lu le poids sans le signe %, je préfère vérifier avant de simuler.",
+    "follow_up": "Même actif et même financement que la dernière idée simulée.",
+}
+CHAT_CONFIRM_YES = "Oui, simuler"
 CHAT_MANUAL_CHANGE = "Paramètres modifiés : {idea}"
 CHAT_CHOICE = "Choix : {choice}"
 CHAT_MODE_CHANGED = "Source des données : {mode}."
@@ -106,6 +140,10 @@ CHAT_CLARIFY = {
     "several_funding": "Un seul titre peut financer l'idée. Lequel ?",
     "funding_same_as_asset": "Le titre vendu ne peut pas être l'actif ajouté.",
     "funding_not_held": "{funding} n'est pas détenu dans ce portefeuille : il ne peut pas financer l'idée.",
+    "relative_weight": (
+        "Je simule un poids total, pas un écart. Quel poids total visé pour {tickers} ? "
+        "Choisissez une valeur ou écrivez-la, par exemple \"20 %\"."
+    ),
 }
 CHAT_CLARIFY_MANUAL = "Vous pouvez aussi passer par les réglages manuels."
 CHAT_KEY_POINTS = "Points clés (cliquez sur un chiffre pour sa preuve)"
