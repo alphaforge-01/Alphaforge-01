@@ -45,6 +45,8 @@ VALID_MODES = ("offline", "bedrock")
 # l'essai reel, une erreur de sens que le validateur ne peut pas voir (mesure rattachee a la mauvaise chose).
 # Entre ce plancher et le seuil du garde-fou, le texte reste affiche avec la mention "ancrage faible".
 GROUNDING_FLOOR = 0.3
+# Requete fixe du controle d'ancrage (copie verifiee par un test dans scripts/diagnose_grounding.py).
+GROUNDING_QUERY = "Explique le resultat de l'analyse."
 _SEVERITY = {"conflict": 0, "tension": 1, "missing_info": 2, "compliant": 3}
 
 
@@ -480,13 +482,15 @@ def explain(
         try:
             bedrock_client = client or BedrockClient(config)
             checked_text = _model_text(output, brief)
-            guardrail = bedrock_client.check_output_grounding(
-                json.dumps(brief, ensure_ascii=False), "Explique le resultat de l'analyse.", checked_text)
+            source_text, source_kind = _grounding_source(brief)
+            guardrail = bedrock_client.check_output_grounding(source_text, GROUNDING_QUERY, checked_text)
             guard_status = "ok" if guardrail["action"] != "not_run" else "skipped"
             guard_details = {
                 "action": guardrail["action"], "grounding_score": guardrail["grounding_score"],
                 "relevance_score": guardrail["relevance_score"], "mode": guardrail["mode"],
                 "checked_chars": len(checked_text),
+                # Forme et taille de la source comparee (jamais son texte) : "sentences" ou "json".
+                "source_kind": source_kind, "source_chars": len(source_text),
             }
             flags = getattr(bedrock_client, "last_grounding_flags", None)
             if isinstance(flags, dict) and flags.get("below_threshold"):
@@ -633,6 +637,25 @@ def _excerpts(rejections: list[dict[str, Any]], limit: int = 8) -> list[str]:
     return [
         f"{r.get('slot')}:{r.get('code')}:{redact_text(str(r.get('excerpt', '')))[:40]}" for r in rejections[:limit]
     ]
+
+
+def _grounding_source(brief: dict[str, Any]) -> tuple[str, str]:
+    """Source du controle d'ancrage : le dossier reecrit en phrases francaises, sinon son JSON.
+
+    Le controle compare des phrases a une source. Avec le dossier en JSON (statuts en codes anglais, seuils en
+    fractions), un texte fidele du modele obtenait 0,15 a 0,42 et pouvait etre remplace a tort par le gabarit ;
+    avec les memes faits en phrases, 0,70 a 0,91 (mesures : docs/grounding_diagnosis.md). L'explicateur, lui,
+    recoit toujours le dossier JSON. Si la reecriture echoue, on garde le JSON : le controle a toujours lieu.
+    Ce score mesure la proximite du texte avec le dossier, pas l'exactitude des statuts (garantie par le code).
+    """
+    try:
+        from .grounding_source import build_grounding_source
+        text = build_grounding_source(brief)
+        if text.strip():
+            return text, "sentences"
+    except Exception:  # la reecriture est une amelioration : jamais une cause d'echec
+        pass
+    return json.dumps(brief, ensure_ascii=False), "json"
 
 
 def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None) -> str:
