@@ -68,6 +68,10 @@ GUARDRAIL_VERSION_ENV = "ALPHAFORGE_GUARDRAIL_VERSION"
 
 DEFAULT_GROUNDING_THRESHOLD = 0.5
 DEFAULT_RELEVANCE_THRESHOLD = 0.5
+TIER_CLASSIC = "classic"
+TIER_STANDARD = "standard"
+# Profil d'inference interregional du garde-fou, exige par le niveau Standard (region us-east-1).
+DEFAULT_GUARDRAIL_PROFILE = "us.guardrail.v1:0"
 MAX_THRESHOLD = 0.99  # borne documentée par AWS pour l'ancrage contextuel
 
 # Limites de l'API CreateGuardrail (modèle de service botocore).
@@ -85,46 +89,47 @@ TOPIC_ORDER_EXECUTION = "order_execution"
 TOPIC_RETURN_PREDICTION = "return_prediction"
 
 DENIED_TOPICS: list[dict] = [
+    # Definitions courtes, a l'affirmatif, sans clause "non vise" : le classifieur de Bedrock traite mal les
+    # negations (premier essai : 1 faux refus et 4 refus manques sur 19 requetes). Le perimetre est borne par
+    # le temps (le futur, pas l'historique observe) et par la personne (la situation reelle de l'utilisateur,
+    # pas un profil fictif), de sorte que l'analyse d'une idee fictive n'entre pas dans ces sujets.
     {
         "name": TOPIC_PERSONALIZED_ADVICE,
         "definition": (
-            "Recommander à une personne réelle quoi acheter, vendre ou détenir "
-            "selon sa situation. Non visé : analyser l'historique d'une idée de "
-            "placement fictive ou expliquer les règles d'un profil fictif."
+            "Conseil d'investissement personnalisé : dire à l'utilisateur quoi acheter, "
+            "vendre ou garder selon sa propre situation, ses économies ou ses objectifs réels."
         ),
         "examples": [
             "Dis-moi quoi acheter avec mes économies.",
-            "Quelles actions devrais-je acheter cette semaine ?",
-            "Est-ce que je devrais vendre mes actions de banque maintenant ?",
+            "Compte tenu de ma situation, que devrais-je vendre ou acheter ?",
             "Quel placement me conseilles-tu pour ma retraite ?",
-            "Comment je peux en profiter, concrètement ?",
+            "Comment en profiter ?",
+            "Est-ce que je devrais vendre mes obligations pour acheter autre chose ?",
         ],
     },
     {
         "name": TOPIC_ORDER_EXECUTION,
         "definition": (
-            "Passer, transmettre ou programmer un ordre d'achat ou de vente, ou "
-            "se connecter à un compte de courtage. Non visé : simuler une idée "
-            "de placement dans un portefeuille fictif."
+            "Demande d'exécuter une opération financière pour l'utilisateur : acheter, vendre, "
+            "passer ou envoyer un ordre, ou agir sur son compte de courtage."
         ),
         "examples": [
-            "Achète des actions TSLA pour moi.",
-            "Passe un ordre de vente de 100 actions sur mon compte.",
+            "Achète TSLA pour moi.",
+            "Passe un ordre de vente sur mon compte.",
             "Connecte-toi à mon courtier et vends tout.",
-            "Place un ordre limite sur le Bitcoin à 50 000 $.",
+            "Envoie un ordre d'achat demain matin.",
             "Exécute ce rééquilibrage sur mon compte réel.",
         ],
     },
     {
         "name": TOPIC_RETURN_PREDICTION,
         "definition": (
-            "Prédire ou promettre le rendement ou le prix futur d'un titre ou "
-            "d'un portefeuille. Non visé : décrire rendements, volatilité ou "
-            "pertes observés sur une période passée d'une idée fictive."
+            "Prévision ou promesse portant sur l'avenir : prix ou rendement futur d'un actif "
+            "ou d'un portefeuille à une date à venir (demain, l'an prochain), ou gain garanti."
         ),
         "examples": [
-            "Combien vaudra TSLA dans un an ?",
-            "Quel rendement vais-je obtenir l'année prochaine ?",
+            "Que va faire mon portefeuille l'an prochain ?",
+            "Combien vaudra cette action dans six mois ?",
             "Garantis-moi 10 % de rendement par an.",
             "Est-ce que le Bitcoin va monter le mois prochain ?",
             "Mon portefeuille va-t-il battre le marché en 2027 ?",
@@ -158,11 +163,17 @@ def build_guardrail_config(
     relevance_threshold: float = DEFAULT_RELEVANCE_THRESHOLD,
     grounding_action: str = "NONE",
     name: str = GUARDRAIL_NAME,
+    tier: str = TIER_STANDARD,
+    profile: str = DEFAULT_GUARDRAIL_PROFILE,
 ) -> dict:
     """Retourne les paramètres communs à ``create_guardrail`` et ``update_guardrail``.
 
     ``grounding_action = "NONE"`` correspond au mode détection (scores sans
     blocage). Les sujets refusés bloquent en entrée et en sortie.
+
+    ``tier = "standard"`` classe les sujets refusés avec le niveau Standard, plus robuste sur les
+    demandes courtes et le passé contre le futur. Il exige un profil d'inférence interrégional
+    (``profile``) : les requêtes sont alors traitées dans une autre région américaine.
     """
     topics = [
         {
@@ -183,7 +194,7 @@ def build_guardrail_config(
         {"type": "RELEVANCE", "threshold": float(relevance_threshold),
          "action": grounding_action, "enabled": True},
     ]
-    return {
+    config = {
         "name": name,
         "description": GUARDRAIL_DESCRIPTION,
         "topicPolicyConfig": {"topicsConfig": topics},
@@ -191,6 +202,10 @@ def build_guardrail_config(
         "blockedInputMessaging": BLOCKED_INPUT_MESSAGE,
         "blockedOutputsMessaging": BLOCKED_OUTPUT_MESSAGE,
     }
+    if tier == TIER_STANDARD:
+        config["topicPolicyConfig"]["tierConfig"] = {"tierName": "STANDARD"}
+        config["crossRegionConfig"] = {"guardrailProfileIdentifier": profile}
+    return config
 
 
 def validate_config(config: dict) -> list[str]:
@@ -227,6 +242,10 @@ def describe_config(config: dict) -> str:
     lines = [f"Garde-fou : {config['name']}", "Sujets refusés (blocage entrée et sortie) :"]
     for topic in config["topicPolicyConfig"]["topicsConfig"]:
         lines.append(f"- {topic['name']} : {topic['definition']}")
+    tier = config["topicPolicyConfig"].get("tierConfig", {}).get("tierName", "CLASSIC")
+    lines.append(f"Niveau de classification des sujets : {tier}")
+    if "crossRegionConfig" in config:
+        lines.append(f"Profil interrégional : {config['crossRegionConfig']['guardrailProfileIdentifier']}")
     lines.append("Ancrage contextuel :")
     for flt in config["contextualGroundingPolicyConfig"]["filtersConfig"]:
         mode = "détection" if flt["action"] == "NONE" else "blocage"
@@ -396,6 +415,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--relevance-threshold", type=float, default=DEFAULT_RELEVANCE_THRESHOLD)
     parser.add_argument("--grounding-action", choices=("NONE", "BLOCK"), default="NONE",
                         help="NONE = mode détection (défaut), BLOCK = blocage.")
+    parser.add_argument("--tier", choices=(TIER_CLASSIC, TIER_STANDARD), default=TIER_STANDARD,
+                        help="Niveau de classification des sujets refusés. Standard (défaut) : inférence "
+                             "interrégionale, nécessaire pour classer les demandes courtes (mesuré : 17/19 contre 15/19).")
+    parser.add_argument("--guardrail-profile", default=DEFAULT_GUARDRAIL_PROFILE,
+                        help="Profil interrégional du garde-fou, utilisé avec --tier standard.")
     parser.add_argument("--guardrail-id", help=f"Pour --test (sinon {GUARDRAIL_ID_ENV}).")
     parser.add_argument("--guardrail-version", help=f"Pour --test (sinon {GUARDRAIL_VERSION_ENV}).")
     return parser.parse_args(argv)
@@ -409,7 +433,7 @@ def main(argv: list[str] | None = None, *,
     args = parse_args(argv)
     env = dict(os.environ) if environ is None else environ
     config = build_guardrail_config(args.grounding_threshold, args.relevance_threshold,
-                                    args.grounding_action)
+                                    args.grounding_action, tier=args.tier, profile=args.guardrail_profile)
     errors = validate_config(config)
     if errors:
         print("Configuration invalide : " + "; ".join(errors))
