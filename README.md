@@ -86,6 +86,10 @@ En mode `bedrock`, un texte rédigé par le modèle n'est affiché que si le gar
 .venv/Scripts/python scripts/run_scenarios.py --mode bedrock --persona robert   # agents réels (quotas partagés)
 ```
 
+Pour tout revérifier comme le jury, à partir de GitHub seulement : `.venv/Scripts/python scripts/check_clean_clone.py`. Le script clone `main` dans un dossier vide, vérifie que les dépendances se chargent réellement, lance les tests, les scénarios, la sensibilité (rapport identique au rapport versionné) et l'interface sans navigateur, et contrôle l'absence de secrets, de tirets cadratins et de fichiers interdits à la racine. Par défaut, il réutilise l'environnement qui le lance, en vérifiant qu'il ne contient rien de plus que `requirements.txt` pour le code ; `--fresh-env` crée un environnement neuf.
+
+**Windows 11 et Smart App Control.** Smart App Control bloque chaque nouvelle copie d'une DLL non signée, comme celle de PyArrow, que pandas et Streamlit chargent. Dans un environnement fraîchement créé, l'import échoue avec « Une stratégie de contrôle d'application a bloqué ce fichier » : pandas continue alors sans PyArrow sans le signaler, alors que Streamlit en a besoin pour afficher les tableaux de données. Si cela arrive, `check_clean_clone.py` le signale en échec au lieu de compter les tests comme réussis. Il ne faut pas désactiver la protection : utiliser un environnement dont les fichiers sont déjà autorisés, ou une machine sans Smart App Control (Linux, macOS).
+
 `run_scenarios.py` écrit un rapport dans `outputs/reports/scenarios/` (ignoré par Git) : verdicts global, financier et ESG, contrefactuels, variantes, textes d'explication et taux de rejet du validateur.
 
 Résultat hors ligne de référence : verdict affiché après la demande, financement au prorata, données jusqu'au 12 novembre 2026.
