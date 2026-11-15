@@ -124,8 +124,8 @@ DENIED_TOPICS: list[dict] = [
     {
         "name": TOPIC_RETURN_PREDICTION,
         "definition": (
-            "Prédiction ou promesse du prix ou du rendement futur d'un actif ou d'un "
-            "portefeuille : combien il vaudra, s'il va monter ou baisser, quel gain garanti."
+            "Prévision ou promesse portant sur l'avenir : prix ou rendement futur d'un actif "
+            "ou d'un portefeuille à une date à venir (demain, l'an prochain), ou gain garanti."
         ),
         "examples": [
             "Que va faire mon portefeuille l'an prochain ?",
@@ -163,7 +163,7 @@ def build_guardrail_config(
     relevance_threshold: float = DEFAULT_RELEVANCE_THRESHOLD,
     grounding_action: str = "NONE",
     name: str = GUARDRAIL_NAME,
-    tier: str = TIER_CLASSIC,
+    tier: str = TIER_STANDARD,
     profile: str = DEFAULT_GUARDRAIL_PROFILE,
 ) -> dict:
     """Retourne les paramètres communs à ``create_guardrail`` et ``update_guardrail``.
@@ -415,8 +415,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--relevance-threshold", type=float, default=DEFAULT_RELEVANCE_THRESHOLD)
     parser.add_argument("--grounding-action", choices=("NONE", "BLOCK"), default="NONE",
                         help="NONE = mode détection (défaut), BLOCK = blocage.")
-    parser.add_argument("--tier", choices=(TIER_CLASSIC, TIER_STANDARD), default=TIER_CLASSIC,
-                        help="Niveau de classification des sujets refusés (standard : inférence interrégionale).")
+    parser.add_argument("--tier", choices=(TIER_CLASSIC, TIER_STANDARD), default=TIER_STANDARD,
+                        help="Niveau de classification des sujets refusés. Standard (défaut) : inférence "
+                             "interrégionale, nécessaire pour classer les demandes courtes (mesuré : 17/19 contre 15/19).")
     parser.add_argument("--guardrail-profile", default=DEFAULT_GUARDRAIL_PROFILE,
                         help="Profil interrégional du garde-fou, utilisé avec --tier standard.")
     parser.add_argument("--guardrail-id", help=f"Pour --test (sinon {GUARDRAIL_ID_ENV}).")

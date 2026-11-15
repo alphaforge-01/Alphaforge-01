@@ -296,15 +296,15 @@ def test_summarize_assessment_matches_contract():
 
 # ---- niveau de classification des sujets ----
 
-def test_classic_tier_is_the_default_and_adds_no_cross_region_config():
-    config = sg.build_guardrail_config()
+def test_classic_tier_is_opt_in_and_adds_no_cross_region_config():
+    config = sg.build_guardrail_config(tier="classic")
     assert "tierConfig" not in config["topicPolicyConfig"]
     assert "crossRegionConfig" not in config
     assert "CLASSIC" in sg.describe_config(config)
 
 
-def test_standard_tier_sets_the_topic_tier_and_the_cross_region_profile():
-    config = sg.build_guardrail_config(tier="standard")
+def test_standard_tier_is_the_default_and_sets_the_cross_region_profile():
+    config = sg.build_guardrail_config()
     assert config["topicPolicyConfig"]["tierConfig"] == {"tierName": "STANDARD"}
     assert config["crossRegionConfig"] == {"guardrailProfileIdentifier": sg.DEFAULT_GUARDRAIL_PROFILE}
     text = sg.describe_config(config)
@@ -332,6 +332,6 @@ def test_simulation_with_standard_tier_makes_no_aws_call(capsys):
     def forbidden(region):
         raise AssertionError("aucun client AWS en simulation")
 
-    code = sg.main(["--tier", "standard"], client_factory=forbidden, environ={})
+    code = sg.main([], client_factory=forbidden, environ={})
     assert code == sg.EXIT_OK
     assert "STANDARD" in capsys.readouterr().out
