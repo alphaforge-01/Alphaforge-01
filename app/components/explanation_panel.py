@@ -54,10 +54,23 @@ def render_fallback_note(explanation: Mapping[str, Any]) -> None:
         st.info(texts.EXPLANATION_FALLBACK.format(reason=texts.REASON_CODES_FR.get(reason, reason)))
 
 
+def render_grounding_note(explanation: Mapping[str, Any]) -> None:
+    """Signal d'ancrage faible dans la section de l'explication : le texte du modèle reste affiché (règle 8 : visible)."""
+    step = next((s for s in explanation.get("trace") or [] if s.get("name") == "guardrail"), None)
+    details = (step or {}).get("details") or {}
+    if explanation["output"].get("origin") != "llm" or not details.get("grounding_weak"):
+        return
+    score = details.get("grounding_score")
+    shown = "-" if score is None else f"{score:.2f}"
+    template = texts.EXPLANATION_GROUNDING_VERY_WEAK if details.get("grounding_very_weak") else texts.EXPLANATION_GROUNDING_WEAK
+    st.warning(template.format(score=shown))
+
+
 def render_origin(explanation: Mapping[str, Any]) -> None:
     """Origine du texte : agent explicateur ou gabarit, avec le badge "texte de repli" (US-10)."""
     origin = explanation["output"].get("origin", "template")
     render_fallback_note(explanation)
+    render_grounding_note(explanation)
     st.badge(texts.EXPLANATION_ORIGIN.get(origin, origin), color="violet" if origin == "llm" else "gray",
              help=texts.EXPLANATION_ORIGIN_HELP.get(origin))
 

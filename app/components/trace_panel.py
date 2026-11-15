@@ -101,6 +101,8 @@ def _step_lines(step: Mapping[str, Any]) -> List[str]:
             lines.append(texts.TRACE_GUARDRAIL_DENIED.format(topics=topics))
         if details.get("grounding_below_threshold") and not details.get("replaced_by_template"):
             lines.append(texts.TRACE_GUARDRAIL_BELOW_THRESHOLD)
+        if details.get("grounding_very_weak"):
+            lines.append(texts.TRACE_GUARDRAIL_VERY_WEAK.format(floor=details.get("grounding_floor")))
         if details.get("error"):
             lines.append(texts.TRACE_GUARDRAIL_ERROR.format(error=details["error"]))
         if details.get("replaced_by_template"):
@@ -124,7 +126,7 @@ def _status_badge(step: Mapping[str, Any]) -> tuple:
     if step.get("name") == "guardrail":
         if details.get("action") == "intervened" or details.get("replaced_by_template"):
             return texts.TRACE_STATUS_INTERVENTION, "orange"
-        if details.get("grounding_below_threshold"):   # signalé, mais le texte du modèle reste affiché
+        if details.get("grounding_below_threshold") or details.get("grounding_very_weak"):   # signalé, texte affiché
             return texts.TRACE_STATUS_FLAGGED, "orange"
     status = step.get("status")
     return (texts.TRACE_STATUSES.get(status, status),

@@ -219,18 +219,32 @@ def test_resolved_text_falls_back_to_raw_text_when_too_long_or_unresolvable():
 
 # ---- plancher d'ancrage : un score tres bas a signale une erreur de sens reelle ----
 
-def test_grounding_below_the_floor_replaces_the_text_and_is_not_cached():
+def test_grounding_below_the_floor_keeps_the_text_flagged_very_weak_and_is_not_cached():
     from alphaforge.analysis_pipeline import GROUNDING_FLOOR
     cache = ExplanationCache()
     guard = Guard(action="none", flags={"below_threshold": True, "filters": ["GROUNDING"]}, score=0.12)
     explanation = explained(guard, cache=cache)
     assert 0.12 < GROUNDING_FLOOR
-    assert explanation["output"]["origin"] == "template" and "TEXTE-MODELE" not in explanation["rendered_markdown"]
-    assert explanation["trace"][0]["status"] == "fallback"
-    assert explanation["trace"][0]["details"]["fallback_reason"] == "ancrage_insuffisant"
+    assert explanation["output"]["origin"] == "llm" and "TEXTE-MODELE" in explanation["rendered_markdown"]
+    assert explanation["trace"][0]["status"] == "ok" and "fallback_reason" not in explanation["trace"][0]["details"]
     details = explanation["trace"][2]["details"]
-    assert details["replaced_by_template"] is True and details["grounding_floor"] == GROUNDING_FLOOR
+    assert details["grounding_weak"] is True and details["grounding_very_weak"] is True
+    assert details["grounding_floor"] == GROUNDING_FLOOR and "replaced_by_template" not in details
     assert details["grounding_score"] == 0.12 and len(cache) == 0
+
+
+def test_grounding_very_weak_without_the_threshold_flag_is_still_flagged():
+    guard = Guard(action="none", flags={}, score=0.05)
+    details = explained(guard)["trace"][2]["details"]
+    assert details["grounding_weak"] is True and details["grounding_very_weak"] is True
+
+
+def test_no_score_or_an_intervention_still_replaces_the_text_by_the_template():
+    for guard in (Guard(action="none", flags={}, score=None),
+                  Guard(action="intervened", flags={}, score=None)):
+        explanation = explained(guard)
+        assert explanation["output"]["origin"] == "template"
+        assert explanation["trace"][2]["details"]["replaced_by_template"] is True
 
 
 @pytest.mark.parametrize("score", [0.3, 0.35, 0.49])
