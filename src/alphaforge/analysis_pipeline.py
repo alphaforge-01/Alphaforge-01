@@ -156,6 +156,41 @@ def scripted_sequence(toolbox: ToolBox, idea: InvestmentIdea) -> AnalystOutcome:
     return AnalystOutcome(submission=submission, actor="code", turns=0, stop_reason="scripted")
 
 
+ASSET_FACT_METRICS = ("volatility_ann", "max_drawdown")
+
+
+def _ensure_asset_facts(toolbox: ToolBox, ticker: str) -> tuple[list[str], str]:
+    """Preuves de l'actif de l'idee pris seul (volatilite, perte maximale), pour le dossier d'explication.
+
+    Sans elles, l'explication ne cite que des mesures du portefeuille et ne peut pas dire d'ou vient l'ecart
+    avec le profil. Reprend l'appel de l'analyste s'il existe, sinon le code appelle ``get_asset_facts``.
+    Budget epuise ou outil en echec : aucune preuve ajoutee, l'analyse continue.
+    Rend (identifiants de preuves, origine : "agent", "code" ou "absent").
+    """
+    found, caller = None, "absent"
+    for call, result in zip(toolbox.calls, toolbox.results):
+        if call["tool_name"] == "get_asset_facts" and result["status"] == "ok" and call["params"].get("ticker") == ticker:
+            found, caller = result, "agent"
+            break
+    if found is None and toolbox.calls_used < toolbox.max_calls:
+        result = toolbox.call("get_asset_facts", {"ticker": ticker})
+        if result["status"] == "ok":
+            found, caller = result, "code"
+    if found is None:
+        return [], "absent"
+    ids = [e["evidence_id"] for e in found.get("evidence", []) or [] if e.get("metric") in ASSET_FACT_METRICS]
+    return ids, caller
+
+
+def _with_callers(calls: list[dict[str, Any]], agent_calls: int) -> list[dict[str, Any]]:
+    """Copie des appels avec ``caller`` : "agent" pour les ``agent_calls`` premiers, "code" ensuite."""
+    return [{**call, "caller": "agent" if index < agent_calls else "code"} for index, call in enumerate(calls)]
+
+
+def _with_asset_facts(highlights: list[str], asset_fact_ids: list[str]) -> list[str]:
+    return highlights + [e for e in asset_fact_ids if e not in highlights]
+
+
 def _load_limits(deps: PipelineDeps, limit_ids: list[str]) -> list[dict]:
     """Catalogue des limites du resultat, au format ``{limit_id, text_novice, text_pro}``.
 
@@ -248,6 +283,9 @@ def run_analysis(
                 toolbox = ToolBox(deps, portfolio, as_of=as_of, capital_cad=capital)
     if outcome is None:
         outcome = scripted_sequence(toolbox, idea)
+    # Appels faits pendant la boucle de l'agent : les suivants (simulation de controle, variantes, faits
+    # de l'actif) sont decides par le code. La trace le dit, au lieu de tout attribuer a l'agent.
+    agent_calls = toolbox.calls_used if outcome.actor == "agent" else 0
     def _simulation_of_idea() -> dict[str, Any] | None:
         # Seule la simulation de l'idee EXACTE demandee sert de snapshot "apres" : jamais une variante.
         for call, simulated in zip(toolbox.calls, toolbox.results):
@@ -320,7 +358,12 @@ def run_analysis(
             governance=deps.evaluate(
                 profile, snapshot, simulate_fn=simulate_fn, idea=variant_idea, evidence=toolbox.evidence()),
         ))
-    trace[0]["details"]["tool_calls"] = list(toolbox.calls)  # inclut les simulations de variantes
+    # Faits de l'actif apres les variantes : ils ne doivent pas consommer le budget d'appels des variantes.
+    asset_fact_ids, asset_facts_caller = _ensure_asset_facts(toolbox, idea["ticker"])
+    trace[0]["details"]["asset_facts"] = {
+        "ticker": idea["ticker"], "caller": asset_facts_caller, "evidence_ids": asset_fact_ids}
+    # inclut les simulations de variantes et les faits de l'actif, avec qui a decide chaque appel
+    trace[0]["details"]["tool_calls"] = _with_callers(toolbox.calls, agent_calls)
     trace.append(_step(2, "governance", "code", "ok", started, {
         "overall_before": governance_before["overall_status"], "overall_after": governance_after["overall_status"],
         "checks": [{"check_id": c["check_id"], "status": c["status"], "margin": c["margin"]}
@@ -335,7 +378,10 @@ def run_analysis(
     submission = AnalystSubmission(
         understood_idea=idea,
         variants=[{"reason_code": v["reason_code"], "idea": v["idea"]} for v in variants],
-        highlight_evidence_ids=[e for e in outcome.submission.get("highlight_evidence_ids", []) if e in evidence][:MAX_HIGHLIGHTS],
+        # au plus MAX_HIGHLIGHTS choisies par l'analyste, puis les faits de l'actif ajoutes par le code
+        highlight_evidence_ids=_with_asset_facts(
+            [e for e in outcome.submission.get("highlight_evidence_ids", []) if e in evidence][:MAX_HIGHLIGHTS],
+            [e for e in asset_fact_ids if e in evidence]),
         unsupported_requests=list(outcome.submission.get("unsupported_requests", [])),
     )
     as_of_value = as_of or next((e["as_of"] for e in evidence.values() if e.get("as_of")), None) or "inconnue"
@@ -624,12 +670,12 @@ def _scope_evidence_labels(evidence: dict[str, Any]) -> None:
     """
     for entry in evidence.values():
         subject = str(entry.get("subject", ""))
-        for prefix, suffix in _SCOPE_SUFFIX:
-            if subject.startswith(prefix):
-                label = str(entry.get("label_fr", ""))
-                if suffix not in label:
-                    entry["label_fr"] = label + suffix
-                break
+        suffix = next((s for prefix, s in _SCOPE_SUFFIX if subject.startswith(prefix)), None)
+        if suffix is None and entry.get("tool_name") == "get_asset_facts" and subject:
+            suffix = f" ({subject} seul)"   # faits de l'actif pris seul, pas du portefeuille
+        label = str(entry.get("label_fr", ""))
+        if suffix and suffix not in label:
+            entry["label_fr"] = label + suffix
 
 
 def _excerpts(rejections: list[dict[str, Any]], limit: int = 8) -> list[str]:

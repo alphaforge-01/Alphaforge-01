@@ -135,7 +135,7 @@ class GovernanceResult(TypedDict):
 class AnalystSubmission(TypedDict):     # paramètres de submit_analysis
     understood_idea: InvestmentIdea
     variants: list[dict]        # au plus 2 : {"reason_code": ReasonCode, "idea": InvestmentIdea}
-    highlight_evidence_ids: list[str]   # au plus 2
+    highlight_evidence_ids: list[str]   # au plus 2 choisies par l'analyste, puis les faits de l'actif ajoutes par le code
     unsupported_requests: list[str]
 
 class Variant(TypedDict):

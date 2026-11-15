@@ -373,7 +373,7 @@ def test_pipeline_falls_back_when_agent_loop_fails():
     assert step["details"]["fallback_reason"].startswith("AnalystFailure")
     assert step["details"]["stop_reason"] == "scripted"
     assert [c["tool_name"] for c in step["details"]["tool_calls"]] == [
-        "analyze_portfolio", "simulate_portfolio_change"]
+        "analyze_portfolio", "simulate_portfolio_change", "get_asset_facts"]
 
 
 def test_pipeline_falls_back_on_auth_error_without_leaking_secrets():

@@ -48,6 +48,7 @@ def _render_tool_calls(details: Mapping[str, Any]) -> None:
     rows = [
         {
             texts.COLUMN_TOOL: texts.TOOL_LABELS.get(call.get("tool_name"), call.get("tool_name")),
+            texts.COLUMN_CALLER: texts.TRACE_ACTORS.get(call.get("caller"), call.get("caller") or "-"),
             texts.COLUMN_PARAMS: _params_text(call.get("params") or {}),
             texts.COLUMN_STATUS: texts.TRACE_STATUSES.get(
                 call.get("status"), texts.STATUS_LABELS.get(call.get("status"), call.get("status"))),
