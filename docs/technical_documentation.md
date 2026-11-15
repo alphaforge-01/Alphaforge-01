@@ -166,7 +166,7 @@ La même analyse rattache les deux autres règles non conformes à des preuves d
 
 ### 4.3 Le même exemple en mode `bedrock` : trace réelle
 
-**[À REMPLIR après la régénération des traces de 16 h 30 à 18 h 30 (Godwin) : date et heure de l'essai, fichiers de `outputs/reports/demo_traces/`, modèles, nombre de tours et d'appels de l'analyste, phrase rendue par l'explicateur avec `explainer_v5`, renvois vérifiés, action du garde-fou, score d'ancrage et `source_kind`.]**
+**[À REMPLIR après la régénération des traces finales (Godwin) : date et heure de l'essai, fichiers de `outputs/reports/demo_traces/`, modèles, nombre de tours et d'appels de l'analyste, phrase rendue par l'explicateur avec `explainer_v5`, renvois vérifiés, action du garde-fou, score d'ancrage et `source_kind`.]**
 
 | Étape | Acteur | Ce que montre la trace |
 | --- | --- | --- |
