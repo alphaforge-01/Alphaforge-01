@@ -119,3 +119,26 @@ def test_the_explainer_still_receives_the_json_dossier(monkeypatch):
     with pytest.raises(Exception):
         explain_with_llm(Client(), "m", brief, lambda o, b: {"is_valid": True, "rejections": []})
     assert '"brief_id": "b1"' in seen["message"] and "PHRASES" not in seen["message"]
+
+
+# ---- avec le vrai module du flux D (src/alphaforge/grounding_source.py), sur de vraies analyses hors ligne ----
+
+@pytest.mark.parametrize("persona", ["robert", "amira", "mateo"])
+@pytest.mark.parametrize("level", ["novice", "pro"])
+def test_real_module_gives_french_sentences_for_every_persona_and_level(persona, level):
+    from alphaforge.pipeline_deps import resolve_deps
+    from alphaforge.profiles import load_personas
+
+    deps = resolve_deps()
+    assert deps.is_fixture is False
+    chosen = load_personas()[persona]
+    result = run_analysis(chosen["profile"], chosen["portfolio"], load("idea_tsla_25.json"), mode="offline")
+    brief = deps.build_brief(result, level)
+    text, kind = _grounding_source(brief)
+    assert kind == "phrases" and 0 < len(text) < GROUNDING_SOURCE_MAX_CHARS
+    # la source est du francais, pas du JSON : ni cles anglaises ni codes de statut anglais
+    assert not text.lstrip().startswith("{")
+    for english in ("warn_threshold", "limit_threshold", "evidence_ids", '"conflict"', '"compliant"'):
+        assert english not in text
+    assert any(word in text for word in ("conforme", "en tension", "en conflit"))
+    assert brief["idea"]["ticker"] in text                      # l'idee simulee figure dans la source

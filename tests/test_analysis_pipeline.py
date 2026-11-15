@@ -256,7 +256,10 @@ def test_explain_bedrock_valid_llm_text_is_kept_and_grounding_reflected():
     kind, source, query, answer = client.calls[0]
     from alphaforge.analysis_pipeline import _model_text
     # le garde-fou recoit les phrases du modele (limite de 5000 caracteres), pas le texte rendu complet
-    assert answer == _model_text(explanation["output"], explanation["brief"]) and "brief_id" in source
+    from alphaforge.analysis_pipeline import _grounding_source
+    # la source est celle que choisit le pipeline : le dossier en phrases francaises, ou le JSON en repli
+    assert answer == _model_text(explanation["output"], explanation["brief"])
+    assert source == _grounding_source(explanation["brief"])[0]
 
 
 def test_explain_bedrock_runner_error_falls_back_with_reason():
