@@ -228,7 +228,7 @@ def test_describe_rejections_is_bounded_and_masks_secrets():
     assert "AKIA" + "Q" * 16 not in leaked
 
 
-def test_prompt_v2_states_the_validator_rules():
+def test_prompt_states_the_validator_rules():
     prompt = load_prompt("explainer_v5")
     for needle in ("REGLE 1", "REGLE 2", "REGLE 3", "REGLE 4", "REGLE 5", "max_chars_per_slot", "[LM1]", "il faut"):
         assert needle in prompt
@@ -273,7 +273,7 @@ def test_trace_records_the_slot_of_each_rejection_without_any_model_text():
     assert details["rejection_excerpts"] == ["summary:forbidden_term:MARQUEUR-SECRET"]
 
 
-def test_prompt_v4_forbids_naming_variants_by_identifier():
+def test_prompt_forbids_naming_variants_by_identifier():
     prompt = load_prompt("explainer_v5")
     assert "REGLE 6" in prompt and "V1" in prompt and "UNE seule phrase" in prompt
 
@@ -318,7 +318,7 @@ def test_guardrail_checks_only_the_model_sentences_not_the_long_rendered_text():
     assert explanation["trace"][2]["details"]["checked_chars"] == len(received["answer"])
 
 
-def test_prompt_v4_states_the_scope_of_measures_and_forbids_additions():
+def test_prompt_states_the_scope_of_measures_and_forbids_additions():
     prompt = load_prompt("explainer_v5")
     assert "REGLE 7" in prompt and "PORTEFEUILLE ENTIER" in prompt and "de la position" in prompt
     assert "REGLE 8" in prompt and "rien d'ajoute" in prompt
@@ -364,6 +364,7 @@ def test_a_reply_with_a_link_is_retried_and_the_second_reply_is_kept():
 def test_prompt_v5_forbids_calling_counterfactual_weights_unavailable():
     prompt = load_prompt("explainer_v5")
     assert "REGLE 9" in prompt and "JAMAIS qu'ils sont absents, manquants ou non disponibles" in prompt
+    assert "seule la marge au seuil est connue" in prompt and "toujours affiches" not in prompt
     # l'exemple ne doit plus pointer vers une preuve de poids qui n'existe pas
     assert "Sous le poids indique en [E5]" not in prompt
     assert "REGLE 10" in prompt and "(TSLA seul)" in prompt

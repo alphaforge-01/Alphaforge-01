@@ -168,9 +168,8 @@ def _ensure_asset_facts(toolbox: ToolBox, ticker: str) -> tuple[list[str], str]:
     Rend (identifiants de preuves, origine : "agent", "code" ou "absent").
     """
     found, caller = None, "absent"
-    for result in toolbox.results:
-        if (result["tool_name"] == "get_asset_facts" and result["status"] == "ok"
-                and (result.get("params") or {}).get("ticker") == ticker):
+    for call, result in zip(toolbox.calls, toolbox.results):
+        if call["tool_name"] == "get_asset_facts" and result["status"] == "ok" and call["params"].get("ticker") == ticker:
             found, caller = result, "agent"
             break
     if found is None and toolbox.calls_used < toolbox.max_calls:
@@ -181,6 +180,11 @@ def _ensure_asset_facts(toolbox: ToolBox, ticker: str) -> tuple[list[str], str]:
         return [], "absent"
     ids = [e["evidence_id"] for e in found.get("evidence", []) or [] if e.get("metric") in ASSET_FACT_METRICS]
     return ids, caller
+
+
+def _with_callers(calls: list[dict[str, Any]], agent_calls: int) -> list[dict[str, Any]]:
+    """Copie des appels avec ``caller`` : "agent" pour les ``agent_calls`` premiers, "code" ensuite."""
+    return [{**call, "caller": "agent" if index < agent_calls else "code"} for index, call in enumerate(calls)]
 
 
 def _with_asset_facts(highlights: list[str], asset_fact_ids: list[str]) -> list[str]:
@@ -279,6 +283,9 @@ def run_analysis(
                 toolbox = ToolBox(deps, portfolio, as_of=as_of, capital_cad=capital)
     if outcome is None:
         outcome = scripted_sequence(toolbox, idea)
+    # Appels faits pendant la boucle de l'agent : les suivants (simulation de controle, variantes, faits
+    # de l'actif) sont decides par le code. La trace le dit, au lieu de tout attribuer a l'agent.
+    agent_calls = toolbox.calls_used if outcome.actor == "agent" else 0
     def _simulation_of_idea() -> dict[str, Any] | None:
         # Seule la simulation de l'idee EXACTE demandee sert de snapshot "apres" : jamais une variante.
         for call, simulated in zip(toolbox.calls, toolbox.results):
@@ -300,7 +307,6 @@ def run_analysis(
         raise AnalysisError("Budget d'appels d'outils epuise avant la simulation de l'idee.") from error
     if simulation is None:
         raise AnalysisError("La simulation de l'idee n'a pas abouti : aucun resultat exploitable.")
-    asset_fact_ids, asset_facts_caller = _ensure_asset_facts(toolbox, idea["ticker"])
     snapshot_before, snapshot_after = _snapshots_from_simulation(simulation)
     snapshot_before = {**snapshot_before, "subject": "portfolio_before"}
     snapshot_after = {**snapshot_after, "subject": "portfolio_after"}
@@ -313,7 +319,6 @@ def run_analysis(
     details: dict[str, Any] = {
         "tool_calls": list(toolbox.calls), "turns": outcome.turns, "stop_reason": outcome.stop_reason,
         "mode_requested": mode, "mode_effective": "bedrock" if outcome.actor == "agent" else "offline",
-        "asset_facts": {"ticker": idea["ticker"], "caller": asset_facts_caller, "evidence_ids": asset_fact_ids},
     }
     if fallback_reason and mode == "bedrock":
         details["fallback_reason"] = fallback_reason
@@ -353,7 +358,12 @@ def run_analysis(
             governance=deps.evaluate(
                 profile, snapshot, simulate_fn=simulate_fn, idea=variant_idea, evidence=toolbox.evidence()),
         ))
-    trace[0]["details"]["tool_calls"] = list(toolbox.calls)  # inclut les simulations de variantes
+    # Faits de l'actif apres les variantes : ils ne doivent pas consommer le budget d'appels des variantes.
+    asset_fact_ids, asset_facts_caller = _ensure_asset_facts(toolbox, idea["ticker"])
+    trace[0]["details"]["asset_facts"] = {
+        "ticker": idea["ticker"], "caller": asset_facts_caller, "evidence_ids": asset_fact_ids}
+    # inclut les simulations de variantes et les faits de l'actif, avec qui a decide chaque appel
+    trace[0]["details"]["tool_calls"] = _with_callers(toolbox.calls, agent_calls)
     trace.append(_step(2, "governance", "code", "ok", started, {
         "overall_before": governance_before["overall_status"], "overall_after": governance_after["overall_status"],
         "checks": [{"check_id": c["check_id"], "status": c["status"], "margin": c["margin"]}

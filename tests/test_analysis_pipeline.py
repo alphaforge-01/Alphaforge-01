@@ -489,7 +489,6 @@ def _deps_with_asset_facts():
 def test_asset_facts_of_the_idea_reach_the_brief_with_a_scoped_label():
     from alphaforge.analysis_pipeline import run_analysis
     from alphaforge.bedrock_client import BedrockConfig
-    from alphaforge.fixture_collaborators import fixture_deps
 
     deps = _deps_with_asset_facts()
     profile, portfolio, idea = _robert_inputs()
@@ -520,3 +519,20 @@ def test_asset_facts_reuse_the_analyst_call_and_never_break_on_an_exhausted_budg
     full = ToolBox(deps, portfolio, as_of=None, capital_cad=None, max_calls=0)
     assert _ensure_asset_facts(full, ticker) == ([], "absent")
     assert _with_asset_facts(["E1", "E2"], ["E2", "E9"]) == ["E1", "E2", "E9"]
+
+
+def test_trace_says_who_decided_each_tool_call():
+    from alphaforge.analysis_pipeline import _with_callers
+
+    calls = [{"tool_name": "analyze_portfolio"}, {"tool_name": "simulate_portfolio_change"}, {"tool_name": "get_asset_facts"}]
+    assert [c["caller"] for c in _with_callers(calls, 2)] == ["agent", "agent", "code"]
+    assert "caller" not in calls[0]   # copie, la liste d'origine n'est pas modifiee
+    offline = run("robert")
+    assert {c["caller"] for c in offline["trace"][0]["details"]["tool_calls"]} == {"code"}
+
+
+def test_agent_calls_are_labeled_agent_and_code_additions_code():
+    result = run("robert", mode="bedrock", config=BEDROCK_CONFIG, client=FakeClient(), analyst_runner=agent_runner)
+    calls = result["trace"][0]["details"]["tool_calls"]
+    assert calls[0]["caller"] == "agent"
+    assert calls[-1]["tool_name"] == "get_asset_facts" and calls[-1]["caller"] == "code"
