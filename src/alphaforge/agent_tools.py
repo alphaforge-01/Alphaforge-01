@@ -30,6 +30,7 @@ from typing import Any
 
 import pandas as pd
 
+from alphaforge.asset_labels import asset_class_fr, currency_fr, sector_fr
 from alphaforge import calendar_alignment
 from alphaforge.calendar_alignment import MissingPriceError, NoDataError, daily_cad_returns, returns_base_date
 from alphaforge.contracts import EvidenceEntry, InvestmentIdea, Portfolio, PortfolioSnapshot, ToolResult
@@ -267,13 +268,13 @@ def _composition_entries(tool: str, snapshot: PortfolioSnapshot, as_of: str) -> 
         entry("defensive_share", snapshot["defensive_share"], COMPOSITION_LIMITS, UNIVERSE_SOURCES),
     ]
     entries += [entry(f"weight_by_asset_class.{name}", value, COMPOSITION_LIMITS, UNIVERSE_SOURCES,
-                      f"Poids de la classe d'actifs {name}")
+                      f"Poids de la classe d'actifs : {asset_class_fr(name)}")
                 for name, value in snapshot["weight_by_asset_class"].items()]
     entries += [entry(f"weight_by_sector.{name}", value, COMPOSITION_LIMITS, UNIVERSE_SOURCES,
-                      f"Poids du secteur {name}")
+                      f"Poids du secteur : {sector_fr(name)}")
                 for name, value in snapshot["weight_by_sector"].items()]
     entries += [entry(f"currency_exposure.{name}", value, CURRENCY_LIMITS, UNIVERSE_SOURCES,
-                      f"Exposition au {name}")
+                      f"Exposition au {currency_fr(name)}")
                 for name, value in snapshot["currency_exposure"].items()]
     entries += [entry(f"weights.{ticker}", value, WEIGHT_LIMITS, (), f"Poids de {ticker}")
                 for ticker, value in snapshot["weights"].items()]
