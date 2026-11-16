@@ -292,7 +292,7 @@ def test_explainer_receives_the_context_in_the_brief_json():
 
 def test_prompt_already_documents_the_field():
     from alphaforge.prompt_loader import load_prompt
-    prompt = load_prompt("explainer_v5")
+    prompt = load_prompt("explainer_v6")
     assert "profile_context" in prompt and "sans chiffre" in prompt
 
 

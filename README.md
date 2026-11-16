@@ -150,7 +150,7 @@ analysis_pipeline.run_analysis / explain
         v
   2. Gouvernance (code) : statut et marge par règle, contrefactuel, verdicts financier et ESG séparés
   3. Registre de preuves et dossier d'explication (code)
-  4. Agent explicateur (Bedrock, sans outil, dossier seul, prompt explainer_v5)  ou gabarit
+  4. Agent explicateur (Bedrock, sans outil, dossier seul, prompt explainer_v6)  ou gabarit
   5. Validateur (code) : aucun chiffre hors registre, aucune recommandation ni prévision, aucun lien ni HTML
   6. Garde-fou Bedrock : sujets refusés, ancrage contre la source en phrases  ->  trace (S3 privé facultatif)
 ```

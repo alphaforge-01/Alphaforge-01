@@ -557,7 +557,7 @@ def test_counterfactual_slot_is_always_written_by_the_code_and_passes_validation
     def runner(client, model_id, brief, validate):
         output = deps.render_template(brief)
         seen["template"] = output["counterfactual"]
-        output.update({"origin": "llm", "attempt": 1, "model_id": model_id, "prompt_version": "explainer_v5",
+        output.update({"origin": "llm", "attempt": 1, "model_id": model_id, "prompt_version": "explainer_v6",
                        "counterfactual": "Le detail est donne ci-dessous.",
                        "summary": "Resume ecrit par le modele [G1]."})
         return output
@@ -657,7 +657,7 @@ def test_cached_model_output_gets_code_counterfactual_and_model_text_stays_check
     result = run("robert", deps=deps)
     brief = deps.build_brief(result, "novice")
     output, template = _model_output(deps, brief)
-    cached = {**output, "attempt": 1, "model_id": "model-test", "prompt_version": "explainer_v5",
+    cached = {**output, "attempt": 1, "model_id": "model-test", "prompt_version": "explainer_v6",
               "counterfactual": template["counterfactual"] + " PHRASE-DU-MODELE-EN-CACHE."}
 
     class OldCache:

@@ -38,7 +38,7 @@ analysis_pipeline.run_analysis(profil, portefeuille, idée, as_of, mode)
   3. Dossier     code : registre de preuves numérotées, facteurs classés, contexte du profil, limites, glossaire
         |
 analysis_pipeline.explain(résultat, niveau)
-  4. Explication agent explicateur (Bedrock, sans outil, dossier seul, prompt explainer_v5)  ou gabarit ;
+  4. Explication agent explicateur (Bedrock, sans outil, dossier seul, prompt explainer_v6)  ou gabarit ;
                  la phrase du contrefactuel est toujours écrite par le code
   5. Validation  code : rejette chiffre hors registre, renvoi inconnu, recommandation, prévision, lien, HTML
   6. Garde-fou   Bedrock Guardrails : sujets refusés, ancrage contre une source en phrases  ->  trace (S3 privé)
@@ -56,7 +56,7 @@ analysis_pipeline.explain(résultat, niveau)
 | Gouvernance (`governance.py`, `counterfactual.py`) | Code déterministe testé | Statut par règle (conforme, tension, conflit, information manquante), marge, contrefactuel par balayage du poids au point près ; verdict global, financier et ESG | Un verdict ne doit pas varier d'un appel à l'autre ; il doit être testable. Séparer l'ESG évite qu'une préférence non vérifiable masque le verdict financier |
 | Registre de preuves (`evidence.py`) | Code | Numérote chaque chiffre (E1, E2...) avec valeur, affichage, période, devise, sources, transformation, limites | Base de l'explicabilité : tout chiffre affiché remonte à une preuve |
 | Dossier et gabarit (`explanation_brief.py`, `explanation_fallback.py`) | Code | Seule entrée de l'explicateur : facteurs classés, faits de l'actif seul, contexte déclaré du profil (objectif, horizon, tolérance, ESG, cryptoactifs), glossaire et limites ; explication de repli sans modèle | L'explicateur ne voit ni le texte de l'utilisateur ni les données brutes : il ne peut parler que de ce qui a été calculé ou déclaré |
-| Agent explicateur (`explainer_agent.py`, `prompts/explainer_v5.md`) | Modèle sur Bedrock, un appel sans outil, un nouvel essai au plus | Rédige en novice ou en pro, uniquement par renvois (`[E3]`, `[G1]`, `[T2]`) ; cite les faits de l'actif seul quand une règle est en tension ou en conflit ; s'appuie sur le contexte du profil. La phrase du contrefactuel est remplacée par celle du code | Séparer l'explication de l'analyse : changer de niveau ne relance que l'explicateur, les chiffres ne peuvent pas bouger |
+| Agent explicateur (`explainer_agent.py`, `prompts/explainer_v6.md`) | Modèle sur Bedrock, un appel sans outil, un nouvel essai au plus | Rédige en novice ou en pro, uniquement par renvois (`[E3]`, `[G1]`, `[T2]`) ; cite les faits de l'actif seul quand une règle est en tension ou en conflit ; s'appuie sur le contexte du profil. La phrase du contrefactuel est remplacée par celle du code | Séparer l'explication de l'analyse : changer de niveau ne relance que l'explicateur, les chiffres ne peuvent pas bouger |
 | Validateur (`explanation_validator.py`) | Code | Rejette tout chiffre hors registre (y compris en lettres), renvoi inconnu, terme de recommandation ou de prévision, règle non citée, contrefactuel dit « indisponible », lien, image ou balise HTML, texte trop long | Fidélité garantie par construction, pas par un second modèle |
 | Garde-fou (`scripts/setup_guardrail.py`, `bedrock_client.py`, `grounding_source.py`) | Amazon Bedrock Guardrails | Sujets refusés : conseil personnalisé, exécution d'ordres, prédiction de rendement. Ancrage contextuel en mode détection, appliqué aux **seules phrases écrites par le modèle** (valeurs à la place des renvois), contre une **source rédigée en phrases françaises** à partir du seul dossier. **Aucun texte de modèle n'est affiché sans garde-fou qui l'a vérifié** : garde-fou absent, en erreur, intervenu (sujet refusé) ou sans score, et c'est le gabarit du code qui s'affiche, avec la raison dans la trace. Un ancrage faible est un **signal, pas un blocage** : entre 0,3 et 0,5, le texte reste affiché avec l'avertissement « ancrage faible » ; sous 0,3, avec l'avertissement « ancrage très faible » (`grounding_very_weak` dans la trace) et sans mise en cache | Règle de simulation de l'énoncé ; indicateur de proximité du texte avec le dossier (ce qu'il mesure vraiment : section 5.3) |
 | Traces (`trace_store.py`, `scripts/setup_trace_bucket.py`) | Amazon S3 privé | Une trace JSON par appel, sans secret ni texte libre du modèle (paramètres réduits aux clés validées), écrite seulement si les quatre options Block Public Access sont actives et si le compartiment appartient au compte attendu ; compartiment créé par script idempotent (chiffrement, TLS obligatoire) | Preuve consultable de l'intégration AWS réelle |
@@ -168,13 +168,13 @@ La même analyse rattache les deux autres règles non conformes à des preuves d
 
 ### 4.3 Le même exemple en mode `bedrock` : trace réelle
 
-**[À REMPLIR après la régénération des traces finales (Godwin) : date et heure de l'essai, fichiers de `outputs/reports/demo_traces/`, modèles, nombre de tours et d'appels de l'analyste, phrase rendue par l'explicateur avec `explainer_v5`, renvois vérifiés, action du garde-fou, score d'ancrage et `source_kind`.]**
+**[À REMPLIR après la régénération des traces finales (Godwin) : date et heure de l'essai, fichiers de `outputs/reports/demo_traces/`, modèles, nombre de tours et d'appels de l'analyste, phrase rendue par l'explicateur avec `explainer_v6`, renvois vérifiés, action du garde-fou, score d'ancrage et `source_kind`.]**
 
 | Étape | Acteur | Ce que montre la trace |
 | --- | --- | --- |
 | 1. Analyse | Agent analyste (Bedrock) | **[À REMPLIR]** tours et appels d'outils, avec `caller: agent` pour ceux de l'agent et `caller: code` pour ceux du code |
 | 2. Gouvernance | Code | Mêmes verdicts et mêmes valeurs qu'en mode hors ligne (R1 en conflit à 25 %, R2 et R3 en tension) ; seuls les numéros de preuve peuvent différer, car le registre numérote dans l'ordre des appels choisi par l'agent |
-| 4. Explication | Agent explicateur (prompt `explainer_v5`) | **[À REMPLIR]** phrase rendue ; contrefactuel écrit par le code (`slots_written_by_code`) |
+| 4. Explication | Agent explicateur (prompt `explainer_v6`) | **[À REMPLIR]** phrase rendue ; contrefactuel écrit par le code (`slots_written_by_code`) |
 | 5. Validation | Code | **[À REMPLIR]** renvois vérifiés, rejets éventuels |
 | 6. Garde-fou | Bedrock Guardrails | **[À REMPLIR]** action, score d'ancrage, pertinence, `source_kind: sentences` |
 
