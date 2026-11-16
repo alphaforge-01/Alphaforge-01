@@ -17,11 +17,15 @@ import streamlit as st
 import data_source
 import ui_texts as texts
 from components import explanation_panel, idea_panel, result_panel, trace_panel
-from components.evidence import ProofContext, source_line
+from components.evidence import ProofContext
 from components.persistence import kept_toggle
 from components.rules import render_key_points
 from components.style import html, pill
 from formatting import escape_dollars, format_pct, summary_section
+
+
+# Interrupteur du menu de paramètres (démo et jury) : affiche l'onglet Trace des réponses.
+SHOW_TRACE_KEY = "show_trace"
 
 
 def _guard_caption(action: Optional[str]) -> Optional[str]:
@@ -263,18 +267,6 @@ def render_compact(entry: Mapping[str, Any], result: Optional[Mapping[str, Any]]
          f'{result_panel.split_verdict_html(result["governance_after"])}')
 
 
-def _render_sources_and_limits(result: Mapping[str, Any], ctx: ProofContext, threshold_notice: str) -> None:
-    sources = sorted({source for entry in result["evidence"].values() for source in entry.get("source_ids") or []})
-    st.markdown(f"**{texts.CHAT_SOURCES}**")
-    st.markdown("\n".join(f"- {source_line(source, ctx)}" for source in sources) or texts.PROOF_NONE)
-    st.markdown(f"**{texts.CHAT_LIMITS}**")
-    text_key = "text_pro" if ctx.level == "pro" else "text_novice"
-    lines = [f"- {limit.get(text_key) or limit.get('limit_id')}" for limit in result.get("limits") or []]
-    if threshold_notice:
-        lines.append(f"- {threshold_notice}")
-    st.markdown("\n".join(lines) or texts.PROOF_NONE)
-
-
 def render_reply(entry: Mapping[str, Any], index: int, result: Mapping[str, Any],
                  explanation: Optional[Mapping[str, Any]], ctx: ProofContext,
                  rules_by_id: Mapping[str, Dict[str, Any]], names: Mapping[str, str],
@@ -300,17 +292,21 @@ def render_reply(entry: Mapping[str, Any], index: int, result: Mapping[str, Any]
     # L'avertissement reste visible en permanence dans le bandeau du haut (règle 8).
     if not kept_toggle(texts.CHAT_SHOW_DETAILS, f"details_{index}"):
         return
-    details_tab, text_tab, sources_tab, trace_tab = st.tabs(
-        [texts.CHAT_TAB_DETAILS, texts.CHAT_TAB_TEXT, texts.CHAT_TAB_SOURCES, texts.CHAT_TAB_TRACE])
+    # Trace (outils, contrôles, interventions du garde-fou, règle 8) : onglet présent seulement
+    # quand l'interrupteur de démo du menu de paramètres est activé.
+    show_trace = bool(st.session_state.get(SHOW_TRACE_KEY))
+    # Sources et limites : déjà dans l'explication complète (sections Limites et Preuves citées).
+    labels = [texts.CHAT_TAB_DETAILS, texts.CHAT_TAB_TEXT]
+    tabs = st.tabs(labels + [texts.CHAT_TAB_TRACE] if show_trace else labels)
+    details_tab, text_tab = tabs[:2]
     with details_tab:
         result_panel.render_details(result, rules_by_id, ctx, names, load_asset_facts, threshold_notice)
     with text_tab:
         if explanation is not None:
             explanation_panel.render_explanation(explanation, result, ctx)
-    with sources_tab:
-        _render_sources_and_limits(result, ctx, threshold_notice)
-    with trace_tab:
-        trace_panel.render_trace(result, explanation)
+    if show_trace:
+        with tabs[2]:
+            trace_panel.render_trace(result, explanation)
 
 
 def render_entry(entry: Mapping[str, Any], index: int, is_latest_analysis: bool,
@@ -320,7 +316,8 @@ def render_entry(entry: Mapping[str, Any], index: int, is_latest_analysis: bool,
     role = entry.get("role")
     if role == "user":
         avatar = ":material/tune:" if entry.get("origin") == "manual" else "user"
-        with st.chat_message("user", avatar=avatar):
+        # Conteneur à clé : la feuille de style place les messages de l'utilisateur à droite.
+        with st.container(key=f"chat-user-{index}"), st.chat_message("user", avatar=avatar):
             st.markdown(entry["text"])
         return
     with st.chat_message("assistant", avatar=":material/neurology:"):
