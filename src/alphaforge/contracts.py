@@ -266,6 +266,7 @@ class ConversationBrief(TypedDict):     # seule entrée de l'agent conversationn
     limits: list[dict]
     cards: list[dict]                   # fiches pédagogiques F#, vides sans accord d'un mentor
     missing: list[str]                  # informations absentes, à dire comme telles
+    guardrail_notice: NotRequired[list[str]]   # sujets signalés par le garde-fou : réponse reformulée vers le permis
 
 
 class ConversationReply(TypedDict):
@@ -285,6 +286,7 @@ class ConversationResult(TypedDict):
     trace: list[TraceStep]              # réponse, validation, garde-fou
     cited_evidence: NotRequired[list[str]]   # preuves citées par la réponse affichée (sections de l'interface)
     cited_terms: NotRequired[list[str]]      # termes du glossaire cités
+    brief: NotRequired[ConversationBrief]
     validation_skipped: NotRequired[str]     # raison si la validation n'a pas eu lieu : `validation` est alors neutre
 
 

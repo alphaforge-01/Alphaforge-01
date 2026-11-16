@@ -33,6 +33,9 @@ from .contracts import (
 )
 from .conversation_agent import MAX_QUESTION_CHARS, render_answer, render_answer_with_citations, reply_with_llm
 from .conversation_agent import grounding_source as conversation_grounding_source
+from .conversation_router import RouterOutcome, run_router
+from .conversation_tools import ConversationProviders, ConversationToolBox
+from .conversation_fallback import plain_brief
 from .explainer_agent import PROMPT_VERSION as EXPLAINER_PROMPT_VERSION
 from .explanation_cache import ExplanationCache
 from .pipeline_deps import PipelineDeps, resolve_deps
@@ -475,10 +478,13 @@ def explain(
                         f"{type(error).__name__}: {redact_text(str(error))}" if known else type(error).__name__)
     if output is None:
         output = deps.render_template(brief)
-    elif output["origin"] == "llm" and not from_cache:
+    elif output["origin"] == "llm":
         # L'emplacement du contrefactuel est ecrit par le code, jamais par le modele : sa phrase decrit un affichage
         # du code (poids detailles dessous), absent du dossier, et le controle d'ancrage la juge non fondee (mesure
-        # sur Amira : texte entier a 0,11, puis 0,58 sans cet emplacement). Celle du gabarit est fondee par construction.
+        # sur Amira : texte entier a 0,11, puis 0,58 sans cet emplacement). La phrase du gabarit qui la remplace
+        # renvoie elle aussi a cet affichage : elle est donc retiree du texte controle a l'etape 6 (_model_text).
+        # Aussi pour une sortie relue depuis le cache : une entree plus ancienne pourrait contenir un contrefactuel
+        # ecrit par le modele, qui ne doit ni s'afficher ni echapper au controle d'ancrage. Idempotent sinon.
         output = {**output, "counterfactual": deps.render_template(brief)["counterfactual"]}
     details: dict[str, Any] = {
         "level": level, "origin": output["origin"], "attempt": output["attempt"], "brief_id": brief["brief_id"],
@@ -539,14 +545,15 @@ def explain(
     if effective_mode == "bedrock" and config.has_guardrail:
         try:
             bedrock_client = client or BedrockClient(config)
-            checked_text = _model_text(output, brief)
+            # Seules les phrases du modele sont controlees : les emplacements ecrits par le code en sont retires.
+            checked_text, skipped_slots = checked_model_text(output, brief, deps.render_template(brief))
             source_text, source_kind = _grounding_source(brief)
             guardrail = bedrock_client.check_output_grounding(source_text, GROUNDING_QUERY, checked_text)
             guard_status = "ok" if guardrail["action"] != "not_run" else "skipped"
             guard_details = {
                 "action": guardrail["action"], "grounding_score": guardrail["grounding_score"],
                 "relevance_score": guardrail["relevance_score"], "mode": guardrail["mode"],
-                "checked_chars": len(checked_text),
+                "checked_chars": len(checked_text), "skipped_slots": skipped_slots,
                 # Forme et taille de la source comparee (jamais son texte) : "sentences" ou "json".
                 "source_kind": source_kind, "source_chars": len(source_text),
             }
@@ -721,7 +728,42 @@ def _grounding_source(brief: dict[str, Any]) -> tuple[str, str]:
     return json.dumps(brief, ensure_ascii=False), "json"
 
 
-def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None) -> str:
+_CHECKED_TEXT_SLOTS = ("summary", "counterfactual", "variants", "limits_context")
+
+
+def code_written_slots(output: dict[str, Any], template: dict[str, Any] | None) -> list[str]:
+    """Emplacements d'une sortie du modele dont le texte est exactement celui du gabarit du code.
+
+    Decision par le contenu, pas par l'historique : le contrefactuel (toujours ecrit par le code) et les
+    emplacements repares par le gabarit en font partie, quel que soit le chemin (premier appel, cache,
+    reparation). Un texte qui differe de celui du code, donc ecrit par le modele, n'est jamais retire du
+    controle. Aucun pour une sortie du gabarit, verifiee en entier.
+    """
+    if output.get("origin") != "llm" or not template:
+        return []
+    slots = [name for name in _CHECKED_TEXT_SLOTS if output.get(name) and output.get(name) == template.get(name)]
+    template_factors = {factor.get("check_id"): factor.get("text") for factor in template.get("factors") or []}
+    slots.extend(f"factors[{index}]" for index, factor in enumerate(output.get("factors") or [])
+                 if factor.get("text") and factor.get("text") == template_factors.get(factor.get("check_id")))
+    return slots
+
+
+def checked_model_text(output: dict[str, Any], brief: dict[str, Any],
+                       template: dict[str, Any] | None) -> tuple[str, list[str]]:
+    """Texte envoye au controle d'ancrage et emplacements reellement retires (pour la trace).
+
+    Si tout le texte vient du code, rien n'est retire : le controle porte sur le texte entier et la trace le dit
+    (liste vide), plutot que d'envoyer un texte vide.
+    """
+    skipped = code_written_slots(output, template)
+    text = _model_text(output, brief, skipped)
+    if skipped and not text.strip():
+        return _model_text(output, brief), []
+    return text, skipped
+
+
+def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None,
+                skip_slots: list[str] | tuple[str, ...] = ()) -> str:
     """Les phrases ecrites par le modele : l'objet que le garde-fou doit verifier.
 
     Le texte rendu complet (tableaux, preuves) depasse la limite de 5000 caracteres du controle d'ancrage,
@@ -729,9 +771,19 @@ def _model_text(output: dict[str, Any], brief: dict[str, Any] | None = None) -> 
     Si le dossier est fourni, les renvois ([E3], [G1]...) sont remplaces par les memes valeurs que celles que
     voit l'utilisateur : sans cela, le garde-fou lit des reperes opaques et ne peut pas les rattacher au dossier
     (scores d'ancrage mesures de 0,16 a 0,47). Repli sur le texte brut si le remplacement est impossible ou trop long.
+
+    ``skip_slots`` retire les emplacements ecrits par le code (voir ``code_written_slots``) : ils ne viennent pas
+    du modele. Le contrefactuel du code renvoie a un affichage ("donne ci-dessous", "valeur ci-dessous") absent du
+    dossier, sans le poids lui-meme, et ajoute des phrases que la source ne contient pas ("Respecter une regle
+    n'implique pas de respecter les autres") : le garder faisait juger non fonde un texte du modele fidele.
+    Le repli quand tout le texte est ecrit par le code est fait par ``checked_model_text``.
     """
-    parts = [output["summary"], *(factor["text"] for factor in output["factors"]),
-             output["counterfactual"], output["variants"], output["limits_context"]]
+    skipped = set(skip_slots)
+    factor_texts = [factor["text"] for index, factor in enumerate(output["factors"])
+                    if f"factors[{index}]" not in skipped]
+    slots = {name: (output[name] if name not in skipped else "")
+             for name in ("summary", "counterfactual", "variants", "limits_context")}
+    parts = [slots["summary"], *factor_texts, slots["counterfactual"], slots["variants"], slots["limits_context"]]
     raw = "\n".join(part for part in parts if part)
     if brief is None:
         return raw
@@ -869,18 +921,24 @@ def answer_question(
     trace ni dans la source d'ancrage. Rien n'est enregistre sur S3.
     """
     config = config or BedrockConfig.from_env()
+    brief = plain_brief(brief)   # type: ignore[assignment]  (niveau novice : noms de regles sans jargon)
     validate, fallback = _conversation_collaborators(validate, fallback)
     effective_mode, reason = _resolve_mode(mode, config, client)
     if effective_mode == "bedrock" and not config.has_guardrail:
         effective_mode, reason = "offline", "garde_fou_non_configure"   # regle 8 : aucun texte de modele sans garde-fou
     if effective_mode == "bedrock" and validate is None:
         effective_mode, reason = "offline", "validateur_indisponible"
-    if effective_mode == "bedrock" and (request_check is None or request_check.get("action") != "none"
-                                        or request_check.get("denied_topics")):
+    # Un message signale par le garde-fou (intervention, ou sujet refuse detecte) n'atteint le modele que si le
+    # code a mis le signalement dans le dossier (`guardrail_notice`) : le modele reformule alors vers ce qui est
+    # permis, et la sortie reste controlee par le validateur et le garde-fou de sortie.
+    signalled = request_check is not None and (
+        request_check.get("action") == "intervened" or bool(request_check.get("denied_topics")))
+    flagged = signalled and bool(brief.get("guardrail_notice"))
+    if effective_mode == "bedrock" and not flagged and (
+            request_check is None or request_check.get("action") != "none" or request_check.get("denied_topics")):
         # Regle 8 : la question doit avoir passe le garde-fou d'entree avant d'atteindre le modele. Un sujet
         # refuse detecte compte comme un refus, meme si le garde-fou passait un jour en mode detection.
-        refused = request_check is not None and (
-            request_check.get("action") == "intervened" or bool(request_check.get("denied_topics")))
+        refused = signalled
         effective_mode, reason = "offline", "demande_refusee" if refused else "controle_entree_absent"
     wanted_llm = mode == "bedrock"
 
@@ -988,7 +1046,71 @@ def answer_question(
     except Exception:  # dossier mal forme : le texte brut, jamais de plantage
         rendered, cited_evidence, cited_terms = reply["answer"], [], []
     result = ConversationResult(reply=reply, validation=validation, guardrail=guardrail, rendered_answer=rendered,
-                                trace=trace, cited_evidence=cited_evidence, cited_terms=cited_terms)
+                                trace=trace, cited_evidence=cited_evidence, cited_terms=cited_terms, brief=brief)
     if skipped:
         result["validation_skipped"] = skipped
     return result
+
+
+def converse_with_tools(
+    question: str,
+    level: Level,
+    providers: ConversationProviders,
+    mode: str = "offline",
+    *,
+    profile_label: str = "",
+    has_analysis: bool = False,
+    request_check: GuardrailResult | None = None,
+    client: BedrockClient | None = None,
+    config: BedrockConfig | None = None,
+    router: Callable[..., RouterOutcome] | None = None,
+    flagged_topics: list[str] | None = None,
+    **answer_options: Any,
+) -> dict[str, Any] | None:
+    """Question libre : l'agent choisit ses outils, puis la reponse est redigee par ``answer_question``.
+
+    Toute question passe d'abord par le garde-fou d'entree (``request_check``, execute par le code). Un message
+    signale (``intervened``, ou ``flagged_topics`` du controle local) va quand meme a l'agent, avec le
+    signalement : il ne fait pas ce qui est refuse et choisit les outils de la reformulation permise la plus
+    proche. Le signalement est rendu (``notice``) pour que l'interface l'affiche.
+
+    Rend None quand l'agent ne peut pas etre appele (mode hors ligne, configuration incomplete, garde-fou
+    d'entree non execute) ou quand sa collecte echoue : l'interface revient alors au routage par
+    regles. Sinon rend {"kind": "proposal", "idea", "trace", "calls"} si l'agent reprend une idee de
+    l'utilisateur (a confirmer d'un clic, jamais simulee ici), ou {"kind": "answer", **ConversationResult,
+    "calls"}. Les outils n'ecrivent que des resultats de code deterministe ; aucun outil d'ordre.
+    """
+    config = config or BedrockConfig.from_env()
+    effective_mode, _ = _resolve_mode(mode, config, client)
+    if effective_mode != "bedrock" or not config.has_guardrail:
+        return None
+    if request_check is None or request_check.get("action") not in ("none", "intervened"):
+        return None   # regle 8 : le garde-fou d'entree doit avoir ete execute (jamais "not_run")
+    notice = list(flagged_topics or [])
+    if request_check.get("action") == "intervened" or request_check.get("denied_topics"):
+        notice = list(dict.fromkeys([*(request_check.get("denied_topics") or []), *notice])) or ["refused"]
+    toolbox = ConversationToolBox(providers, level)
+    started = time.perf_counter()
+    try:
+        bedrock_client = client or BedrockClient(config)
+        outcome = (router or run_router)(bedrock_client, config.conversation_model_id, toolbox, question,
+                                         profile_label=profile_label, has_analysis=has_analysis,
+                                         flagged_topics=notice)
+    except Exception:  # repli sur les regles, jamais de plantage
+        return None
+    step = _step(1, "analysis", "agent", "ok", started, {
+        "turns": outcome.turns, "stop_reason": outcome.stop_reason, "guardrail_notice": notice,
+        "tool_calls": toolbox.trace_calls(),
+    }, outcome.model_id)
+    if toolbox.proposal is not None:
+        return {"kind": "proposal", "idea": toolbox.proposal, "trace": [step], "calls": list(toolbox.calls),
+                "notice": notice}
+    brief = toolbox.brief(question)
+    if notice:
+        brief["guardrail_notice"] = notice
+    result = answer_question(brief, mode, client=client or bedrock_client, config=config,  # type: ignore[arg-type]
+                             request_check=request_check, **answer_options)
+    for later in result["trace"]:
+        later["step"] += 1
+    return {"kind": "answer", **result, "trace": [step, *result["trace"]], "calls": list(toolbox.calls),
+            "notice": notice}

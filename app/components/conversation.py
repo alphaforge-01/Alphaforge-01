@@ -42,7 +42,19 @@ def render_welcome(on_example: Callable[[str], None]) -> None:
                 st.button(example, key=f"chat_example_{position}", on_click=on_example, args=(example,))
 
 
-def _render_refused(entry: Mapping[str, Any]) -> None:
+def _render_refused(entry: Mapping[str, Any], index: int = 0,
+                    on_choice: Optional[Callable[..., None]] = None) -> None:
+    idea = entry.get("reformulation")
+    if idea and on_choice is not None:
+        # Refus du garde-fou, mais une idée fictive précise dans le message : avertir, puis proposer
+        # la simulation (rien n'est simulé avant le clic, le message n'est envoyé à aucun modèle).
+        label = idea_panel.describe_idea(idea)
+        st.warning(texts.CHAT_REFUSED_WARNING.format(topics=_topics(entry.get("topics") or [])))
+        st.caption(texts.CHAT_REFUSED_BY[entry.get("by", "local")])
+        st.markdown(texts.CHAT_REFORMULATION.format(idea=label))
+        st.button(texts.CHAT_CONFIRM_YES, key=f"reformulate_{index}", type="primary", on_click=on_choice,
+                  args=(idea, texts.CHAT_CHOICE.format(choice=label)))
+        return
     st.error(texts.CHAT_REFUSED.format(topics=_topics(entry.get("topics") or [])))
     st.caption(texts.CHAT_REFUSED_BY[entry.get("by", "local")])
     guard = _guard_caption(entry.get("guard_action"))
@@ -133,6 +145,51 @@ def _render_answer(entry: Mapping[str, Any], index: int, on_ask: Optional[Callab
         _example_buttons(index, on_ask)
 
 
+def _render_notice(entry: Mapping[str, Any]) -> None:
+    """Signalement du garde-fou (texte du code), avant la réponse reformulée de l'agent."""
+    notice = entry.get("notice") or []
+    if notice:
+        st.warning(texts.CHAT_GUARDRAIL_NOTICE.format(topics=_topics(notice)))
+
+
+def _render_conversation_answer(entry: Mapping[str, Any]) -> None:
+    """Réponse de l'agent : la version du niveau courant, sinon la dernière rédigée (avec son niveau)."""
+    _render_notice(entry)
+    level = st.session_state.get("level") if st.session_state.get("level") in ("novice", "pro") else "novice"
+    versions = entry.get("versions") or {}
+    if not versions:
+        return
+    shown_level = level if level in versions else next(reversed(versions))
+    _render_conversation_version(versions[shown_level])
+    if shown_level != level:
+        st.caption(texts.CHAT_OTHER_LEVEL.format(level=texts.LEVEL_LABELS[shown_level].lower()))
+
+
+def _render_conversation_version(entry: Mapping[str, Any]) -> None:
+    origin = entry.get("origin", "template")
+    is_llm = origin == "llm"
+    badge = texts.CHAT_ORIGIN_BEDROCK if is_llm else texts.CHAT_ORIGIN_FALLBACK
+    badge_class = "" if is_llm else " af-chat-badge--fallback"
+    proofs = [e for e in entry.get("evidence") or []
+              if e.get("evidence_id") in set(entry.get("cited_evidence") or [])]
+    with st.container():
+        html(f'<div class="af-chat-answer{" af-chat-answer--fallback" if not is_llm else ""}>'
+             f'<div class="af-chat-meta"><span class="af-chat-badge{badge_class}">{escape(badge)}</span>'
+             f'<span>{escape(texts.CHAT_PROOFS)} : {len(proofs)}</span></div>'
+             f'<div>{entry["answer"]}</div></div>')
+        if proofs:
+            with st.expander(texts.CHAT_PROOFS):
+                for evidence in proofs:
+                    evidence_id = evidence.get("evidence_id")
+                    with st.container(border=True):
+                        st.markdown(f"**{evidence_id} - {evidence.get('label_fr', '')}**")
+                        st.caption(evidence.get("display_value", ""))
+                        if evidence.get("as_of"):
+                            st.caption(f"Date de référence : {evidence['as_of']}")
+        with st.expander(texts.CHAT_TRACE):
+            trace_panel.render_trace({"trace": entry.get("trace") or []}, None)
+
+
 def _render_agent_answer(entry: Mapping[str, Any]) -> None:
     """Réponse de l'agent conversationnel (issue 78) : texte, origine, signaux du garde-fou, données et limites.
 
@@ -181,6 +238,7 @@ def _render_agent_answer(entry: Mapping[str, Any]) -> None:
 
 def _render_confirm(entry: Mapping[str, Any], index: int, on_choice: Callable[..., None]) -> None:
     """Idée proposée (poids lu sans "%", relance) : rien n'est simulé avant le clic."""
+    _render_notice(entry)
     parsed = entry["parsed"]
     idea = parsed["idea"]
     label = idea_panel.describe_idea(idea)
@@ -272,13 +330,15 @@ def render_entry(entry: Mapping[str, Any], index: int, is_latest_analysis: bool,
         elif kind == "info":
             st.info(entry["text"])
         elif kind == "refused":
-            _render_refused(entry)
+            _render_refused(entry, index, on_choice)
         elif kind == "clarify":
             _render_clarify(entry, index, on_choice)
         elif kind == "confirm":
             _render_confirm(entry, index, on_choice)
         elif kind == "answer":
             _render_answer(entry, index, on_ask)
+        elif kind == "conversation_answer":
+            _render_conversation_answer(entry)
         elif kind == "agent_answer":
             _render_agent_answer(entry)
         elif kind == "analysis":

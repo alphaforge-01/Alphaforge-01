@@ -67,7 +67,10 @@ def test_profile_cites_declared_facts_and_says_what_is_missing():
     brief = make_brief("profile", missing=["loss_capacity"])
     text = cf.build_fallback_reply(brief)["answer"]
     assert "[E90]" in text and "[E91]" in text                       # objectif et horizon déclarés
-    assert cf.MISSING_PHRASES["loss_capacity"] in text               # tolérance n'est pas capacité
+    phrases = cf.NOVICE_MISSING_PHRASES if brief["level"] == "novice" else cf.MISSING_PHRASES
+    assert phrases["loss_capacity"] in text                          # tolérance n'est pas capacité
+    pro = cf.build_fallback_reply({**brief, "level": "pro"})["answer"]
+    assert cf.MISSING_PHRASES["loss_capacity"] in pro
 
 
 def test_unknown_missing_item_gets_a_generic_sentence():

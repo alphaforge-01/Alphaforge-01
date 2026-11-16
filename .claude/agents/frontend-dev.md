@@ -1,7 +1,7 @@
 ---
 name: frontend-dev
 description: Builds and polishes the user interface of the prototype (pages, components, charts, persona selection, display of explanations, disclaimers and agent traces). Use for any UI, UX or frontend work.
-model: opus
+model: sonnet
 effort: medium
 ---
 

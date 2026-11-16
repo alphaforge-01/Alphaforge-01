@@ -13,7 +13,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
 import streamlit as st
 
@@ -43,6 +43,8 @@ SESSION_DEFAULTS: Dict[str, Any] = {
     # Demande explicite d'explication (message, "Simuler", bouton "Rédiger") : en mode bedrock,
     # l'explicateur n'est appelé que dans l'exécution qui suit un clic (quotas partagés).
     "explanation_request": False,
+    # Vrai après un changement de niveau : les réponses de l'agent sont réécrites (mode bedrock).
+    "rephrase_request": False,
     # Vrai dès qu'un curseur de niveau a été touché : le choix d'un profil ne l'écrase plus.
     "level_chosen": False,
 }
@@ -185,8 +187,16 @@ def ask(text: Optional[str] = None) -> None:
         LOGGER.exception("Contrôle du garde-fou impossible")
         guard = {"action": "not_run", "denied_topics": []}
     if guard.get("action") == "intervened" or guard.get("denied_topics"):
-        _append({"role": "assistant", "type": "refused", "by": "guardrail",
-                 "topics": list(guard.get("denied_topics") or [])})
+        # Signalé par le garde-fou : l'agent reformule vers le permis (signalement affiché) ; sinon, refus
+        # et, si les règles y lisent une idée fictive précise, la simulation proposée en un clic.
+        if mode == "bedrock" and _answer_with_tools(text, persona, guard):
+            return
+        entry = {"role": "assistant", "type": "refused", "by": "guardrail",
+                 "topics": list(guard.get("denied_topics") or [])}
+        reformulation = _guardrail_reformulation(text, persona)
+        if reformulation is not None:
+            entry["reformulation"] = reformulation
+        _append(entry)
         return
     try:
         universe = data_source.get_universe()
@@ -202,6 +212,13 @@ def ask(text: Optional[str] = None) -> None:
         LOGGER.exception("Analyse de la demande impossible")
         _append({"role": "assistant", "type": "note",
                  "text": texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__)})
+        return
+    # Seules les idées lues par les règles (idée, confirmation, clarification) restent au code : tout le
+    # reste, refus local compris, va d'abord à l'agent avec outils. Un refus local est transmis comme
+    # signalement. Agent indisponible : routage de la conversation par règles (question_routing), puis règles.
+    tools_eligible = parsed["status"] in ("answer", "refused")
+    flagged = [str(parsed.get("reason"))] if parsed["status"] == "refused" else []
+    if mode == "bedrock" and tools_eligible and _answer_with_tools(text, persona, guard, flagged):
         return
     if parsed["status"] == "refused":
         _append({"role": "assistant", "type": "refused", "by": "local", "topics": [parsed["reason"]],
@@ -227,6 +244,118 @@ def ask(text: Optional[str] = None) -> None:
     else:
         _set_idea(parsed["idea"])
         _append_analysis(guard.get("action"), persona)
+
+
+def _guardrail_reformulation(text: str, persona: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Idée fictive lue par les règles dans un message refusé par le garde-fou, ou None.
+
+    Seules les règles déterministes lisent le message : il n'est envoyé à aucun modèle. Le refus reste
+    affiché, et l'idée n'est simulée qu'après un clic. Sans actif ET poids précis, aucune reformulation.
+    """
+    try:
+        parsed = data_source.parse_request(text, data_source.get_universe(),
+                                           idea_panel.held_tickers(persona["portfolio"]), None)
+    except Exception:
+        return None
+    if parsed["status"] in ("idea", "confirm") and parsed.get("idea"):
+        return dict(parsed["idea"])
+    return None
+
+
+
+def _current_analysis(persona: Dict[str, Any]) -> Tuple[Optional[Tuple[Any, ...]], Optional[Dict[str, Any]]]:
+    """Clé et résultat de la dernière idée analysée pour ce profil, s'ils sont en mémoire."""
+    if st.session_state.idea is None:
+        return None, None
+    effective_idea = idea_panel.effective_idea(st.session_state.idea, persona["portfolio"])[0]
+    key = (st.session_state.mode, fingerprint(persona["profile"]), fingerprint(persona["portfolio"]),
+           fingerprint(effective_idea))
+    result = st.session_state.analysis_cache.get(key)
+    return (key, result) if result is not None else (None, None)
+
+
+def _answer_with_tools(question: str, persona: Dict[str, Any], request_check: Mapping[str, Any],
+                       flagged: Optional[List[str]] = None) -> bool:
+    """Agent avec outils. Faux si l'agent n'a pas pu être appelé (le routage par règles prend le relais)."""
+    cache_key, result = _current_analysis(persona)
+    level = st.session_state.level or "novice"
+    try:
+        with st.spinner(texts.CHAT_AGENT_SPINNER):
+            answer = data_source.converse(st.session_state.mode, persona, question, level,
+                                          request_check, result=result, flagged_topics=flagged)
+    except Exception:
+        LOGGER.exception("Agent avec outils indisponible")
+        return False
+    if answer is None:
+        return False
+    if answer["kind"] == "proposal":
+        # Idée reprise du message par l'agent : toujours une confirmation, jamais une simulation directe.
+        _append({"role": "assistant", "type": "confirm", "notice": answer.get("notice") or [],
+                 "parsed": {"status": "confirm", "reason": "agent_proposal", "idea": answer["idea"]}})
+        return True
+    context = {"question": question, "request_check": dict(request_check),
+               "calls": answer["calls"], "cache_key": cache_key, "notice": answer.get("notice") or []}
+    _append({"role": "assistant", "type": "conversation_answer", "context": context,
+             "notice": answer.get("notice") or [], "versions": {level: _version_from(answer)}})
+    return True
+
+
+def _version_from(answer: Mapping[str, Any]) -> Dict[str, Any]:
+    return {
+        "answer": answer["rendered_answer"],
+        "trace": answer["trace"],
+        "origin": answer["reply"]["origin"],
+        "cited_evidence": answer.get("cited_evidence", []),
+        "evidence": answer.get("brief", {}).get("evidence", []),
+    }
+
+
+
+def _conversation_version(context: Mapping[str, Any], persona: Dict[str, Any],
+                          level: str) -> Optional[Dict[str, Any]]:
+    """Réponse de l'agent à un niveau donné ; None si elle est impossible (message déjà ajouté)."""
+    result = None
+    if context.get("cache_key") is not None:
+        result = st.session_state.analysis_cache.get(context["cache_key"])
+        if result is None:
+            _append({"role": "assistant", "type": "info", "text": texts.CHAT_REPHRASE_UNAVAILABLE})
+            return None
+    try:   # outils rejoués par le code au nouveau niveau, seul le texte est réécrit
+        answer = data_source.converse_at_level(
+            st.session_state.mode, persona, context["question"], level, context["request_check"],
+            context["calls"], result=result, notice=context.get("notice"))
+    except data_source.DataUnavailable as exc:
+        _append({"role": "assistant", "type": "info", "text": str(exc)})
+        return None
+    except Exception as exc:
+        LOGGER.exception("Réponse conversationnelle impossible")
+        _append({"role": "assistant", "type": "note",
+                 "text": texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__)})
+        return None
+    return _version_from(answer)
+
+
+MAX_REPHRASED_ANSWERS = 5  # appels Bedrock bornés par changement de niveau (quotas partagés)
+
+
+def rephrase_pending() -> bool:
+    """Vrai si un changement de niveau attend la réécriture des réponses de l'agent."""
+    return bool(st.session_state.get("rephrase_request")) and st.session_state.mode == "bedrock"
+
+
+def rephrase_all() -> None:
+    """Réécrit au niveau courant les dernières réponses de l'agent qui n'ont pas encore cette version."""
+    st.session_state.rephrase_request = False
+    persona = active_persona()
+    if persona is None:
+        return
+    level = st.session_state.level or "novice"
+    pending = [entry for entry in st.session_state.chat_history
+               if entry.get("type") == "conversation_answer" and level not in entry.get("versions", {})]
+    for entry in pending[-MAX_REPHRASED_ANSWERS:]:
+        version = _conversation_version(entry["context"], persona, level)
+        if version is not None:
+            entry["versions"][level] = version
 
 
 _CAPS_WORDS = frozenset({"EST", "EN", "LE", "LA", "LES", "DE", "DU", "DES", "ET", "OU", "UN", "UNE", "MON", "MA",
@@ -348,6 +477,8 @@ def sync_level(widget_key: str) -> None:
     """Rappel des curseurs Novice / Pro : le niveau vit dans st.session_state.level."""
     st.session_state.level = st.session_state[widget_key]
     st.session_state.level_chosen = True
+    # Les réponses de l'agent seront réécrites au nouveau niveau au prochain affichage du fil.
+    st.session_state.rephrase_request = True
 
 
 def resolve_level(profiles: Dict[str, Any]) -> None:

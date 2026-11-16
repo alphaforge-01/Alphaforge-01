@@ -39,14 +39,48 @@ STATUS_SHORT = {
     "conflict": "en conflit",
     "missing_info": "information manquante",
 }
+# Nom simple de chaque règle du profil, affiché à la place du nom technique (niveau novice).
+NOVICE_RULE_LABELS = {
+    "max_single_asset_weight": "Pas trop d'argent sur un seul placement",
+    "max_asset_class_weight": "Pas trop d'argent sur un même type de placement",
+    "max_portfolio_volatility": "Des hauts et des bas de valeur limités",
+    "max_portfolio_drawdown": "Une plus forte baisse passée limitée",
+    "min_defensive_share": "Assez de placements calmes",
+    "excluded_asset_class": "Types de placements exclus par le profil",
+    "max_correlated_group_weight": "Pas trop de placements qui bougent ensemble",
+    "esg_exclusion": "Respect de l'environnement et de la société",
+}
+
+
+def plain_brief(brief: Mapping[str, Any]) -> Dict[str, Any]:
+    """Copie du dossier où les règles portent un nom simple au niveau novice ; inchangé au niveau pro.
+
+    Seul le libellé affiché change : statut, valeurs et preuves restent ceux du code.
+    """
+    if brief.get("level") != "novice":
+        return dict(brief)
+    checks = []
+    for check in brief.get("checks") or []:
+        label = NOVICE_RULE_LABELS.get(str(check.get("rule_type")))
+        checks.append({**check, "label_fr": label} if label else dict(check))
+    return {**brief, "checks": checks}
+
+
+# Sens simple de chaque statut, ajouté après le mot exact (niveau novice).
+NOVICE_STATUS_HINT = {
+    "compliant": ", c'est-à-dire dans les limites prévues pour ce profil",
+    "tension": ", c'est-à-dire proche de la limite prévue pour ce profil",
+    "conflict": ", c'est-à-dire au-delà de la limite prévue pour ce profil",
+    "missing_info": "",
+}
 PROFILE_PHRASES = {
     "novice": {
-        "profile_objective": "L'objectif déclaré du profil fictif est : [{ref}].",
-        "profile_horizon": "Son horizon de placement déclaré est [{ref}].",
-        "profile_risk_tolerance": "Sa tolérance au risque déclarée est [{ref}].",
-        "profile_experience": "Son expérience déclarée est [{ref}].",
-        "profile_esg_preference": "Sa préférence ESG déclarée est [{ref}].",
-        "profile_crypto_allowed": "Les cryptoactifs sont, pour ce profil : [{ref}].",
+        "profile_objective": "Ce que le profil fictif veut faire de son argent : [{ref}].",
+        "profile_horizon": "Le temps prévu avant d'avoir besoin de cet argent : [{ref}].",
+        "profile_risk_tolerance": "Les hauts et les bas de valeur que le profil accepte : [{ref}].",
+        "profile_experience": "Son expérience des placements : [{ref}].",
+        "profile_esg_preference": "Son souci de l'environnement et de la société dans ses placements : [{ref}].",
+        "profile_crypto_allowed": "Les monnaies numériques comme le bitcoin, pour ce profil : [{ref}].",
     },
     "pro": {
         "profile_objective": "Objectif déclaré : [{ref}].",
@@ -61,6 +95,32 @@ PROFILE_PHRASES = {
 MISSING_PHRASES = {
     "loss_capacity": "La capacité à absorber une perte n'est pas disponible dans ce prototype : "
                      "elle ne se déduit pas de la tolérance au risque déclarée.",
+}
+# Niveau novice : chaque mesure dite avec des mots de tous les jours (clé : début du nom de la mesure).
+NOVICE_METRIC_LABELS = (
+    ("volatility_ann", "à quel point la valeur monte et descend sur une année"),
+    ("max_drawdown_cad", "la plus forte baisse passée, appliquée au capital fictif"),
+    ("max_drawdown_start", "le début de la plus forte baisse passée"),
+    ("max_drawdown_end", "le point le plus bas de cette baisse"),
+    ("max_drawdown", "la plus forte baisse passée"),
+    ("recovery_days", "le temps qu'il a fallu pour revenir au niveau d'avant"),
+    ("underwater_days", "le temps passé sous le niveau le plus haut"),
+    ("total_return", "ce que l'ensemble a rapporté sur toute la période"),
+    ("return_ann", "ce que l'ensemble a rapporté en moyenne par année"),
+    ("top_asset_weight", "la part du plus gros placement"),
+    ("defensive_share", "la part des placements plus calmes"),
+    ("weight_by_asset_class.etf_bond", "la part des paniers de prêts à des États ou des entreprises"),
+    ("weight_by_asset_class.etf_equity", "la part des paniers de parts d'entreprises"),
+    ("weight_by_asset_class.etf_commodity", "la part des paniers de matières comme l'or"),
+    ("weight_by_asset_class.equity", "la part des entreprises prises une à une"),
+    ("weight_by_asset_class.crypto", "la part des monnaies numériques"),
+    ("currency_exposure.USD", "la part qui dépend du dollar américain"),
+    ("currency_exposure.CAD", "la part en dollars canadiens"),
+    ("largest_correlated_group_weight", "la part des placements qui montent et baissent en même temps"),
+)
+NOVICE_MISSING_PHRASES = {
+    "loss_capacity": "Ce prototype ne sait pas quelle baisse le profil pourrait supporter sans difficulté : "
+                     "ce n'est pas la même chose que les hauts et les bas qu'il dit accepter.",
 }
 MISSING_GENERIC = "Une partie de l'information demandée n'est pas disponible dans ce prototype."
 NOTHING_CITABLE = "Cette information n'est pas disponible dans ce prototype."
@@ -106,6 +166,15 @@ def _profile_sentences(brief: Mapping[str, Any]) -> List[str]:
     return [phrases[m].format(ref=by_metric[m]) for m in order if m in by_metric]
 
 
+def _novice_label(entry: Mapping[str, Any]) -> Optional[str]:
+    """Libellé sans jargon d'une mesure, ou None si la mesure n'a pas de libellé simple connu."""
+    metric = str(entry.get("metric") or "")
+    for prefix, label in NOVICE_METRIC_LABELS:
+        if metric == prefix or metric.startswith(prefix + "."):
+            return label
+    return None
+
+
 def _xray_sentences(brief: Mapping[str, Any]) -> List[str]:
     """Mesures du portefeuille fictif : chaque mesure lue sur le portefeuille actuel, sinon après l'idée."""
     evidence = _usable_evidence(brief)
@@ -118,10 +187,14 @@ def _xray_sentences(brief: Mapping[str, Any]) -> List[str]:
             if found:
                 refs.append(found[0])
                 break
-    template = "Pour le portefeuille fictif, {label} atteint [{ref}]." if novice else "{label} : [{ref}]."
+    template = "Pour l'ensemble de vos placements fictifs, {label} : [{ref}]." if novice else "{label} : [{ref}]."
     sentences = []
     for ref in refs:
         label = str(evidence[ref].get("label_fr") or "").strip()
+        plain = _novice_label(evidence[ref]) if novice else None
+        if plain:
+            sentences.append(template.format(label=plain, ref=ref))
+            continue
         # Le portefeuille actuel est le sujet par défaut ; "après l'ajout" reste écrit quand c'est le cas.
         suffix = SCOPE_SUFFIXES[0]
         label = label[: -len(suffix)] if label.endswith(suffix) else label
@@ -145,7 +218,8 @@ def _explanation_sentences(brief: Mapping[str, Any]) -> List[str]:
             sentences.append(f"La règle [{ref}] {STATUS_PHRASE[status]} : la preuve nécessaire "
                              "n'est pas disponible dans ce prototype.")
         elif measure and novice:
-            sentences.append(f"La règle [{ref}] {STATUS_PHRASE[status]} : la mesure concernée atteint [{measure}].")
+            sentences.append(f"La règle [{ref}] {STATUS_PHRASE[status]}{NOVICE_STATUS_HINT[status]} : "
+                             f"la valeur observée est [{measure}].")
         elif measure:
             sentences.append(f"[{ref}] ({STATUS_SHORT[status]}) : mesure observée [{measure}].")
         else:
@@ -209,7 +283,8 @@ BUILDERS: Dict[str, Callable[[Mapping[str, Any]], List[str]]] = {
 def _missing_sentences(brief: Mapping[str, Any]) -> List[str]:
     sentences, generic = [], False
     for item in brief.get("missing") or []:
-        phrase = MISSING_PHRASES.get(str(item))
+        phrases = NOVICE_MISSING_PHRASES if _level(brief) == "novice" else {}
+        phrase = phrases.get(str(item)) or MISSING_PHRASES.get(str(item))
         if phrase and phrase not in sentences:
             sentences.append(phrase)
         elif not phrase:
