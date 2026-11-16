@@ -255,8 +255,14 @@ def test_explain_bedrock_valid_llm_text_is_kept_and_grounding_reflected():
     assert explanation["guardrail"]["grounding_score"] == 0.82
     kind, source, query, answer = client.calls[0]
     from alphaforge.analysis_pipeline import _model_text
-    # le garde-fou recoit les phrases du modele (limite de 5000 caracteres), pas le texte rendu complet
-    assert answer == _model_text(explanation["output"], explanation["brief"])
+    # le garde-fou recoit les phrases du modele (limite de 5000 caracteres), pas le texte rendu complet,
+    # ni le contrefactuel ecrit par le code
+    from alphaforge.analysis_pipeline import checked_model_text
+    expected, skipped = checked_model_text(
+        explanation["output"], explanation["brief"], deps.render_template(explanation["brief"]))
+    assert answer == expected
+    # ici le texte du modele est celui du gabarit : tout vient du code, donc tout est controle et la trace le dit
+    assert step6["details"]["skipped_slots"] == skipped == []
     # la source est le dossier en phrases francaises, pas son JSON (docs/grounding_diagnosis.md)
     from alphaforge.grounding_source import build_grounding_source
     assert source == build_grounding_source(explanation["brief"]) and "brief_id" not in source
@@ -552,7 +558,8 @@ def test_counterfactual_slot_is_always_written_by_the_code_and_passes_validation
         output = deps.render_template(brief)
         seen["template"] = output["counterfactual"]
         output.update({"origin": "llm", "attempt": 1, "model_id": model_id, "prompt_version": "explainer_v5",
-                       "counterfactual": "Le detail est donne ci-dessous."})
+                       "counterfactual": "Le detail est donne ci-dessous.",
+                       "summary": "Resume ecrit par le modele [G1]."})
         return output
 
     class Guard:
@@ -571,3 +578,104 @@ def test_counterfactual_slot_is_always_written_by_the_code_and_passes_validation
     assert explanation["output"]["counterfactual"] == seen["template"]
     assert "Le detail est donne" not in seen["answer"]
     assert explanation["trace"][0]["details"]["slots_written_by_code"] == ["counterfactual"]
+    # la phrase du gabarit qui la remplace n'est pas controlee non plus : elle ne vient pas du modele et renvoie a
+    # un affichage ("ci-dessous") absent de la source d'ancrage
+    assert seen["template"] and seen["template"] not in seen["answer"]
+    assert "counterfactual" in explanation["trace"][2]["details"]["skipped_slots"]
+
+
+def _model_output(deps, brief):
+    """Sortie du modele fictive : chaque emplacement differe du gabarit, sauf le contrefactuel (ecrit par le code)."""
+    template = deps.render_template(brief)
+    # Chaque texte garde les renvois du gabarit (le validateur les exige) et ajoute une phrase propre au modele.
+    output = {**template, "origin": "llm", "summary": template["summary"] + " Resume du modele.",
+              "variants": "Variante du modele.", "limits_context": "Limites du modele."}
+    output["factors"] = [{**factor, "text": f"{factor['text']} Facteur {chr(65 + index)} du modele."}
+                         for index, factor in enumerate(output["factors"])]
+    return output, template
+
+
+def test_checked_text_keeps_every_model_slot_and_drops_only_code_slots():
+    from alphaforge.analysis_pipeline import _model_text, checked_model_text, code_written_slots
+    from alphaforge.fixture_collaborators import fixture_deps
+
+    deps = fixture_deps()
+    brief = deps.build_brief(run("robert"), "novice")
+    output, template = _model_output(deps, brief)
+    # decision par le contenu : seul l'emplacement identique au gabarit est retire
+    assert code_written_slots(output, template) == ["counterfactual"]
+    assert code_written_slots({**output, "origin": "template"}, template) == []
+    text, skipped = checked_model_text(output, brief, template)
+    assert skipped == ["counterfactual"]
+    assert template["counterfactual"] not in text
+    for expected in ("Resume du modele.", "Variante du modele.", "Limites du modele.", "Facteur A du modele."):
+        assert expected in text
+    # un facteur repare par le gabarit (meme texte que le gabarit) est retire ; les autres facteurs restent
+    repaired = {**output, "factors": [dict(template["factors"][0]), *output["factors"][1:]]}
+    text, skipped = checked_model_text(repaired, brief, template)
+    assert skipped == ["counterfactual", "factors[0]"]
+    assert template["factors"][0]["text"] not in text
+    for index in range(1, len(output["factors"])):
+        assert f"Facteur {chr(65 + index)} du modele." in text
+    # sans liste, rien n'est retire (gabarit, diagnostic)
+    assert template["counterfactual"] in _model_text(output)
+
+
+def test_model_text_differing_from_template_is_never_skipped():
+    """Un emplacement dont le texte differe de celui du code, quel que soit son nom, reste controle."""
+    from alphaforge.analysis_pipeline import checked_model_text
+    from alphaforge.fixture_collaborators import fixture_deps
+
+    deps = fixture_deps()
+    brief = deps.build_brief(run("robert"), "novice")
+    output, template = _model_output(deps, brief)
+    tampered = {**output, "counterfactual": template["counterfactual"] + " PHRASE-DU-MODELE."}
+    text, skipped = checked_model_text(tampered, brief, template)
+    assert "counterfactual" not in skipped
+    assert "PHRASE-DU-MODELE." in text
+
+
+def test_all_code_text_is_checked_whole_and_trace_says_so():
+    from alphaforge.analysis_pipeline import _model_text, checked_model_text
+    from alphaforge.fixture_collaborators import fixture_deps
+
+    deps = fixture_deps()
+    brief = deps.build_brief(run("robert"), "novice")
+    template = deps.render_template(brief)
+    everything_from_code = {**template, "origin": "llm"}
+    text, skipped = checked_model_text(everything_from_code, brief, template)
+    assert skipped == []
+    assert text == _model_text(everything_from_code, brief)
+
+
+def test_cached_model_output_gets_code_counterfactual_and_model_text_stays_checked():
+    """Une entree de cache plus ancienne, avec un contrefactuel ecrit par le modele : celui du code le remplace,
+    et rien de ce que le modele a ecrit n'echappe au controle d'ancrage."""
+    from alphaforge.analysis_pipeline import explain
+
+    deps = fixture_deps()
+    result = run("robert", deps=deps)
+    brief = deps.build_brief(result, "novice")
+    output, template = _model_output(deps, brief)
+    cached = {**output, "attempt": 1, "model_id": "model-test", "prompt_version": "explainer_v5",
+              "counterfactual": template["counterfactual"] + " PHRASE-DU-MODELE-EN-CACHE."}
+
+    class OldCache:
+        def get(self, key):
+            return dict(cached)
+
+        def put(self, key, value):
+            pass
+
+        def discard(self, key):
+            pass
+
+    client = FakeClient(grounding=guardrail("output_grounding", "none", grounding=0.82, relevance=0.9))
+    explanation = explain(result, "novice", "bedrock", deps=deps, client=client, config=GUARDRAIL_CONFIG,
+                          cache=OldCache(), explainer_runner=lambda *args: None)
+    assert explanation["trace"][0]["details"]["from_cache"] is True
+    assert "PHRASE-DU-MODELE-EN-CACHE." not in explanation["rendered_markdown"]
+    assert explanation["output"]["counterfactual"] == template["counterfactual"]
+    kind, source, query, answer = client.calls[0]
+    assert "Resume du modele." in answer and "Variante du modele." in answer
+    assert explanation["trace"][2]["details"]["skipped_slots"] == ["counterfactual"]
