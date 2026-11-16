@@ -1,8 +1,7 @@
-# Versions validées : suite de tests verte et interface sans exception sur Python 3.12 (celui de Streamlit
-# Community Cloud) et 3.14. Gelées pour qu'une installation neuve donne les mêmes résultats.
-pandas==2.3.3
-numpy==2.5.5
-boto3==1.44.3
-streamlit==1.67.0
-pytest==9.2.0
+# B0 development dependencies; freeze tested versions before handoff.
+pandas>=2.2,<3
+numpy>=1.26,<3
+boto3>=1.35,<2
+streamlit>=1.65,<2
+pytest>=8,<10
 # yfinance is only needed if explicitly rebuilding the starter dataset.
