@@ -1,4 +1,4 @@
-"""Accueil : promesse, trois étapes, les trois personas côte à côte, puis le style d'explication (US-01, US-10).
+"""Accueil : promesse, trois étapes, l'aisance du visiteur, puis les trois personas côte à côte (US-01, US-10).
 
 Un bouton de carte choisit le profil et ouvre la page Simulation. Le passage de page se
 fait hors du rappel du bouton (`st.switch_page` est interdit dans un rappel) : le rappel
@@ -27,9 +27,8 @@ def render_hero() -> None:
     html(f'<div class="af-hero"><h1>{escape(texts.HOME_TITLE)}</h1>'
          f'<p>{escape(texts.HOME_SUBTITLE)}</p></div>')
     steps = "".join(
-        f'<li class="af-step"><span class="af-step-n" aria-hidden="true">{index}</span>'
-        f'<div><div class="af-step-title">{escape(title)}</div>'
-        f'<div class="af-step-text">{escape(detail)}</div></div></li>'
+        f'<li class="af-step" title="{escape(detail)}"><span class="af-step-n" aria-hidden="true">{index}</span>'
+        f'{escape(title)}</li>'
         for index, (title, detail) in enumerate(texts.HOME_STEPS, start=1))
     html(f'<ol class="af-steps" aria-label="{escape(texts.HOME_STEPS_LABEL)}">{steps}</ol>')
 
@@ -58,36 +57,32 @@ def _level_help(preview: Optional[Dict[str, Any]]) -> str:
 
 
 def render_level_choice() -> None:
-    """Un seul contrôle, discret : explications simples ou détaillées (valeurs internes novice et pro)."""
+    """Question d'aisance avant les cartes ; la réponse règle le style d'explication (novice ou pro)."""
     preview = session.safe_reference(
         lambda: data_source.get_level_preview(st.session_state.profile_id or ""), None, quiet=True)
     level = st.session_state.level if st.session_state.level in texts.EXPLANATION_STYLE_LABELS else None
     st.session_state[LEVEL_WIDGET_KEY] = level
-    with st.container(horizontal=True, vertical_alignment="center", gap="medium", key="home-level-row"):
-        st.segmented_control(texts.HOME_LEVEL_TITLE, options=list(texts.EXPLANATION_STYLE_LABELS),
-                             format_func=texts.EXPLANATION_STYLE_LABELS.get, key=LEVEL_WIDGET_KEY,
+    with st.container(horizontal=True, vertical_alignment="bottom", gap="medium", key="home-level-row"):
+        st.segmented_control(texts.HOME_LEVEL_TITLE, options=list(texts.HOME_COMFORT_LABELS),
+                             format_func=texts.HOME_COMFORT_LABELS.get, key=LEVEL_WIDGET_KEY,
                              on_change=_on_level_change, help=_level_help(preview),
                              label_visibility="visible")
-        if level is None:
-            st.caption(texts.HOME_LEVEL_DEFAULT)
+        st.caption(texts.HOME_LEVEL_DESCRIPTIONS[level] if level else texts.HOME_LEVEL_DEFAULT)
 
 
 def render() -> None:
     if st.session_state.pop(session.GO_SIMULATION_KEY, False):
         st.switch_page(navigation.ALL_PAGES["simulation"].path)
     render_hero()
+    session.guarded(render_level_choice)
     personas = session.personas()
-    st.subheader(texts.HOME_PROFILES_TITLE, anchor=False)
-    st.caption(texts.HOME_PROFILES_HINT)
     if not personas:
         session.show_personas_error()
     else:
         profile_panel.render_persona_cards(
             personas, st.session_state.profile_id,
             on_select=lambda profile_id: session.select_profile_and_go(profile_id, personas))
-    with st.container(horizontal=True, vertical_alignment="bottom", horizontal_alignment="distribute",
-                      key="home-foot"):
-        session.guarded(render_level_choice)
+    with st.container(horizontal=True, horizontal_alignment="right", key="home-foot"):
         navigation.link("custom", texts.HOME_CUSTOM_LINK)
 
 
