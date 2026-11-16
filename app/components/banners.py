@@ -27,8 +27,12 @@ def render_header(mode: str, profile_name: Optional[str], idea_text: Optional[st
 
 
 def render_disclaimer() -> None:
-    """Avertissement court (US-12), rendu seul : il ne dépend d'aucune donnée et ne disparaît jamais."""
-    html(f'<div class="af-disclaimer">{escape(texts.DISCLAIMER)}</div>')
+    """Avertissement court (US-12, règle 8), rendu seul : il ne dépend d'aucune donnée et ne disparaît jamais.
+
+    Une puce discrète sous l'en-tête ; la phrase complète s'affiche au survol (attribut `title`).
+    """
+    html(f'<div class="af-disclaimer"><span title="{escape(texts.DISCLAIMER)}">'
+         f'{escape(texts.DISCLAIMER_SHORT)}</span></div>')
 
 
 def render_fixture_banner() -> None:

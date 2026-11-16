@@ -197,5 +197,5 @@ Après le gel, seulement des corrections de bogues dans des branches `fix/...`, 
 - Marge nulle d'une règle conforme : "À la limite de la tension, sans la franchir."
 - Garde-fou : quatre exemples visibles par colonne, les autres dans un encadré repliable.
 - Accueil : sans choix explicite, aucun niveau n'est mis en avant ; le profil choisi fixe alors le sien.
-- Accueil : les personas défilent un par un dans un carrousel (flèches, ou touches gauche et droite), sur une carte avec initiale, résumé et trois repères (risque, horizon, objectif) ; le bouton "Choisir ce profil" ouvre la simulation.
+- Accueil : titre-promesse, trois étapes numérotées, puis les trois personas côte à côte (cartes de même hauteur : initiale, âge et métier, ce que le profil teste, risque, horizon, objectif). Le bouton "Essayer avec ..." (clé `choose_profile_<id>`) choisit le profil et ouvre la simulation. Le choix d'explication (Simples ou Détaillées, valeurs `novice` et `pro`) est sous les cartes ; le curseur de la barre latérale n'apparaît que sur les autres pages. La source des données est repliée dans "Paramètres avancés".
 - Simulation : dès le choix du profil, un petit graphique en barres montre la composition du portefeuille fictif de départ (poids lus dans le registre de la radiographie, valeur au bout de chaque barre, info-bulle au survol) ; `components/portfolio_chart.py`.

@@ -17,7 +17,7 @@ import ui_texts as texts
 from components.persistence import KEEP_PREFIX
 from components.rules import threshold_text
 from components.style import PERSONA_CARD_KEY, html
-from formatting import format_cad, format_horizon
+from formatting import format_horizon
 
 LOGGER = logging.getLogger("alphaforge.ui")
 
@@ -40,15 +40,14 @@ def _identity_line(persona: Dict[str, Any]) -> Optional[str]:
     return ", ".join(parts) if parts else None
 
 
-# Position du carrousel des personas (hors widget : survit au changement de page).
-CAROUSEL_KEY = "persona_carousel_index"
-# Couleur d'accent de chaque persona fictif (initiale et liseré de la carte).
-PERSONA_ACCENTS = {"robert": "#1d4e89", "amira": "#7b4fc0", "mateo": "#2e7d4f"}
+# Couleur d'identité de chaque persona fictif (initiale et liseré de la carte).
+# L'action (bouton) garde la couleur unique du thème.
+PERSONA_ACCENTS = {"robert": "#1d4e89", "amira": "#6a3fb0", "mateo": "#2a6f46"}
 DEFAULT_ACCENT = "#5b6675"
 
 
 def _card_html(profile_id: str, persona: Dict[str, Any], is_selected: bool) -> str:
-    """Carte d'un persona fictif : initiale, identité, résumé et trois repères (risque, horizon, objectif)."""
+    """Carte d'un persona fictif : initiale, identité, ce que le profil teste, trois repères."""
     profile = persona["profile"]
     accent = PERSONA_ACCENTS.get(profile_id, DEFAULT_ACCENT)
     name = escape(profile["display_name"])
@@ -58,61 +57,45 @@ def _card_html(profile_id: str, persona: Dict[str, Any], is_selected: bool) -> s
         (texts.PERSONA_HORIZON, format_horizon(profile["horizon_years_min"], profile["horizon_years_max"])),
         (texts.PERSONA_OBJECTIVE, profile["objective"]),
     )
-    tiles = "".join(f'<div class="af-pc-tile"><div class="af-pc-tile-label">{escape(label)}</div>'
-                    f'<div class="af-pc-tile-value">{escape(str(value))}</div></div>' for label, value in facts)
-    selected = (f'<span class="af-pc-selected">{escape(texts.SELECTED_PROFILE)}</span>' if is_selected else "")
-    footer = (f'{escape(texts.PERSONA_EXPERIENCE)} : {escape(texts.EXPERIENCE_LABELS[profile["experience"]])}'
-              f', {escape(texts.PERSONA_CAPITAL.lower())} : {escape(format_cad(profile["capital_cad"]))}')
+    rows = "".join(f'<div class="af-pc-fact"><dt>{escape(label)}</dt><dd>{escape(str(value))}</dd></div>'
+                   for label, value in facts)
+    selected = (f'<span class="af-pc-selected">{escape(texts.HOME_ACTIVE_BADGE)}</span>' if is_selected else "")
+    tests = texts.PERSONA_TESTS.get(profile_id) or persona.get("summary_fr") or ""
     return (
-        f'<div class="af-pc" style="--af-accent: {accent}">'
-        f'<div class="af-pc-head"><div class="af-pc-avatar">{escape(name[:1])}</div>'
+        f'<div class="af-pc{" af-pc--on" if is_selected else ""}" style="--af-accent: {accent}">'
+        f'<div class="af-pc-head"><div class="af-pc-avatar" aria-hidden="true">{escape(name[:1])}</div>'
         f'<div class="af-pc-id"><div class="af-pc-name">{name}'
         f'<span class="af-pc-badge">{escape(texts.FICTIONAL_BADGE)}</span>{selected}</div>'
         f'<div class="af-pc-sub">{escape(identity or "")}</div></div></div>'
-        f'<div class="af-pc-summary">{escape(persona.get("summary_fr") or "")}</div>'
-        f'<div class="af-pc-tiles">{tiles}</div>'
-        f'<div class="af-pc-foot">{footer}</div></div>'
+        f'<div class="af-pc-tests"><span>{escape(texts.HOME_TESTS_LABEL)}</span>{escape(tests)}</div>'
+        f'<dl class="af-pc-facts">{rows}</dl></div>'
     )
 
 
-def _move(step: int, count: int) -> None:
-    st.session_state[CAROUSEL_KEY] = (st.session_state.get(CAROUSEL_KEY, 0) + step) % count
+def render_persona_cards(personas: Dict[str, Any], selected_id: Optional[str],
+                         on_select: Callable[[str], None]) -> None:
+    """Les personas côte à côte, cartes de même hauteur, un seul bouton par carte.
 
-
-def render_persona_carousel(personas: Dict[str, Any], selected_id: Optional[str],
-                            on_select: Callable[[str], None]) -> None:
-    """Un persona à la fois : flèches (ou touches gauche et droite) pour passer au suivant.
-
-    `on_select(profile_id)` est appelé par le bouton "Choisir ce profil".
+    `on_select(profile_id)` est appelé par le bouton "Essayer avec ..." (clé
+    `choose_profile_<id>`, utilisée par les tests et scripts/check_clean_clone.py).
     """
     ids = ordered_ids(personas)
     if not ids:
         return
-    if CAROUSEL_KEY not in st.session_state:
-        st.session_state[CAROUSEL_KEY] = ids.index(selected_id) if selected_id in ids else 0
-    position = st.session_state[CAROUSEL_KEY] % len(ids)
-    profile_id = ids[position]
-    with st.container(horizontal=True, horizontal_alignment="center", vertical_alignment="center",
-                      key="persona-carousel"):
-        st.button("", key="persona_prev", icon=":material/chevron_left:", help=texts.CAROUSEL_PREV,
-                  shortcut="left", on_click=_move, args=(-1, len(ids)))
-        with st.container(key=f"{PERSONA_CARD_KEY}{profile_id}", width=560):
+    columns = st.columns(len(ids), gap="medium")
+    for column, profile_id in zip(columns, ids):
+        with column, st.container(key=f"{PERSONA_CARD_KEY}{profile_id}"):
             try:
-                html(_card_html(profile_id, personas[profile_id], profile_id == selected_id))
-                st.button(
-                    texts.SELECTED_PROFILE if profile_id == selected_id else texts.CHOOSE_THIS_PROFILE,
-                    key=f"choose_profile_{profile_id}", type="primary", width="stretch",
-                    icon=":material/check:" if profile_id == selected_id else ":material/arrow_forward:",
-                    on_click=on_select, args=(profile_id,))
+                is_selected = profile_id == selected_id
+                name = personas[profile_id]["profile"]["display_name"]
+                html(_card_html(profile_id, personas[profile_id], is_selected))
+                label = texts.HOME_CONTINUE_WITH if is_selected else texts.HOME_TRY_WITH
+                st.button(label.format(name=name), key=f"choose_profile_{profile_id}", type="primary",
+                          width="stretch", icon=":material/arrow_forward:", icon_position="right",
+                          on_click=on_select, args=(profile_id,))
             except Exception as exc:  # une carte invalide ne doit pas casser la page
                 LOGGER.exception("Carte du persona %s impossible à afficher", profile_id)
                 st.error(texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__))
-        st.button("", key="persona_next", icon=":material/chevron_right:", help=texts.CAROUSEL_NEXT,
-                  shortcut="right", on_click=_move, args=(1, len(ids)))
-    dots = "".join(f'<span class="af-dot{" af-dot--on" if i == position else ""}"></span>'
-                   for i in range(len(ids)))
-    html(f'<div class="af-dots" aria-label="{escape(texts.CAROUSEL_POSITION.format(n=position + 1, total=len(ids)))}">'
-         f'{dots}</div>')
 
 
 # Réponses du formulaire : clé du widget -> valeur par défaut. Streamlit efface l'état
