@@ -7,8 +7,8 @@ Responsables d'après le plan : one pager, Samer (issue 74, relecture croisée d
 ## A. À trancher avant d'écrire (décisions de l'équipe)
 
 - [ ] **Messages signalés envoyés à l'agent (PR 93).** En mode `bedrock`, un message que le garde-fou d'entrée signale, ou que les règles locales refusent, est maintenant transmis à l'agent avec outils avec un signalement : l'agent choisit les outils de « la reformulation permise la plus proche » (un ordre avec actif et poids devient une idée à confirmer, un ordre sans poids les faits de l'actif, un conseil la description du profil). La sortie reste contrôlée par le validateur et le garde-fou de sortie, et le signalement est affiché. Avant cette PR, un message refusé n'atteignait jamais un modèle (c'est ce que l'audit de sécurité des PR 88 et 92 avait vérifié). La règle 8 demande que le garde-fou fasse respecter le refus : décider si on garde ce comportement, puis **le décrire tel quel** dans la documentation technique (sections 2.1, 5.1 et 6.2). Aucun audit de sécurité n'est mentionné dans la PR 93.
-- [ ] **Application hébergée et AWS.** `docs/deployment.md` dit : mode hors ligne, aucune clé AWS dans les secrets de l'hébergeur, conformément à CLAUDE.md. Si l'équipe modifie cette règle pour la remise, mettre à jour ce document, la doc technique (2.3) et le one pager.
-- [ ] **Accès au dépôt.** Dépôt privé : accès donné aux organisateurs par invitation (lecture). À écrire dans le message de remise, pas dans la doc.
+- [ ] **Pas de déploiement (décision du 15 novembre).** Les correcteurs jugent la remise sur la vidéo de démonstration, avec l'application lancée en local ; la PR de déploiement est retirée (PR 99). Ne rien écrire sur un lien hébergé. La vidéo doit montrer l'application locale en mode `bedrock`.
+- [ ] **Accès au dépôt.** Dépôt privé : accès donné aux organisateurs par invitation (lecture), à demander si le message de remise exige un lien GitHub. À écrire dans le message de remise, pas dans la doc.
 
 ## B. One pager (`docs/one_pager.md`, Samer)
 
@@ -22,7 +22,6 @@ Contraintes : une page en PDF, six rubriques exigées par l'énoncé (problème,
 - [ ] « Hors périmètre : texte libre » est faux : la conversation comprend des messages libres (règles, puis agent avec outils en mode `bedrock`). Garder hors périmètre : transactions réelles et rejeu historique.
 - [ ] Architecture : ajouter l'agent conversationnel et son contrôle (même validateur, même garde-fou). Nommer les services AWS : Amazon Bedrock (API Converse, Guardrails) et Amazon S3 privé pour les traces.
 - [ ] Ajouter la mise à l'épreuve des hypothèses : les verdicts tiennent sur les variantes de données ; les seuils sont l'hypothèse dominante (7 verdicts sur 15 changent avec des seuils 20 % plus stricts, d'après `outputs/reports/sensitivity.md`).
-- [ ] Ajouter l'adresse de l'application hébergée quand elle existe.
 - [ ] Couper pour tenir sur une page : « État du prototype » en deux lignes.
 
 ## C. Documentation technique (`docs/technical_documentation.md`, Naoufal)
@@ -32,10 +31,9 @@ Contraintes : une page en PDF, six rubriques exigées par l'énoncé (problème,
 - [ ] **2.3 sécurité AWS** : vérification du propriétaire du compartiment (`ExpectedBucketOwner`), politique IAM de référence et captures de la console (`outputs/figures/README.md`), contrôles `scripts/final_checks.sh`. Rien de cela n'est cité aujourd'hui.
 - [ ] **Explicateur novice sans jargon** (PR 96, prompt `explainer_v6`) : décrire le changement.
 - [ ] **4.3 trace réelle** : remplacer le bloc « À REMPLIR » par l'essai final (voir section D).
-- [ ] **5.1 validations** : nombre de tests, installation neuve sur Python 3.12 et 3.14 (`docs/deployment.md`), `scripts/check_clean_clone.py`, mesure des 60 phrases de la conversation (PR 85).
+- [ ] **5.1 validations** : nombre de tests, `scripts/check_clean_clone.py` (installation depuis un clone propre), mesure des 60 phrases de la conversation (PR 85).
 - [ ] **5.3 ancrage** : décrire la décision du 15 novembre (le texte du modèle reste affiché avec un avertissement « ancrage faible » ou « très faible »), le contrôle limité aux phrases écrites par le modèle (PR 89), la source qui contient maintenant le contexte du profil (PR 61), et la plage mesurée des scores.
-- [ ] **6.2 limites** : le score varie d'une génération à l'autre pour un même dossier ; l'agent conversationnel n'est mesuré que par les tests et la mesure des 60 phrases tant que l'essai réel n'est pas fait ; le point A (messages signalés) ; l'application hébergée est hors ligne.
-- [ ] **Déploiement** : une courte section ou un renvoi vers `docs/deployment.md` (hébergement, gel, retour arrière).
+- [ ] **6.2 limites** : le score varie d'une génération à l'autre pour un même dossier ; l'agent conversationnel n'est mesuré que par les tests et la mesure des 60 phrases tant que l'essai réel n'est pas fait ; le point A (messages signalés).
 
 ## D. À fournir par Godwin (dépend du terminal AWS)
 
