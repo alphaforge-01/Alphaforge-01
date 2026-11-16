@@ -879,15 +879,17 @@ def answer_question(
         effective_mode, reason = "offline", "garde_fou_non_configure"   # regle 8 : aucun texte de modele sans garde-fou
     if effective_mode == "bedrock" and validate is None:
         effective_mode, reason = "offline", "validateur_indisponible"
-    # Un message signale par le garde-fou n'atteint le modele que si le code a mis le signalement dans le
-    # dossier (`guardrail_notice`) : le modele reformule alors vers ce qui est permis, et la sortie reste
-    # controlee par le validateur et le garde-fou de sortie.
-    flagged = (request_check is not None and request_check.get("action") == "intervened"
-               and bool(brief.get("guardrail_notice")))
+    # Un message signale par le garde-fou (intervention, ou sujet refuse detecte) n'atteint le modele que si le
+    # code a mis le signalement dans le dossier (`guardrail_notice`) : le modele reformule alors vers ce qui est
+    # permis, et la sortie reste controlee par le validateur et le garde-fou de sortie.
+    signalled = request_check is not None and (
+        request_check.get("action") == "intervened" or bool(request_check.get("denied_topics")))
+    flagged = signalled and bool(brief.get("guardrail_notice"))
     if effective_mode == "bedrock" and not flagged and (
-            request_check is None or request_check.get("action") != "none"):
-        # Regle 8 : la question doit avoir passe le garde-fou d'entree avant d'atteindre le modele.
-        refused = request_check is not None and request_check.get("action") == "intervened"
+            request_check is None or request_check.get("action") != "none" or request_check.get("denied_topics")):
+        # Regle 8 : la question doit avoir passe le garde-fou d'entree avant d'atteindre le modele. Un sujet
+        # refuse detecte compte comme un refus, meme si le garde-fou passait un jour en mode detection.
+        refused = signalled
         effective_mode, reason = "offline", "demande_refusee" if refused else "controle_entree_absent"
     wanted_llm = mode == "bedrock"
 
@@ -1036,7 +1038,7 @@ def converse_with_tools(
     if request_check is None or request_check.get("action") not in ("none", "intervened"):
         return None   # regle 8 : le garde-fou d'entree doit avoir ete execute (jamais "not_run")
     notice = list(flagged_topics or [])
-    if request_check.get("action") == "intervened":
+    if request_check.get("action") == "intervened" or request_check.get("denied_topics"):
         notice = list(dict.fromkeys([*(request_check.get("denied_topics") or []), *notice])) or ["refused"]
     toolbox = ConversationToolBox(providers, level)
     started = time.perf_counter()

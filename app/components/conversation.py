@@ -2,8 +2,9 @@
 
 Chaque réponse est courte (verdict, points clés cliquables, résumé de l'explication,
 avertissement), puis dépliable : détail par zones, explication complète, sources et
-limites, trace. Le texte vient toujours de `get_explanation` (agent ou gabarit) et
-les chiffres du registre de preuves : ce module n'invente ni ne calcule rien.
+limites, trace. Le texte d'une analyse vient de `get_explanation` (agent ou gabarit), celui
+d'une question de profil ou d'un "pourquoi" de `answer_question` (agent conversationnel sous contrôle,
+ou réponse du code), et les chiffres du registre de preuves : ce module n'invente ni ne calcule rien.
 Seule la réponse la plus récente est détaillée ; les précédentes restent compactes.
 """
 from __future__ import annotations
@@ -189,6 +190,52 @@ def _render_conversation_version(entry: Mapping[str, Any]) -> None:
             trace_panel.render_trace({"trace": entry.get("trace") or []}, None)
 
 
+def _render_agent_answer(entry: Mapping[str, Any]) -> None:
+    """Réponse de l'agent conversationnel (issue 78) : texte, origine, signaux du garde-fou, données et limites.
+
+    Entrée du fil `{"type": "agent_answer", ...}` écrite par `session._agent_answer` : `answer_kind`,
+    `rendered` (texte, renvois remplacés), `origin` ("llm" ou "template"), `fallback_reason`, `guard`
+    (détails du garde-fou : `grounding_weak`, `grounding_very_weak`, `grounding_score`, `relevance_weak`),
+    `evidence` (preuves citées), `limits` (textes), `counterfactuals` (`label`, `weight`, `none`).
+    La question n'y est jamais recopiée.
+    """
+    st.markdown(escape_dollars(entry.get("rendered", "")))
+    origin = entry.get("origin", "template")
+    guard = entry.get("guard") or {}
+    if origin == "llm" and guard.get("grounding_weak"):
+        score = guard.get("grounding_score")
+        shown = "-" if score is None else f"{score:.2f}"
+        template = (texts.EXPLANATION_GROUNDING_VERY_WEAK if guard.get("grounding_very_weak")
+                    else texts.EXPLANATION_GROUNDING_WEAK)
+        st.warning(template.format(score=shown))
+    if origin == "llm" and guard.get("relevance_weak"):
+        st.caption(texts.CHAT_AGENT_RELEVANCE_WEAK)
+    for item in entry.get("counterfactuals") or []:
+        line = (texts.CHAT_AGENT_COUNTERFACTUAL_NONE.format(label=item["label"]) if item.get("none")
+                else texts.CHAT_AGENT_COUNTERFACTUAL.format(label=item["label"], weight=item.get("weight") or "-"))
+        st.markdown(escape_dollars(line))
+    caption = texts.CHAT_AGENT_ORIGIN.get(origin, "")
+    if origin == "template" and entry.get("fallback_reason"):
+        reason = texts.REASON_CODES_FR.get(entry["fallback_reason"], entry["fallback_reason"])
+        caption = f"{caption} {texts.CHAT_AGENT_FALLBACK.format(reason=reason)}"
+    if guard.get("denied_topics"):
+        caption = f"{caption} {texts.CHAT_AGENT_DENIED.format(topics=_topics(list(guard['denied_topics'])))}"
+    st.caption(caption)
+    with st.expander(texts.CHAT_AGENT_DATA):
+        evidence = entry.get("evidence") or []
+        if not evidence:
+            st.caption(texts.CHAT_AGENT_DATA_NONE)
+        for item in evidence:
+            period = (f" ({item['period_start']} au {item['period_end']}"
+                      f"{', ' + item['currency'] if item.get('currency') else ''})"
+                      if item.get("period_start") and item.get("period_end") else "")
+            st.markdown(escape_dollars(f"- **{item.get('evidence_id')}** {item.get('label_fr', '')} : "
+                                       f"{item.get('display_value') or '-'}{period}"))
+    with st.expander(texts.CHAT_AGENT_LIMITS):
+        for text in entry.get("limits") or []:
+            st.markdown(escape_dollars(f"- {text}"))
+
+
 def _render_confirm(entry: Mapping[str, Any], index: int, on_choice: Callable[..., None]) -> None:
     """Idée proposée (poids lu sans "%", relance) : rien n'est simulé avant le clic."""
     _render_notice(entry)
@@ -292,6 +339,8 @@ def render_entry(entry: Mapping[str, Any], index: int, is_latest_analysis: bool,
             _render_answer(entry, index, on_ask)
         elif kind == "conversation_answer":
             _render_conversation_answer(entry)
+        elif kind == "agent_answer":
+            _render_agent_answer(entry)
         elif kind == "analysis":
             if entry.get("guard_action") is not None:
                 # Demande écrite : on montre l'idée comprise. Une idée venue d'un bouton ou des

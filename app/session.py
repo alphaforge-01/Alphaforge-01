@@ -186,7 +186,9 @@ def ask(text: Optional[str] = None) -> None:
     except Exception:  # le contrôle reste affiché comme non exécuté, la demande continue
         LOGGER.exception("Contrôle du garde-fou impossible")
         guard = {"action": "not_run", "denied_topics": []}
-    if guard.get("action") == "intervened":
+    if guard.get("action") == "intervened" or guard.get("denied_topics"):
+        # Signalé par le garde-fou : l'agent reformule vers le permis (signalement affiché) ; sinon, refus
+        # et, si les règles y lisent une idée fictive précise, la simulation proposée en un clic.
         if mode == "bedrock" and _answer_with_tools(text, persona, guard):
             return
         entry = {"role": "assistant", "type": "refused", "by": "guardrail",
@@ -211,34 +213,20 @@ def ask(text: Optional[str] = None) -> None:
         _append({"role": "assistant", "type": "note",
                  "text": texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__)})
         return
-    # L'agent ne reprend que les questions que les règles n'ont pas traitées : jamais un refus
-    # local, une idée, une confirmation ou une clarification.
-    conversation_kind = (
-        _conversation_kind(text, parsed)
-        if parsed["status"] == "answer" and parsed.get("answer_kind") == "out_of_scope"
-        else None
-    )
-    # "Mon portefeuille est-il risqué ?" : les règles y voient la liste des positions, mais la
-    # question porte sur son risque ; l'agent répond avec la radiographie.
-    if (parsed["status"] == "answer" and parsed.get("answer_kind") == "portfolio"
-            and _conversation_kind(text, parsed) in ("xray", "explanation", "what_changes")):
-        conversation_kind = "xray"
-    # Questions (définitions, questions libres, risque du portefeuille) : l'agent choisit ses outils.
-    # Si l'agent n'est pas disponible, repli sur le dossier choisi par mots-clés, puis sur les règles.
     # Seules les idées lues par les règles (idée, confirmation, clarification) restent au code : tout le
-    # reste, refus local compris, va d'abord à l'agent. Un refus local est transmis comme signalement.
+    # reste, refus local compris, va d'abord à l'agent avec outils. Un refus local est transmis comme
+    # signalement. Agent indisponible : routage de la conversation par règles (question_routing), puis règles.
     tools_eligible = parsed["status"] in ("answer", "refused")
     flagged = [str(parsed.get("reason"))] if parsed["status"] == "refused" else []
     if mode == "bedrock" and tools_eligible and _answer_with_tools(text, persona, guard, flagged):
         return
-    if mode == "bedrock" and conversation_kind is not None:
-        answer = _answer_conversation_question(
-            text, conversation_kind, persona, guard, parsed)
-        if answer:
-            return
     if parsed["status"] == "refused":
         _append({"role": "assistant", "type": "refused", "by": "local", "topics": [parsed["reason"]],
                  "guard_action": guard.get("action")})
+    elif kind := _agent_kind(text, parsed, analysed):
+        # Question de profil ou "pourquoi" : agent conversationnel, sous contrôle (issue 78). Les refus passent
+        # avant ; _agent_kind écarte idées, confirmations, salutations et termes du glossaire.
+        _append(_agent_answer(text, kind, persona, guard))
     elif parsed["status"] == "clarify":
         _append({"role": "assistant", "type": "clarify", "parsed": parsed})
     elif parsed["status"] == "confirm":
@@ -273,36 +261,6 @@ def _guardrail_reformulation(text: str, persona: Dict[str, Any]) -> Optional[Dic
         return dict(parsed["idea"])
     return None
 
-
-def _conversation_kind(text: str, parsed: Mapping[str, Any]) -> Optional[str]:
-    lowered = text.casefold()
-    if parsed.get("answer_kind") == "definition":
-        return "concept"
-    if any(token in lowered for token in ("profil", "tolérance", "tolerance", "horizon",
-                                         "objectif", "préférence", "preference")):
-        return "profile"
-    if any(token in lowered for token in ("changerait", "rendre conforme", "conforme",
-                                         "réduire", "reduire", "modifier")):
-        return "what_changes"
-    if any(token in lowered for token in ("conflit", "tension", "statut", "règle", "regle",
-                                         "pourquoi")):
-        return "explanation"
-    if any(token in lowered for token in ("diversif", "composition", "radiographie",
-                                         "risque", "risqué", "risqu", "volatil", "perte",
-                                         "concentr", "équilibr", "equilibr")):
-        return "xray"
-    # Phrase libre sans indice : l'agent répond quand même, à partir du dossier le plus proche.
-    return "general"
-
-
-def _conversation_focus(answer_kind: str, result: Optional[Mapping[str, Any]],
-                        parsed: Mapping[str, Any]) -> List[str]:
-    if answer_kind == "concept" and parsed.get("term_id"):
-        return [str(parsed["term_id"])]
-    if answer_kind in ("profile", "xray"):
-        return []
-    return [str(check["check_id"]) for check in (result or {}).get("governance_after", {}).get("checks", [])
-            if check.get("status") != "compliant"]
 
 
 def _current_analysis(persona: Dict[str, Any]) -> Tuple[Optional[Tuple[Any, ...]], Optional[Dict[str, Any]]]:
@@ -352,47 +310,6 @@ def _version_from(answer: Mapping[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _answer_conversation_question(
-    question: str,
-    answer_kind: str,
-    persona: Dict[str, Any],
-    request_check: Mapping[str, Any],
-    parsed: Mapping[str, Any],
-) -> bool:
-    effective_idea = (
-        idea_panel.effective_idea(st.session_state.idea, persona["portfolio"])[0]
-        if st.session_state.idea is not None else None
-    )
-    result = None
-    cache_key = None
-    if answer_kind in ("explanation", "what_changes", "general"):
-        if effective_idea is not None:
-            cache_key = (
-                st.session_state.mode, fingerprint(persona["profile"]), fingerprint(persona["portfolio"]),
-                fingerprint(effective_idea),
-            )
-            result = st.session_state.analysis_cache.get(cache_key)
-        # Sans analyse en cours, la question porte sur le portefeuille fictif de départ.
-        if result is None:
-            answer_kind, cache_key = "xray", None
-        elif answer_kind == "general":
-            answer_kind = "explanation"
-    # Contexte figé de la question : une reformulation à un autre niveau repart du même dossier.
-    context = {
-        "question": question,
-        "answer_kind": answer_kind,
-        "request_check": dict(request_check),
-        "focus": _conversation_focus(answer_kind, result, parsed),
-        "cache_key": cache_key,
-    }
-    level = st.session_state.level or "novice"
-    version = _conversation_version(context, persona, level)
-    if version is None:
-        return True
-    _append({"role": "assistant", "type": "conversation_answer", "context": context,
-             "versions": {level: version}})
-    return True
-
 
 def _conversation_version(context: Mapping[str, Any], persona: Dict[str, Any],
                           level: str) -> Optional[Dict[str, Any]]:
@@ -403,15 +320,10 @@ def _conversation_version(context: Mapping[str, Any], persona: Dict[str, Any],
         if result is None:
             _append({"role": "assistant", "type": "info", "text": texts.CHAT_REPHRASE_UNAVAILABLE})
             return None
-    try:
-        if context.get("calls") is not None:   # réponse de l'agent avec outils : outils rejoués par le code
-            answer = data_source.converse_at_level(
-                st.session_state.mode, persona, context["question"], level, context["request_check"],
-                context["calls"], result=result, notice=context.get("notice"))
-        else:
-            answer = data_source.get_conversation_answer(
-                st.session_state.mode, persona, context["question"], level,
-                context["answer_kind"], context["request_check"], result=result, focus=context["focus"])
+    try:   # outils rejoués par le code au nouveau niveau, seul le texte est réécrit
+        answer = data_source.converse_at_level(
+            st.session_state.mode, persona, context["question"], level, context["request_check"],
+            context["calls"], result=result, notice=context.get("notice"))
     except data_source.DataUnavailable as exc:
         _append({"role": "assistant", "type": "info", "text": str(exc)})
         return None
@@ -444,6 +356,93 @@ def rephrase_all() -> None:
         version = _conversation_version(entry["context"], persona, level)
         if version is not None:
             entry["versions"][level] = version
+
+
+_CAPS_WORDS = frozenset({"EST", "EN", "LE", "LA", "LES", "DE", "DU", "DES", "ET", "OU", "UN", "UNE", "MON", "MA",
+                         "MES", "CE", "CET", "CETTE", "IL", "ELLE", "QUE", "QUI", "POUR", "PAR", "SUR", "AU", "AUX",
+                         "PAS", "NE", "SE", "SI", "PLUS", "TRES", "TROP", "AVEC"})
+
+
+def _agent_kind(text: str, parsed: Dict[str, Any], analysed: bool) -> Optional[str]:
+    """Type de question pour l'agent, seulement pour ce que les règles du chat n'ont pas su traiter.
+
+    Jamais pour un refus, une idée, une confirmation, une salutation, un terme du glossaire ou la liste des
+    positions demandée comme telle. Une définition sans terme connu ("explique-moi le verdict") et une
+    question lue comme une idée sans actif ("c'est grave une perte de 26 % ?") peuvent être reprises.
+    """
+    status, answer_kind = parsed["status"], parsed.get("answer_kind")
+    eligible = (
+        (status == "answer" and answer_kind in ("out_of_scope", "portfolio"))
+        or (status == "answer" and answer_kind == "definition" and parsed.get("term_id") is None)
+        # Lue comme une idée sans actif ("c'est grave une perte de 26 % ?") ; un actif inconnu nommé
+        # ("le risque de GME") garde la demande de précision, qui dit qu'il n'est pas dans l'univers.
+        # Message tout en majuscules : ses mots courants ("EST", "EN") ne sont pas des titres inconnus ; un vrai
+        # titre inconnu ("GME") garde la demande de précision.
+        or (status == "clarify" and parsed.get("reason") == "unknown_asset"
+            and not [t for t in parsed.get("unknown_tokens") or () if not (text.isupper() and t in _CAPS_WORDS)])
+    )
+    if not eligible:
+        return None
+    kind = data_source.classify_question(text, has_analysis=analysed)
+    if status == "clarify" and kind != "explanation":
+        return None
+    return kind
+
+
+def _latest_analysis(persona: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Dernière analyse déjà calculée pour l'idée courante et ce profil, sans nouvel appel."""
+    analysed = any(entry.get("type") == "analysis" for entry in st.session_state.chat_history)
+    if st.session_state.idea is None or not analysed:
+        return None
+    return st.session_state.analysis_cache.get(_analysis_entry_key(persona, st.session_state.idea))
+
+
+def _xray_or_none(persona: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Radiographie du portefeuille fictif (code seul), depuis le cache si possible ; indisponible : None."""
+    key = (st.session_state.mode, fingerprint(persona["profile"]), fingerprint(persona["portfolio"]))
+    if key in st.session_state.xray_cache:
+        return st.session_state.xray_cache[key]
+    try:
+        st.session_state.xray_cache[key] = data_source.get_xray(
+            st.session_state.mode, persona["profile"], persona["portfolio"])
+    except data_source.DataUnavailable:   # la réponse se contente alors du profil
+        return None
+    return st.session_state.xray_cache[key]
+
+
+def _agent_answer(text: str, kind: str, persona: Dict[str, Any], guard: Dict[str, Any]) -> Dict[str, Any]:
+    """Réponse de l'agent conversationnel, prête à afficher. La question n'est pas recopiée dans l'entrée."""
+    mode = st.session_state.mode
+    level = st.session_state.level or "novice"
+    try:
+        result = _latest_analysis(persona)
+        # La radiographie ne sert qu'aux questions sur le portefeuille actuel, ou quand aucune analyse n'existe.
+        xray = _xray_or_none(persona) if (kind == "xray" or result is None) else None
+        brief = data_source.build_conversation_brief(text, kind, level, persona["profile"], result=result, xray=xray)
+        conversation = data_source.answer_question(mode, brief, guard)
+    except data_source.DataUnavailable as exc:
+        return {"role": "assistant", "type": "info", "text": str(exc)}
+    except Exception as exc:  # la page ne plante jamais
+        LOGGER.exception("Réponse de l'agent conversationnel impossible")
+        return {"role": "assistant", "type": "note",
+                "text": texts.MSG_UNEXPECTED_ERROR.format(error_type=type(exc).__name__)}
+    evidence = {entry["evidence_id"]: entry for entry in brief["evidence"]}
+    checks = {check["check_id"]: check for check in brief["checks"]}
+    steps = {step["name"]: step.get("details") or {} for step in conversation["trace"]}
+    counterfactuals = [
+        {"label": checks[ref]["label_fr"], "weight": (checks[ref]["counterfactual"] or {}).get("display_value"),
+         "none": (checks[ref]["counterfactual"] or {}).get("compliant_at_or_below") is None}
+        for ref in brief["focus"] if ref in checks and checks[ref].get("counterfactual")
+    ] if kind == "what_changes" else []
+    return {
+        "role": "assistant", "type": "agent_answer", "answer_kind": kind,
+        "rendered": conversation["rendered_answer"], "origin": conversation["reply"]["origin"],
+        "fallback_reason": steps.get("explanation", {}).get("fallback_reason"),
+        "guard": dict(steps.get("guardrail", {})),
+        "evidence": [evidence[ref] for ref in conversation.get("cited_evidence", []) if ref in evidence],
+        "limits": [limit["text"] for limit in brief["limits"]],
+        "counterfactuals": counterfactuals,
+    }
 
 
 def request_analysis() -> None:

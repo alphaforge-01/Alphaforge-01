@@ -369,6 +369,7 @@ def test_a_rejected_reply_quoting_the_question_never_reaches_the_trace(brief):
     (None, "controle_entree_absent"),
     ({**PASSED, "action": "not_run"}, "controle_entree_absent"),
     ({**PASSED, "action": "intervened", "denied_topics": ["order_execution"]}, "demande_refusee"),
+    ({**PASSED, "action": "none", "denied_topics": ["personalized_advice"]}, "demande_refusee"),
 ])
 def test_the_model_is_never_called_without_a_passed_input_check(brief, check, reason):
     client = FakeClient(['{"answer": "La regle [G1] est en conflit."}'])

@@ -296,76 +296,6 @@ def get_explanation(mode: str, result: Dict[str, Any], level: str) -> Dict[str, 
         raise DataUnavailable(texts.MSG_EXPLANATION_REFUSED.format(reason=exc)) from exc
 
 
-def get_conversation_answer(
-    mode: str,
-    persona: Dict[str, Any],
-    question: str,
-    level: str,
-    answer_kind: str,
-    request_check: Mapping[str, Any],
-    result: Optional[Dict[str, Any]] = None,
-    focus: Optional[List[str]] = None,
-) -> Dict[str, Any]:
-    """Construit le dossier ferme transmis a l'agent conversationnel."""
-    pipeline = _src_module("analysis_pipeline", texts.MSG_PIPELINE_NOT_READY)
-    brief_builder = _src_module("explanation_brief", texts.MSG_PIPELINE_NOT_READY)
-    tools = _src_module("agent_tools", texts.MSG_PIPELINE_NOT_READY)
-    profile = persona["profile"]
-    brief: Dict[str, Any] = {
-        "brief_id": f"conversation-{profile['profile_id']}-{answer_kind}",
-        "level": level,
-        "answer_kind": answer_kind,
-        "focus": list(focus or []),
-        "question": question,
-        "profile_context": brief_builder.build_profile_context(profile),
-        "evidence": [],
-        "checks": [],
-        "idea": None,
-        "glossary": [],
-        "limits": [],
-        "cards": [],
-        "missing": [],
-    }
-    if answer_kind in ("explanation", "what_changes"):
-        if result is None:
-            raise DataUnavailable(texts.MSG_EXPLANATION_REFUSED.format(reason="analyse absente"))
-        brief.update(brief_builder.build_brief(result, level))
-        brief["answer_kind"] = answer_kind
-        brief["focus"] = list(focus or [])
-        brief["question"] = question
-    elif answer_kind == "profile":
-        profile_result = tools.get_profile_facts(profile)
-        if profile_result["status"] != "ok":
-            raise DataUnavailable(texts.MSG_PROFILE_FACTS_FAILED.format(
-                reason=profile_result.get("error_message") or profile_result["status"]))
-        brief["evidence"] = [
-            {**entry, "evidence_id": f"E{index}"}
-            for index, entry in enumerate(profile_result["evidence"], start=1)
-        ]
-        brief["missing"] = list(profile_result["data"].get("missing") or [])
-    elif answer_kind == "xray":
-        xray = get_xray(mode, profile, persona["portfolio"])
-        brief["evidence"] = list(xray["evidence"].values())
-        brief["checks"] = list(xray["governance"].get("checks") or [])
-    elif answer_kind == "concept":
-        for term in brief_builder.load_glossary():
-            level_text = term.get(level) or {}
-            brief["glossary"].append({
-                "term_id": term["term_id"],
-                "term": term["term"],
-                "definition": level_text.get("definition", ""),
-                "analogy": level_text.get("analogy", ""),
-            })
-    else:
-        raise DataUnavailable(texts.MSG_UNEXPECTED_ERROR.format(error_type="question_inconnue"))
-    return pipeline.answer_question(
-        brief,
-        mode=_pipeline_mode(mode),
-        config=_pipeline_config(mode),
-        request_check=dict(request_check),
-    )
-
-
 def _conversation_providers(mode: str, persona: Dict[str, Any], result: Optional[Dict[str, Any]]) -> Any:
     """Données des outils de l'agent conversationnel, calculées par le code (aucun agent ici)."""
     tools_module = _src_module("conversation_tools", texts.MSG_PIPELINE_NOT_READY)
@@ -429,6 +359,30 @@ def get_asset_facts(mode: str, ticker: str, portfolio: Dict[str, Any]) -> Dict[s
         raise DataUnavailable(texts.MSG_ASSET_FACTS_FAILED.format(
             ticker=ticker, reason=tool_result.get("error_message") or tool_result["status"]))
     return {"evidence": toolbox.evidence(), "data": tool_result["data"]}
+
+
+def classify_question(text: str, has_analysis: bool = False) -> Optional[str]:
+    """Type de question pour l'agent conversationnel (issue 78), ou None. Règles sans modèle."""
+    routing = _src_module("question_routing", texts.MSG_PIPELINE_NOT_READY)
+    return routing.classify_question(text, has_analysis=has_analysis)
+
+
+def build_conversation_brief(question: str, answer_kind: str, level: str, profile: Dict[str, Any],
+                             result: Optional[Dict[str, Any]] = None,
+                             xray: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Dossier de l'agent conversationnel : faits déjà calculés par le code (analyse, radiographie, profil)."""
+    module = _src_module("conversation_brief", texts.MSG_PIPELINE_NOT_READY)
+    try:
+        return module.build_conversation_brief(question, answer_kind, level, profile, result=result, xray=xray)
+    except ValueError as exc:
+        raise DataUnavailable(texts.MSG_CONVERSATION_REFUSED.format(reason=exc)) from exc
+
+
+def answer_question(mode: str, brief: Dict[str, Any], request_check: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """ConversationResult : agent Bedrock sous contrôle (validateur, garde-fou), sinon réponse du code."""
+    pipeline = _src_module("analysis_pipeline", texts.MSG_PIPELINE_NOT_READY)
+    return pipeline.answer_question(brief, _pipeline_mode(mode), config=_pipeline_config(mode),
+                                    request_check=request_check)
 
 
 def check_request(mode: str, text: str) -> Dict[str, Any]:
