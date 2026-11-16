@@ -120,7 +120,8 @@ AWS integration is 15% of the grade: prefer AWS services (e.g. Bedrock for agent
 
 - Considérer le compte AWS, le stockage CloudShell, les espaces SageMaker, les URL hébergées et le dossier Kiro partagé `/workshop` comme jetables. Garder le code, les prompts, la configuration et les artefacts reproductibles autorisés dans le dépôt. Une copie présente uniquement dans AWS ne doit jamais être la source de vérité.
 - Ne jamais placer d'identifiants AWS, clés API, contenu de `.env` ou URL Kiro contenant un jeton dans le code, Git, les prompts d'un assistant, les journaux, les captures ou la documentation. Si un secret est exposé, cesser de l'utiliser et avertir un mentor ou un organisateur.
-- Utiliser uniquement des données publiques ou fictives. Avant de téléverser des CSV financiers ou rapports publics dans le compte de l'atelier, confirmer avec un mentor que ces documents sont permis. Respecter les licences; si la redistribution est interdite, versionner le code de récupération et la provenance plutôt que le jeu complet.
+- Utiliser uniquement des données publiques ou fictives. Avant de téléverser des CSV financiers ou rapports publics dans le compte de l'atelier, confirmer avec un mentor que ces documents sont permis. Respecter les licences; si la redistribution est interdite, versionner le code de récupération et la provenance plutôt que le jeu complet. 
+- Pour la remise, les identifiants temporaires de l'atelier peuvent être saisis dans les secrets de l'application Streamlit du projet, jamais dans le dépôt. Les secrets et l'application sont supprimés après la correction du jury.
 
 ### Sécurité par défaut
 
