@@ -16,7 +16,7 @@ from .contracts import ExplainerOutput, ExplanationBrief
 from .prompt_loader import load_prompt
 from .tool_specs import ExplainerFailure
 
-PROMPT_NAME = "explainer_v5"
+PROMPT_NAME = "explainer_v6"
 PROMPT_VERSION = PROMPT_NAME
 # Pas de temperature : les modeles Claude recents la refusent (ValidationException, constate sur le compte).
 # 4000 jetons : Haiku tronquait parfois sa reponse a 2500 (stopReason max_tokens, constate). Plafond de cout borne.

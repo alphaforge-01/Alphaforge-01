@@ -444,7 +444,8 @@ def explain(
         # Regle 8 : aucun texte de modele n'est affiche sans garde-fou. Repli sur le gabarit, signale dans la trace.
         effective_mode, config_fallback = "offline", "garde_fou_non_configure"
     try:
-        brief = deps.build_brief(result, level)
+        # Niveau novice : les regles portent un nom sans jargon (statuts, valeurs et preuves inchanges).
+        brief = plain_brief(deps.build_brief(result, level))  # type: ignore[assignment]
     except ValueError as error:
         raise AnalysisError(f"Dossier d'explication impossible : {redact_text(str(error))}") from error
 
