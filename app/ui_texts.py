@@ -101,6 +101,16 @@ CHAT_ANALOGY = "Pour se le représenter : {analogy}."
 CHAT_DEFINITION_SOURCE = "Définition du glossaire du projet, niveau {level}."
 CHAT_DEFINITION_UNKNOWN = "Ce terme n'est pas dans le glossaire du projet. Je peux expliquer : {terms}."
 CHAT_GLOSSARY_MISSING = "Le glossaire du projet est indisponible : je ne peux pas définir ce terme."
+CHAT_TRACE = "Voir la trace de cette réponse"
+CHAT_ORIGIN_BEDROCK = "Réponse Bedrock validée"
+CHAT_ORIGIN_FALLBACK = "Réponse de secours du code"
+CHAT_PROOFS = "Preuves citées"
+CHAT_OTHER_LEVEL = "Réponse rédigée au niveau {level}."
+CHAT_AGENT_SPINNER = "L'agent consulte les données..."
+CHAT_REPHRASE_SPINNER = "Réécriture des réponses au nouveau niveau..."
+CHAT_REPHRASE_UNAVAILABLE = ("L'analyse sur laquelle portait cette réponse n'est plus disponible : "
+                             "posez de nouveau la question pour une réponse à ce niveau.")
+SIM_PROGRESS = ("Profil", "Idée", "Verdict", "Explication")
 CHAT_AGENT_ORIGIN = {
     "llm": "Réponse de l'agent conversationnel (Amazon Bedrock), vérifiée par le validateur et le garde-fou.",
     "template": "Réponse écrite par le code, à partir des mêmes faits.",
@@ -116,6 +126,7 @@ CHAT_AGENT_LIMITS = "Limites"
 CHAT_CONFIRM = "Voulez-vous simuler **{idea}** ?"
 CHAT_CONFIRM_WHY = {
     "weight_to_confirm": "J'ai lu le poids sans le signe %, je préfère vérifier avant de simuler.",
+    "agent_proposal": "J'ai repris l'actif et le poids de votre message : vérifiez-les avant de simuler.",
     "follow_up": "Même actif et même financement que la dernière idée simulée.",
 }
 CHAT_CONFIRM_YES = "Oui, simuler"
@@ -137,6 +148,12 @@ CHAT_REFUSED_BY = {
         "Rappel : l'outil ne passe aucun ordre et ne prédit aucun rendement."
     ),
 }
+CHAT_GUARDRAIL_NOTICE = ("Garde-fou : votre message touche un sujet que ce prototype ne traite pas ({topics}). "
+                         "Il ne passe aucun ordre, ne donne aucun conseil personnalisé et ne prédit rien. "
+                         "Voici ce que je peux vous montrer à la place.")
+CHAT_REFUSED_WARNING = ("Votre message ressemble à une demande que ce prototype ne traite pas ({topics}) : "
+                        "il ne passe aucun ordre et ne donne aucun conseil personnalisé.")
+CHAT_REFORMULATION = "Je peux en revanche simuler, sur le portefeuille fictif : **{idea}**. Voulez-vous lancer cette simulation ?"
 CHAT_REFUSED_HELP = (
     "Je peux seulement simuler une idée sur ce portefeuille fictif et décrire le passé, "
     "par exemple : \"Et si je mettais 10 % dans NVDA ?\""
@@ -574,6 +591,11 @@ TOOL_LABELS = {
     "analyze_portfolio": "analyze_portfolio (radiographie)",
     "simulate_portfolio_change": "simulate_portfolio_change (simulation avant/après)",
     "get_asset_facts": "get_asset_facts (faits sur un actif)",
+    "lookup_glossary": "lookup_glossary (glossaire du projet)",
+    "get_profile_facts": "get_profile_facts (faits du profil)",
+    "list_assets": "list_assets (actifs d'un secteur)",
+    "get_current_analysis": "get_current_analysis (dernière simulation)",
+    "propose_idea": "propose_idea (idée à confirmer)",
     "outil_inconnu": "outil inconnu (demande rejetée)",
 }
 REASON_CODES_FR = {
@@ -657,6 +679,7 @@ MSG_GUARDRAIL_PROMPTS_MISSING = "Requêtes prédéfinies du garde-fou introuvabl
 MSG_FIXTURE_NO_ASSET_FACTS = "Faits sur l'actif indisponibles en mode Données d'essai."
 MSG_ASSET_FACTS_FAILED = "Faits sur {ticker} indisponibles : {reason}"
 MSG_XRAY_FAILED = "Radiographie impossible : {reason}"
+MSG_PROFILE_FACTS_FAILED = "Faits du profil indisponibles : {reason}"
 MSG_ANALYSIS_REFUSED = "Idée non analysable : {reason}"
 MSG_EXPLANATION_REFUSED = "Explication impossible : {reason}"
 MSG_CONVERSATION_REFUSED = "Réponse impossible : {reason}"

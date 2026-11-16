@@ -20,7 +20,7 @@ import importlib
 import json
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 import ui_texts as texts
 from formatting import summary_section
@@ -294,6 +294,53 @@ def get_explanation(mode: str, result: Dict[str, Any], level: str) -> Dict[str, 
         return pipeline.explain(result, level, mode=_pipeline_mode(mode), config=_pipeline_config(mode))
     except pipeline.AnalysisError as exc:
         raise DataUnavailable(texts.MSG_EXPLANATION_REFUSED.format(reason=exc)) from exc
+
+
+def _conversation_providers(mode: str, persona: Dict[str, Any], result: Optional[Dict[str, Any]]) -> Any:
+    """Données des outils de l'agent conversationnel, calculées par le code (aucun agent ici)."""
+    tools_module = _src_module("conversation_tools", texts.MSG_PIPELINE_NOT_READY)
+    brief_builder = _src_module("explanation_brief", texts.MSG_PIPELINE_NOT_READY)
+    agent_tools = _src_module("agent_tools", texts.MSG_PIPELINE_NOT_READY)
+    profile, portfolio = persona["profile"], persona["portfolio"]
+    return tools_module.ConversationProviders(
+        profile=profile,
+        profile_context=lambda: brief_builder.build_profile_context(profile),
+        profile_facts=lambda: agent_tools.get_profile_facts(profile),
+        xray=lambda: get_xray(mode, profile, portfolio),
+        asset_facts=lambda ticker: get_asset_facts(mode, ticker, portfolio),
+        universe=get_universe,
+        glossary=brief_builder.load_glossary,
+        analysis_brief=lambda level: brief_builder.build_brief(result, level) if result is not None else None,
+    )
+
+
+def converse(mode: str, persona: Dict[str, Any], question: str, level: str,
+             request_check: Mapping[str, Any], result: Optional[Dict[str, Any]] = None,
+             flagged_topics: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+    """Message traité par l'agent avec outils ; None si l'agent n'est pas disponible (règles).
+
+    Un message signalé (garde-fou ou contrôle local) va aussi à l'agent, qui reformule vers le permis.
+    """
+    pipeline = _src_module("analysis_pipeline", texts.MSG_PIPELINE_NOT_READY)
+    return pipeline.converse_with_tools(
+        question, level, _conversation_providers(mode, persona, result), _pipeline_mode(mode),
+        profile_label=str(persona["profile"].get("display_name") or persona["profile"].get("profile_id")),
+        has_analysis=result is not None, request_check=dict(request_check), config=_pipeline_config(mode),
+        flagged_topics=list(flagged_topics or []))
+
+
+def converse_at_level(mode: str, persona: Dict[str, Any], question: str, level: str,
+                      request_check: Mapping[str, Any], calls: List[Dict[str, Any]],
+                      result: Optional[Dict[str, Any]] = None,
+                      notice: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Même réponse à un autre niveau : les outils sont rejoués par le code, seul le texte est réécrit."""
+    pipeline = _src_module("analysis_pipeline", texts.MSG_PIPELINE_NOT_READY)
+    tools_module = _src_module("conversation_tools", texts.MSG_PIPELINE_NOT_READY)
+    brief = tools_module.replay(_conversation_providers(mode, persona, result), level, calls, question)
+    if notice:
+        brief["guardrail_notice"] = list(notice)
+    return pipeline.answer_question(brief, mode=_pipeline_mode(mode), config=_pipeline_config(mode),
+                                    request_check=dict(request_check))
 
 
 def get_asset_facts(mode: str, ticker: str, portfolio: Dict[str, Any]) -> Dict[str, Any]:

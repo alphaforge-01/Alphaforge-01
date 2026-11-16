@@ -33,6 +33,9 @@ from .contracts import (
 )
 from .conversation_agent import MAX_QUESTION_CHARS, render_answer, render_answer_with_citations, reply_with_llm
 from .conversation_agent import grounding_source as conversation_grounding_source
+from .conversation_router import RouterOutcome, run_router
+from .conversation_tools import ConversationProviders, ConversationToolBox
+from .conversation_fallback import plain_brief
 from .explainer_agent import PROMPT_VERSION as EXPLAINER_PROMPT_VERSION
 from .explanation_cache import ExplanationCache
 from .pipeline_deps import PipelineDeps, resolve_deps
@@ -869,18 +872,24 @@ def answer_question(
     trace ni dans la source d'ancrage. Rien n'est enregistre sur S3.
     """
     config = config or BedrockConfig.from_env()
+    brief = plain_brief(brief)   # type: ignore[assignment]  (niveau novice : noms de regles sans jargon)
     validate, fallback = _conversation_collaborators(validate, fallback)
     effective_mode, reason = _resolve_mode(mode, config, client)
     if effective_mode == "bedrock" and not config.has_guardrail:
         effective_mode, reason = "offline", "garde_fou_non_configure"   # regle 8 : aucun texte de modele sans garde-fou
     if effective_mode == "bedrock" and validate is None:
         effective_mode, reason = "offline", "validateur_indisponible"
-    if effective_mode == "bedrock" and (request_check is None or request_check.get("action") != "none"
-                                        or request_check.get("denied_topics")):
+    # Un message signale par le garde-fou (intervention, ou sujet refuse detecte) n'atteint le modele que si le
+    # code a mis le signalement dans le dossier (`guardrail_notice`) : le modele reformule alors vers ce qui est
+    # permis, et la sortie reste controlee par le validateur et le garde-fou de sortie.
+    signalled = request_check is not None and (
+        request_check.get("action") == "intervened" or bool(request_check.get("denied_topics")))
+    flagged = signalled and bool(brief.get("guardrail_notice"))
+    if effective_mode == "bedrock" and not flagged and (
+            request_check is None or request_check.get("action") != "none" or request_check.get("denied_topics")):
         # Regle 8 : la question doit avoir passe le garde-fou d'entree avant d'atteindre le modele. Un sujet
         # refuse detecte compte comme un refus, meme si le garde-fou passait un jour en mode detection.
-        refused = request_check is not None and (
-            request_check.get("action") == "intervened" or bool(request_check.get("denied_topics")))
+        refused = signalled
         effective_mode, reason = "offline", "demande_refusee" if refused else "controle_entree_absent"
     wanted_llm = mode == "bedrock"
 
@@ -988,7 +997,71 @@ def answer_question(
     except Exception:  # dossier mal forme : le texte brut, jamais de plantage
         rendered, cited_evidence, cited_terms = reply["answer"], [], []
     result = ConversationResult(reply=reply, validation=validation, guardrail=guardrail, rendered_answer=rendered,
-                                trace=trace, cited_evidence=cited_evidence, cited_terms=cited_terms)
+                                trace=trace, cited_evidence=cited_evidence, cited_terms=cited_terms, brief=brief)
     if skipped:
         result["validation_skipped"] = skipped
     return result
+
+
+def converse_with_tools(
+    question: str,
+    level: Level,
+    providers: ConversationProviders,
+    mode: str = "offline",
+    *,
+    profile_label: str = "",
+    has_analysis: bool = False,
+    request_check: GuardrailResult | None = None,
+    client: BedrockClient | None = None,
+    config: BedrockConfig | None = None,
+    router: Callable[..., RouterOutcome] | None = None,
+    flagged_topics: list[str] | None = None,
+    **answer_options: Any,
+) -> dict[str, Any] | None:
+    """Question libre : l'agent choisit ses outils, puis la reponse est redigee par ``answer_question``.
+
+    Toute question passe d'abord par le garde-fou d'entree (``request_check``, execute par le code). Un message
+    signale (``intervened``, ou ``flagged_topics`` du controle local) va quand meme a l'agent, avec le
+    signalement : il ne fait pas ce qui est refuse et choisit les outils de la reformulation permise la plus
+    proche. Le signalement est rendu (``notice``) pour que l'interface l'affiche.
+
+    Rend None quand l'agent ne peut pas etre appele (mode hors ligne, configuration incomplete, garde-fou
+    d'entree non execute) ou quand sa collecte echoue : l'interface revient alors au routage par
+    regles. Sinon rend {"kind": "proposal", "idea", "trace", "calls"} si l'agent reprend une idee de
+    l'utilisateur (a confirmer d'un clic, jamais simulee ici), ou {"kind": "answer", **ConversationResult,
+    "calls"}. Les outils n'ecrivent que des resultats de code deterministe ; aucun outil d'ordre.
+    """
+    config = config or BedrockConfig.from_env()
+    effective_mode, _ = _resolve_mode(mode, config, client)
+    if effective_mode != "bedrock" or not config.has_guardrail:
+        return None
+    if request_check is None or request_check.get("action") not in ("none", "intervened"):
+        return None   # regle 8 : le garde-fou d'entree doit avoir ete execute (jamais "not_run")
+    notice = list(flagged_topics or [])
+    if request_check.get("action") == "intervened" or request_check.get("denied_topics"):
+        notice = list(dict.fromkeys([*(request_check.get("denied_topics") or []), *notice])) or ["refused"]
+    toolbox = ConversationToolBox(providers, level)
+    started = time.perf_counter()
+    try:
+        bedrock_client = client or BedrockClient(config)
+        outcome = (router or run_router)(bedrock_client, config.conversation_model_id, toolbox, question,
+                                         profile_label=profile_label, has_analysis=has_analysis,
+                                         flagged_topics=notice)
+    except Exception:  # repli sur les regles, jamais de plantage
+        return None
+    step = _step(1, "analysis", "agent", "ok", started, {
+        "turns": outcome.turns, "stop_reason": outcome.stop_reason, "guardrail_notice": notice,
+        "tool_calls": toolbox.trace_calls(),
+    }, outcome.model_id)
+    if toolbox.proposal is not None:
+        return {"kind": "proposal", "idea": toolbox.proposal, "trace": [step], "calls": list(toolbox.calls),
+                "notice": notice}
+    brief = toolbox.brief(question)
+    if notice:
+        brief["guardrail_notice"] = notice
+    result = answer_question(brief, mode, client=client or bedrock_client, config=config,  # type: ignore[arg-type]
+                             request_check=request_check, **answer_options)
+    for later in result["trace"]:
+        later["step"] += 1
+    return {"kind": "answer", **result, "trace": [step, *result["trace"]], "calls": list(toolbox.calls),
+            "notice": notice}
