@@ -1,6 +1,7 @@
 # Configuration locale de l'interface : aucun secret ici.
-# Aucune adresse d'écoute ici : l'hébergeur gère le réseau. En local, `scripts/run_app_bedrock.sh` impose
-# 127.0.0.1 (l'URL réseau exposerait le quota Bedrock partagé) ; pour le mode hors ligne, voir le README.
+[server]
+# Écoute en local seulement : l'URL réseau exposerait l'app (et le quota Bedrock partagé).
+address = "127.0.0.1"
 
 [browser]
 gatherUsageStats = false
