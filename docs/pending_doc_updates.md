@@ -1,6 +1,6 @@
 # Mises à jour attendues du one pager et de la documentation technique
 
-Suivi tenu le dimanche 15 novembre 2026, établi en comparant `docs/one_pager.md` et `docs/technical_documentation.md` à l'état de `main` (commit 5ac08bc, 2760 tests verts). Cocher chaque ligne dans la PR qui la traite. Simulation éducative : rien ici n'est un conseil.
+Suivi tenu le dimanche 15 novembre 2026, établi en comparant `docs/one_pager.md` et `docs/technical_documentation.md` à l'état de `main` (2760 tests verts) ; mis à jour après la réécriture du one pager. Cocher chaque ligne dans la PR qui la traite. Simulation éducative : rien ici n'est un conseil.
 
 Responsables d'après le plan : one pager, Samer (issue 74, relecture croisée de Naoufal) ; documentation technique, Naoufal ; scores, traces et description AWS, Godwin.
 
@@ -12,28 +12,23 @@ Responsables d'après le plan : one pager, Samer (issue 74, relecture croisée d
 
 ## B. One pager (`docs/one_pager.md`, Samer)
 
-Contraintes : une page en PDF, six rubriques exigées par l'énoncé (problème, approche agentique, originalité, sources de données, explicabilité, bénéfices pour l'utilisateur).
+Réécrit le 15 novembre au soir : originalité, bénéfices, sources, 15 scénarios, 2 760 tests, plus de FRED, mise à jour des limites. Reste :
 
-- [ ] **Ajouter « Originalité » et « Bénéfices pour l'utilisateur »** (absentes). Propositions détaillées dans l'issue 74.
-- [ ] Données : retirer « FRED » (aucune série FRED n'est lue). Ajouter : calendrier commun TSX et États-Unis, conversion au taux du même jour, aucune donnée future.
-- [ ] État du prototype : « 12 scénarios » devient « 15 scénarios (3 profils x 5 boutons) sans échec » ; ajouter « plus de 2 700 tests » (2760 sur `main`).
-- [ ] Remplacer « interface sans test automatisé (affichage non relu) » : interface rejouée sans navigateur pour les trois profils, dialogues de la conversation testés, verdicts financier et ESG affichés.
-- [ ] Remplacer « ancrage faible (0,34 pour Robert) » par la plage mesurée et les scores de l'essai final (voir section D). Dire que le score mesure la proximité avec le dossier, pas l'exactitude des statuts.
-- [ ] « Hors périmètre : texte libre » est faux : la conversation comprend des messages libres (règles, puis agent avec outils en mode `bedrock`). Garder hors périmètre : transactions réelles et rejeu historique.
-- [ ] Architecture : ajouter l'agent conversationnel et son contrôle (même validateur, même garde-fou). Nommer les services AWS : Amazon Bedrock (API Converse, Guardrails) et Amazon S3 privé pour les traces.
-- [ ] Ajouter la mise à l'épreuve des hypothèses : les verdicts tiennent sur les variantes de données ; les seuils sont l'hypothèse dominante (7 verdicts sur 15 changent avec des seuils 20 % plus stricts, d'après `outputs/reports/sensitivity.md`).
-- [ ] Couper pour tenir sur une page : « État du prototype » en deux lignes.
+- [ ] **Deux tirets cadratins** (règle 1) : titre, ligne 1, et ligne « Agent analyste » (ligne 13). `scripts/final_checks.sh` échoue tant qu'ils sont là.
+- [ ] Vérifier qu'il **tient sur une page en PDF** avec ses six rubriques (problème, approche agentique, originalité, sources, explicabilité, bénéfices).
+- [ ] Remplacer la mention d'un ancrage faible par les **scores de l'essai final** (section D), en précisant que le score mesure la proximité avec le dossier, pas l'exactitude des statuts.
+- [ ] Facultatif : chiffrer la mise à l'épreuve (7 verdicts sur 15 changent avec des seuils 20 % plus stricts, `outputs/reports/sensitivity.md`).
+- [ ] Chaque chiffre du one pager se retrouve dans la doc technique ou dans `outputs/reports/`.
 
 ## C. Documentation technique (`docs/technical_documentation.md`, Naoufal)
 
-- [ ] **2.1 chaîne d'exécution** : la conversation est marquée « en cours ». Elle est fusionnée (PR 88, 91, 92, 93) : agent avec outils qui collecte les faits (outils du code, au plus 3 tours et 6 appels), puis réponse rédigée sous contrôle (un appel sans outil, validateur, garde-fou), réponse du code en repli, routage par règles si l'agent est indisponible.
-- [ ] **2.2 et 2.3** : ajouter l'agent conversationnel (modèle réglé par `ALPHAFORGE_CONVERSATION_MODEL_ID`, par défaut celui de l'explicateur), le prompt `conversation_v1` et `conversation_router_v1`, les contrats `ConversationBrief` et `ConversationReply`. Services AWS : « Agents analyste et explicateur » devient « trois agents ».
-- [ ] **2.3 sécurité AWS** : vérification du propriétaire du compartiment (`ExpectedBucketOwner`), politique IAM de référence et captures de la console (`outputs/figures/README.md`), contrôles `scripts/final_checks.sh`. Rien de cela n'est cité aujourd'hui.
-- [ ] **Explicateur novice sans jargon** (PR 96, prompt `explainer_v6`) : décrire le changement.
-- [ ] **4.3 trace réelle** : remplacer le bloc « À REMPLIR » par l'essai final (voir section D).
-- [ ] **5.1 validations** : nombre de tests, `scripts/check_clean_clone.py` (installation depuis un clone propre), mesure des 60 phrases de la conversation (PR 85).
-- [ ] **5.3 ancrage** : décrire la décision du 15 novembre (le texte du modèle reste affiché avec un avertissement « ancrage faible » ou « très faible »), le contrôle limité aux phrases écrites par le modèle (PR 89), la source qui contient maintenant le contexte du profil (PR 61), et la plage mesurée des scores.
-- [ ] **6.2 limites** : le score varie d'une génération à l'autre pour un même dossier ; l'agent conversationnel n'est mesuré que par les tests et la mesure des 60 phrases tant que l'essai réel n'est pas fait ; le point A (messages signalés).
+Part du flux C faite dans la PR 100 : chaîne de la conversation (2.1), composants (2.2), services AWS, captures et contrôles (2.3), limites de l'agent (6.2), améliorations (6.3). Reste :
+
+- [ ] **4.3 trace réelle** : remplacer les cinq lignes « À REMPLIR » et le marqueur d'Amira en 5.3 par l'essai final (section D).
+- [ ] **Marqueur de 6.2** (agent conversationnel) : part de texte du modèle affiché, motifs de repli, ancrage, latence, après l'essai réel.
+- [ ] **5.1 validations** : « plus de 2 400 tests » devient « plus de 2 700 » (2760 sur `main`) ; citer `scripts/check_clean_clone.py` (installation depuis un clone propre) ; la ligne Interface dépend du travail d'interface en cours.
+- [ ] **Explicateur novice sans jargon** (PR 96, `explainer_v6`) : décrire le changement en 2.2.
+- [ ] **2.1 et 2.2** : « 5 pages » et la ligne Interface, à relire une fois l'interface terminée.
 
 ## D. À fournir par Godwin (dépend du terminal AWS)
 
