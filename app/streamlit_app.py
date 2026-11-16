@@ -64,7 +64,7 @@ LEVEL_WIDGET_KEY = "level_choice"
 
 
 def render_sidebar_level() -> None:
-    """Style d'explication, accessible sur chaque page sauf l'accueil, qui a son propre contrôle.
+    """Style d'explication, accessible sur chaque page depuis le menu des paramètres avancés.
 
     Changer de style ne relance que l'explicateur.
     """
@@ -97,10 +97,10 @@ def main() -> None:
     render_settings(settings_menu)
     session.load_personas()
     session.guarded(lambda: session.resolve_level(session.available_profiles()))
-    # L'accueil porte son propre choix d'explication : pas de doublon dans le menu.
-    if page.title != texts.PAGE_NAMES["home"]:
-        with level_slot:
-            session.guarded(render_sidebar_level)
+    # Le style d'explication reste réglable dans le menu sur toutes les pages, accueil compris :
+    # les deux contrôles de l'accueil lisent et écrivent le même st.session_state.level.
+    with level_slot:
+        session.guarded(render_sidebar_level)
 
     # Au-dessus de chaque page : avertissement toujours visible (US-12) et mode actif (US-15).
     with context_slot:
