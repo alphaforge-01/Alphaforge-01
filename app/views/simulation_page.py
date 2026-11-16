@@ -17,8 +17,27 @@ import session
 import ui_texts as texts
 from components import conversation, idea_panel, portfolio_chart, xray
 from components.persistence import kept_toggle
+from components.style import html
 
 SHOW_XRAY_KEY = "show_xray"
+
+
+def render_progress(active: session.Active) -> None:
+    history = st.session_state.chat_history
+    has_idea = any(entry.get("type") == "analysis" for entry in history)
+    has_verdict = bool(st.session_state.analysis_cache)
+    has_explanation = bool(st.session_state.explanation_cache)
+    states = (True, has_idea, has_verdict, has_explanation)
+    parts = []
+    for index, (label, done) in enumerate(zip(texts.SIM_PROGRESS, states)):
+        state = "done" if done else "active" if index == sum(states) else ""
+        parts.append(
+            f'<span class="af-progress-step af-progress-step--{state}">'
+            f'<span class="af-progress-dot"></span>{label}</span>'
+        )
+        if index < len(texts.SIM_PROGRESS) - 1:
+            parts.append('<span class="af-progress-line"></span>')
+    html('<div class="af-progress" aria-label="Progression du parcours">' + "".join(parts) + "</div>")
 
 
 def render_chart(active: session.Active) -> None:
@@ -95,6 +114,7 @@ def render() -> None:
     active = session.require_profile()
     if active is None:
         return
+    render_progress(active)
     session.guarded(lambda: render_chart(active))
     session.guarded(lambda: render_xray(active))
     session.guarded(lambda: render_manual(active))
@@ -105,6 +125,9 @@ def render() -> None:
     if not any(entry.get("role") == "user" for entry in history):
         conversation.render_welcome(session.ask)
     render_analysis = make_analysis_renderer(active)
+    if session.rephrase_pending():
+        with st.spinner(texts.CHAT_REPHRASE_SPINNER):
+            session.guarded(session.rephrase_all)
     for index, entry in enumerate(history):
         session.guarded(lambda: conversation.render_entry(
             entry, index, index == latest, render_analysis,

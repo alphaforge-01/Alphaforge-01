@@ -40,6 +40,26 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .af-fixture { margin: .25rem 0; padding: .35rem .75rem; border-radius: .45rem;
   font-size: .82rem; background: #fdecea; border: 1px solid #f3c2bd; color: #8a1c12;
   font-weight: 600; }
+.af-progress { display: flex; align-items: center; gap: .35rem; margin: .7rem 0 1rem;
+  padding: .6rem .75rem; border: 1px solid #dbe2ea; border-radius: .65rem;
+  background: #f8fafc; }
+.af-progress-step { display: flex; align-items: center; gap: .3rem; color: #7a8492;
+  font-size: .78rem; white-space: nowrap; }
+.af-progress-step--done, .af-progress-step--active { color: #1d4e89; font-weight: 650; }
+.af-progress-dot { width: .55rem; height: .55rem; border-radius: 50%; background: #c9d3df; }
+.af-progress-step--done .af-progress-dot { background: #2e8b57; }
+.af-progress-step--active .af-progress-dot { background: #1d4e89; box-shadow: 0 0 0 3px #dce9f8; }
+.af-progress-line { flex: 1; height: 1px; min-width: .8rem; background: #dbe2ea; }
+.af-chat-answer { border: 1px solid #dbe2ea; border-left: 4px solid #1d4e89;
+  border-radius: .6rem; padding: .75rem .9rem; margin: .2rem 0 .65rem; background: #fbfcfe; }
+.af-chat-answer--fallback { border-left-color: #c99a2e; }
+.af-chat-meta { display: flex; gap: .4rem; align-items: center; margin-bottom: .35rem;
+  color: #5b6675; font-size: .76rem; }
+.af-chat-badge { border-radius: 999px; padding: .1rem .5rem; font-weight: 650;
+  background: #e8f0fb; color: #1d4e89; }
+.af-chat-badge--fallback { background: #fdf3dc; color: #7a5300; }
+.af-chat-proof { border: 1px solid #e3e8ef; border-radius: .45rem; padding: .35rem .6rem;
+  margin: .25rem 0; background: #ffffff; }
 
 .af-intro { color: #4a5563; margin: -.4rem 0 .6rem; }
 
@@ -105,6 +125,10 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .af-dot { width: .5rem; height: .5rem; border-radius: 50%; background: #c9d3df; }
 .af-dot--on { background: #1d4e89; width: 1.4rem; border-radius: 999px; }
 @media (max-width: 640px) { .af-pc-tiles { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .af-progress { overflow-x: auto; }
+  .af-progress-line { min-width: .5rem; }
+}
 [class*="st-key-card-"] [data-testid="stPopover"] button p { font-size: 1.35rem; font-weight: 650; }
 /* Points clés de la réponse : le chiffre est l'information principale. */
 [class*="st-key-keypoints-"] [data-testid="stPopover"] button p { font-size: 1.2rem; font-weight: 650; }
