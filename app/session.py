@@ -216,7 +216,9 @@ def ask(text: Optional[str] = None) -> None:
     # Seules les idées lues par les règles (idée, confirmation, clarification) restent au code : tout le
     # reste, refus local compris, va d'abord à l'agent avec outils. Un refus local est transmis comme
     # signalement. Agent indisponible : routage de la conversation par règles (question_routing), puis règles.
-    tools_eligible = parsed["status"] in ("answer", "refused")
+    # Salutation ou demande d'aide : l'accueil du code (l'agent n'aurait aucun fait à citer).
+    tools_eligible = parsed["status"] == "refused" or (
+        parsed["status"] == "answer" and parsed.get("answer_kind") != "greeting")
     flagged = [str(parsed.get("reason"))] if parsed["status"] == "refused" else []
     if mode == "bedrock" and tools_eligible and _answer_with_tools(text, persona, guard, flagged):
         return
