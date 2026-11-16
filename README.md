@@ -31,7 +31,7 @@ python -m venv .venv
 .venv/Scripts/streamlit run app/streamlit_app.py   # interface locale, mode hors ligne par défaut
 ```
 
-L'interface s'ouvre sur `http://127.0.0.1:8501`. La configuration `.streamlit/config.toml` limite l'écoute à 127.0.0.1 et masque les traces Python. Sans aucune configuration, elle démarre en mode `offline` : données réelles, aucun appel AWS.
+L'interface s'ouvre sur `http://127.0.0.1:8501`. Pour limiter l'écoute à la machine locale, ajouter `--server.address 127.0.0.1` à la commande (le lanceur `scripts/run_app_bedrock.sh` le fait toujours). La configuration `.streamlit/config.toml` masque les traces Python. Sans aucune configuration, elle démarre en mode `offline` : données réelles, aucun appel AWS.
 
 ## Modes d'exécution
 
@@ -190,6 +190,7 @@ tests/            Tests automatisés (aucun appel AWS)
 - [docs/user_stories.md](docs/user_stories.md) : user stories du MVP et critères d'acceptation.
 - [docs/evidence_keys.md](docs/evidence_keys.md) : preuves produites (clés, unités, sources, limites).
 - [docs/aws_setup.md](docs/aws_setup.md) : mise en place AWS, garde-fou, permissions.
+- [docs/deployment.md](docs/deployment.md) : déploiement de l'interface hébergée (mode hors ligne), gel et retour arrière.
 - [docs/grounding_diagnosis.md](docs/grounding_diagnosis.md) : diagnostic et mesures du contrôle d'ancrage.
 - [docs/ui_spec.md](docs/ui_spec.md) : spécification de l'interface.
 - [docs/data_review.md](docs/data_review.md) : revue des données et sources complémentaires.
