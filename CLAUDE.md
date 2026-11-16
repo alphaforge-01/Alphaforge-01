@@ -31,7 +31,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | --- | --- | --- | --- |
 | Planning a feature or architecture | `planner` | Fable | high |
 | Building a feature | main session | Sonnet | medium |
-| UI, UX and frontend | `frontend-dev` | Opus | medium |
+| UI, UX and frontend | `frontend-dev` | Sonnet | medium |
 | AWS, Bedrock, Guardrails, IAM, credentials | `aws-integration` | Opus | xhigh |
 | Codebase search, data lookups, renames, boilerplate | `explorer` | Haiku | low |
 | Writing and running tests | `test-writer` | Sonnet | low |
