@@ -11,7 +11,10 @@ from components.style import html
 
 
 def render_header(mode: str, profile_name: Optional[str], idea_text: Optional[str]) -> None:
-    """Ligne compacte : marque à gauche, contexte actif (mode, profil, idée) à droite (US-15)."""
+    """Contexte actif (mode, profil, idée) en une pastille groupée dans la barre du haut (US-15).
+
+    La marque vit dans la barre de navigation du haut (navigation.render_top_nav).
+    """
     chips = (
         (texts.HEADER_MODE, texts.MODE_LABELS.get(mode, mode)),
         (texts.HEADER_PROFILE, profile_name or texts.HEADER_NONE),
@@ -20,9 +23,7 @@ def render_header(mode: str, profile_name: Optional[str], idea_text: Optional[st
     chips_html = "".join(
         f'<span class="af-chip">{escape(label)} : <b>{escape(value)}</b></span>' for label, value in chips)
     html(
-        f'<div class="af-header"><div class="af-brand">{escape(texts.BRAND)}'
-        f'<span>{escape(texts.BRAND_TAGLINE)}</span></div>'
-        f'<div class="af-chips">{chips_html}</div></div>'
+        f'<div class="af-header"><div class="af-chips">{chips_html}</div></div>'
     )
 
 

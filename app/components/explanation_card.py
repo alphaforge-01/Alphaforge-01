@@ -15,11 +15,13 @@ n'ajoute ni texte financier ni chiffre.
 - Données manquantes : sans dossier (`brief`) ou si les sections ne peuvent pas être construites,
   la carte retombe sur le texte Markdown déjà rendu, sans titre répété.
 
-Ce module n'est branché dans aucune page : l'interface v2 reste désactivée.
+Branchée dans l'onglet "Explication complète" des réponses (explanation_panel.render_explanation).
+Les intertitres sont des blocs HTML à classe (af-expl-h) : la feuille de style les met en forme.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+from html import escape
 from typing import Any, List, Mapping, Optional, Tuple
 
 import pandas as pd
@@ -29,6 +31,7 @@ import ui_labels as labels
 from alphaforge.explanation_rendering import CheckRow, RenderedSections, render_sections
 from components.cards import status_style
 from components.explanation_panel import render_origin
+from components.style import html
 from formatting import escape_dollars
 
 LEVELS = ("novice", "pro")
@@ -118,8 +121,13 @@ def _text(markdown: str) -> None:
     st.markdown(escape_dollars(markdown))
 
 
+def _heading(title: str) -> None:
+    """Intertitre de section (mise en forme par la classe af-expl-h)."""
+    html(f'<div class="af-expl-h">{escape(title, quote=False)}</div>')
+
+
 def _render_header(explanation: Mapping[str, Any], level: str) -> None:
-    st.markdown(f"**{labels.EXPL_TITLE}**")
+    _heading(labels.EXPL_TITLE)
     if level in labels.EXPL_LEVEL_BADGE:
         st.badge(labels.EXPL_LEVEL_BADGE[level], color="blue", help=labels.EXPL_LEVEL_HELP)
     if isinstance(explanation.get("output"), Mapping):
@@ -139,9 +147,9 @@ def _render_profile_context(sections: RenderedSections) -> None:
 def _render_factors(sections: RenderedSections) -> None:
     if not sections.factors:
         return
-    st.markdown(f"**{labels.EXPL_FACTORS_TITLE}**")
-    for factor in sections.factors:
-        with st.container(border=True):
+    _heading(labels.EXPL_FACTORS_TITLE)
+    for position, factor in enumerate(sections.factors):
+        with st.container(key=f"af-expl-factor-{position}"):
             if factor.status:
                 style = status_style(factor.status)
                 st.badge(style.label, color=style.color, icon=style.icon, help=style.help)
@@ -151,7 +159,7 @@ def _render_factors(sections: RenderedSections) -> None:
 def _render_counterfactual(sections: RenderedSections) -> None:
     if not sections.counterfactual:
         return
-    st.markdown(f"**{labels.EXPL_COUNTERFACTUAL_TITLE}**")
+    _heading(labels.EXPL_COUNTERFACTUAL_TITLE)
     _text(sections.counterfactual)
     for item in sections.counterfactual_items:
         _text(f"- {item.label} : {item.text}")
@@ -192,11 +200,12 @@ def _render_glossary(sections: RenderedSections) -> None:
 def _render_limits(blocks: WarningBlocks) -> None:
     if not blocks.limits and not blocks.limits_context:
         return
-    st.markdown(f"**{labels.EXPL_LIMITS_TITLE}**")
+    _heading(labels.EXPL_LIMITS_TITLE)
     if blocks.limits_context:
         _text(blocks.limits_context)
-    for limit_id, text in blocks.limits:
-        _text(f"- **{limit_id}** : {text}")
+    with st.container(key="af-expl-limits"):
+        for limit_id, text in blocks.limits:
+            _text(f"- **{limit_id}** : {text}")
 
 
 def _render_plain(explanation: Mapping[str, Any]) -> None:
@@ -214,7 +223,7 @@ def _render_plain(explanation: Mapping[str, Any]) -> None:
 
 def render_explanation_card(explanation: Optional[Mapping[str, Any]]) -> None:
     """Affiche une explication (`ExplanationResult`) en sections. Sans explication : "Non disponible"."""
-    with st.container(border=True):
+    with st.container(key="af-expl-card"):
         if not isinstance(explanation, Mapping):
             st.caption(labels.EXPL_NOT_AVAILABLE)
             return
@@ -227,20 +236,21 @@ def render_explanation_card(explanation: Optional[Mapping[str, Any]]) -> None:
             return
         blocks = warning_blocks(sections)
         if blocks.disclaimers:
-            with st.container(border=True):
+            with st.container(key="af-expl-warnings"):
                 st.caption(labels.EXPL_WARNINGS_TITLE)
                 for text in blocks.disclaimers:
                     _text(f"- {text}")
         if sections.idea_line:
             st.caption(escape_dollars(sections.idea_line))
         if sections.summary:
-            st.markdown(f"**{labels.EXPL_SUMMARY_TITLE}**")
-            _text(sections.summary)
+            _heading(labels.EXPL_SUMMARY_TITLE)
+            with st.container(key="af-expl-summary"):
+                _text(sections.summary)
         _render_profile_context(sections)
         _render_factors(sections)
         _render_counterfactual(sections)
         if sections.variants:
-            st.markdown(f"**{labels.EXPL_VARIANTS_TITLE}**")
+            _heading(labels.EXPL_VARIANTS_TITLE)
             _text(sections.variants)
         _render_checks(sections, blocks)
         _render_evidence(sections)

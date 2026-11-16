@@ -31,7 +31,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | --- | --- | --- | --- |
 | Planning a feature or architecture | `planner` | Fable | high |
 | Building a feature | main session | Sonnet | medium |
-| UI, UX and frontend | `frontend-dev` | Sonnet | medium |
+| UI, UX and frontend (regular changes) | main session | Sonnet | medium |
+| Full redesign of a page or flow (only when asked) | `frontend-dev` | Sonnet | medium |
 | AWS, Bedrock, Guardrails, IAM, credentials | `aws-integration` | Opus | xhigh |
 | Codebase search, data lookups, renames, boilerplate | `explorer` | Haiku | low |
 | Writing and running tests | `test-writer` | Sonnet | low |
@@ -39,7 +40,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Security and compliance audit (rules 6 to 8) | `security-auditor` | Fable | xhigh |
 | Code review before committing a feature | `code-reviewer` | Opus | high |
 
-Run `planner` before any non-trivial feature, `code-reviewer` before committing a feature, and `security-auditor` before pushes touching AWS or data sources. Skip delegation for trivial tasks where it costs more than it saves. Relay subagent results to the user, since they do not see them.
+UI changes (text, layout, CSS, components, small flows) are done directly in the main session, with headless `streamlit.testing` checks rather than screenshots unless a visual check is needed: re-delegating small UI edits costs far more tokens than doing them. Use `frontend-dev` only for a full page or flow redesign, or when the user asks for it. Run `planner` before any non-trivial feature, `code-reviewer` before committing a feature, and `security-auditor` before pushes touching AWS or data sources. Skip delegation for trivial tasks where it costs more than it saves. Relay subagent results to the user, since they do not see them.
 10. Branches: never commit directly to `main`; it only receives merged pull requests. Start every piece of work on its own branch created from an up-to-date `main` (`git switch main && git pull && git switch -c <branch>`). Branch names reuse the commit types: `<type>/<short-description>` in English kebab-case, e.g. `feat/profile-builder`, `fix/fx-conversion`, `docs/use-case-decision`, `data/esg-evidence`, `chore/branch-workflow`. One branch per topic; keep it short-lived. Push with `git push -u origin <branch>` and merge into `main` through a GitHub pull request (title follows rule 3, description in French, no AI attribution per rule 2). Never force-push `main`; never rewrite history on a branch others use. If you find yourself on `main` with uncommitted work, create the branch before committing.
 11. Guardrail enforcement: if a proposal, whether from the user, a teammate, a subagent or Claude itself, would go against any rule in this file (rules 1 to 10 and the hard constraints), Claude must not implement it. Claude says so explicitly and up front, names the rule that is violated, explains why in a sentence or two, and proposes the closest compliant alternative. This holds even if the request is phrased as a quick test, an example or a temporary shortcut. Only the user can change a rule, by editing this file; Claude never works around one silently.
 

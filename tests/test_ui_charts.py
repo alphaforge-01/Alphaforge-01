@@ -251,3 +251,35 @@ def test_charts_module_is_not_wired_to_state_or_data():
     source = (APP_DIR / "components" / "charts.py").read_text(encoding="utf-8")
     for forbidden in ("session", "data_source", "boto3", "requests", "random", "numpy"):
         assert forbidden not in source
+
+
+# --- Graphique circulaire du portefeuille (app/components/portfolio_chart.py) -------------
+
+def _rows(count):
+    return [{"ticker": f"T{i}", "name": f"Titre {i}", "value": 0.1 if i < 4 else 0.05,
+             "display": "10 %" if i < 4 else "5 %"} for i in range(count)]
+
+
+def test_fold_small_keeps_eight_positions_as_is():
+    from components import portfolio_chart as pc
+    rows = _rows(8)
+    assert pc._fold_small(rows) is rows
+
+
+def test_fold_small_groups_the_smallest_beyond_eight():
+    from components import portfolio_chart as pc
+    folded = pc._fold_small(_rows(11))
+    assert len(folded) == len(pc.CATEGORICAL)
+    others = folded[-1]
+    assert others["ticker"] == "Autres (4)"
+    assert others["name"] == "T7, T8, T9, T10"
+    assert others["value"] == pytest.approx(0.2)
+    assert others["display"] == "20 %"
+
+
+def test_composition_chart_uses_gray_for_others():
+    from components import portfolio_chart as pc
+    spec = pc._composition_chart(_rows(11)).to_dict()
+    colors = spec["layer"][0]["encoding"]["color"]["scale"]["range"]
+    assert len(colors) == len(pc.CATEGORICAL)
+    assert colors[-1] == pc.OTHERS_COLOR

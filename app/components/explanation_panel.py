@@ -11,16 +11,7 @@ from typing import Any, Mapping
 import streamlit as st
 
 import ui_texts as texts
-from formatting import escape_dollars
 from components.evidence import ProofContext, display, render_proof
-
-
-def _without_title(markdown: str) -> str:
-    """Retire le titre H1 du texte rendu : la section a déjà son titre."""
-    lines = markdown.splitlines()
-    if lines and lines[0].startswith("# "):
-        return "\n".join(lines[1:]).lstrip("\n")
-    return markdown
 
 
 def subject_label(subject: str) -> str:
@@ -76,6 +67,7 @@ def render_origin(explanation: Mapping[str, Any]) -> None:
 
 
 def render_explanation(explanation: Mapping[str, Any], result: Mapping[str, Any], ctx: ProofContext) -> None:
-    with st.container(border=True):
-        st.markdown(escape_dollars(_without_title(explanation["rendered_markdown"])))
+    """Explication complète en sections (carte structurée), puis les preuves cliquables."""
+    from components.explanation_card import render_explanation_card  # import local : la carte importe ce module
+    render_explanation_card(explanation)
     render_cited_evidence(explanation, result, ctx)

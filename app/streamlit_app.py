@@ -3,8 +3,8 @@
 Lancer depuis la racine du projet :
     streamlit run app/streamlit_app.py
 
-Ce fichier pose le cadre commun à toutes les pages : thème, barre latérale
-(navigation, style d'explication, mode replié dans les paramètres avancés),
+Ce fichier pose le cadre commun à toutes les pages : thème, barre de navigation du haut
+et menu de paramètres (style d'explication, mode, trace de démo),
 en-tête compact et bandeau de données d'essai. Chaque page vit dans app/views/ et suit l'ordre de la démo :
 accueil, simulation (conversation et réglages manuels), garde-fou, sources. La logique
 métier reste dans src/alphaforge/ : l'interface lit les objets du contrat par
@@ -27,7 +27,7 @@ import data_source  # noqa: E402
 import navigation  # noqa: E402
 import session  # noqa: E402
 import ui_texts as texts  # noqa: E402
-from components import banners, style  # noqa: E402
+from components import banners, conversation, style  # noqa: E402
 
 
 def render_bedrock_status() -> None:
@@ -45,26 +45,26 @@ def render_bedrock_status() -> None:
         st.warning(texts.SIDEBAR_BEDROCK_FALLBACK)
 
 
-def render_sidebar_advanced() -> None:
+def render_settings(menu) -> None:
     """Rendu avant toute donnée : le mode reste modifiable même si tout le reste échoue (US-15).
 
-    Replié par défaut dans "Paramètres avancés" ; ouvert d'office hors du mode hors ligne,
-    pour que le mode actif reste visible (il l'est aussi dans l'en-tête).
+    Vit dans le menu de l'icône de paramètres (barre du haut) ; le mode actif reste visible
+    dans l'en-tête.
     """
-    with st.sidebar:
-        with st.expander(texts.SIDEBAR_ADVANCED, icon=":material/settings:",
-                         expanded=st.session_state.get("mode", "offline") != "offline"):
-            st.radio(texts.SIDEBAR_MODE_LABEL, options=data_source.MODES, format_func=texts.MODE_LABELS.get,
-                     key="mode", on_change=session.on_mode_change, help=texts.SIDEBAR_MODE_HELP)
-            if st.session_state.mode == "bedrock":
-                session.guarded(render_bedrock_status)
+    with menu:
+        st.radio(texts.SIDEBAR_MODE_LABEL, options=data_source.MODES, format_func=texts.MODE_LABELS.get,
+                 key="mode", on_change=session.on_mode_change, help=texts.SIDEBAR_MODE_HELP)
+        if st.session_state.mode == "bedrock":
+            session.guarded(render_bedrock_status)
+        st.toggle(texts.SHOW_TRACE_LABEL, key=conversation.SHOW_TRACE_KEY, help=texts.SHOW_TRACE_HELP)
+        navigation.render_check_links()
 
 
 LEVEL_WIDGET_KEY = "level_choice"
 
 
 def render_sidebar_level() -> None:
-    """Style d'explication, accessible sur chaque page sauf l'accueil, qui a son propre contrôle.
+    """Style d'explication, accessible sur chaque page depuis le menu des paramètres avancés.
 
     Changer de style ne relance que l'explicateur.
     """
@@ -90,18 +90,21 @@ def main() -> None:
     style.inject()
 
     page = navigation.build()
-    # Place du style d'explication réservée au-dessus des paramètres avancés, rendus avant toute donnée.
-    level_slot = st.sidebar.container()
-    render_sidebar_advanced()
+    settings_menu, context_slot = navigation.render_top_nav(navigation.current_key(page),
+                                              has_profile=bool(st.session_state.get("profile_id")))
+    # Place du style d'explication réservée en tête du menu de paramètres, rendu avant toute donnée.
+    level_slot = settings_menu.container()
+    render_settings(settings_menu)
     session.load_personas()
     session.guarded(lambda: session.resolve_level(session.available_profiles()))
-    # L'accueil porte son propre choix d'explication : pas de doublon dans la barre latérale.
-    if page.title != texts.PAGE_NAMES["home"]:
-        with level_slot:
-            session.guarded(render_sidebar_level)
+    # Le style d'explication reste réglable dans le menu sur toutes les pages, accueil compris :
+    # les deux contrôles de l'accueil lisent et écrivent le même st.session_state.level.
+    with level_slot:
+        session.guarded(render_sidebar_level)
 
     # Au-dessus de chaque page : avertissement toujours visible (US-12) et mode actif (US-15).
-    session.guarded(render_header)
+    with context_slot:
+        session.guarded(render_header)
     banners.render_disclaimer()
     # Rempli après la page : un résultat is_fixture peut venir de n'importe quel mode.
     fixture_slot = st.empty()

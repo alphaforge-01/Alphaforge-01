@@ -14,13 +14,12 @@ DISCLAIMER = (
     "Simulation éducative, pas un conseil financier personnalisé. "
     "Profils, portefeuilles et montants fictifs."
 )
-DISCLAIMER_SHORT = "Simulation fictive, pas un conseil"  # puce toujours visible ; DISCLAIMER au survol
+DISCLAIMER_SHORT = "Une simulation fictive et éducative, pas un conseil personnalisé"  # puce toujours visible ; DISCLAIMER au survol
 FIXTURE_BANNER ="Données d'essai : chiffres inventés, ils ne décrivent aucun marché."
 NOT_AVAILABLE = "non disponible"
 
 # --- Navigation ----------------------------------------------------------------
-NAV_JOURNEY = "Parcours"
-NAV_CHECKS = "Vérifier"
+NAV_CHECKS = "Vérifications (démo)"
 PAGE_NAMES = {
     "home": "Accueil",
     "simulation": "Simulation",
@@ -31,7 +30,7 @@ PAGE_NAMES = {
 PAGE_INTROS = {
     "home": "Testez une idée de placement contre un profil d'investisseur fictif, avec chaque chiffre vérifiable.",
     "simulation": "Décrivez une idée ou réglez-la à la main : l'agent vérifie sa cohérence avec le profil, il ne recommande rien.",
-    "custom": "Répondez par cases et curseurs : aucune donnée personnelle n'est demandée.",
+    "custom": "Quatre questions suffisent. L'outil en tire des règles claires, puis met votre idée à l'épreuve.",
     "guardrail": "Requêtes prédéfinies : le garde-fou doit laisser passer les unes et refuser les autres.",
     "sources": "D'où viennent les données et ce que les chiffres ne disent pas.",
 }
@@ -43,7 +42,7 @@ PROFILE_NOT_IN_MODE = "Ce profil n'existe pas dans ce mode de données. Choisiss
 # --- Accueil ----------------------------------------------------------------------
 HOME_TITLE = "Votre idée de placement colle-t-elle à votre profil ?"
 HOME_SUBTITLE = (
-    "Choisissez un investisseur fictif, proposez une idée, et voyez pourquoi, "
+    "Mettez la même idée à l'épreuve de trois investisseurs fictifs, "
     "chiffres et sources à l'appui."
 )
 # Trois étapes du parcours : (titre, détail).
@@ -53,8 +52,6 @@ HOME_STEPS = (
     ("Comprendre le verdict", "Statut, chiffres, sources, hypothèses et limites."),
 )
 HOME_STEPS_LABEL = "Comment ça marche"
-HOME_PROFILES_TITLE = "Même idée, profils différents"
-HOME_PROFILES_HINT = "Chaque profil réagit autrement à la même idée. Choisissez celui à mettre à l'épreuve."
 HOME_TRY_WITH = "Essayer avec {name}"
 HOME_CONTINUE_WITH = "Continuer avec {name}"
 HOME_ACTIVE_BADGE = "Profil actif"
@@ -62,19 +59,25 @@ HOME_TESTS_LABEL = "Ce que ce profil teste"
 # Ce que chaque persona du datathon met à l'épreuve (brief officiel, section des personas).
 PERSONA_TESTS = {
     "robert": "Tenté par un titre à la mode. L'outil doit signaler la tension, pas acquiescer.",
-    "amira": "Risque élevé ne veut pas dire risque illimité. La diversification compte encore.",
-    "mateo": "Ses valeurs comptent autant que le rendement. Sans donnée ESG vérifiée, l'outil le signale au lieu de conclure.",
+    "amira": "Risque élevé ne veut pas dire risque illimité. La diversification compte.",
+    "mateo": "Ses valeurs comptent autant que le rendement. Sans donnée ESG vérifiée, l'outil le dit.",
 }
+HOME_OBJECTIVE_LABEL = "Son objectif"
 HOME_CUSTOM_LINK = "Ou créer votre propre profil fictif"
-HOME_LEVEL_TITLE = "Explications"
+HOME_LEVEL_TITLE = "Votre aisance avec les placements ?"
+# Accueil : le visiteur parle de lui ; la valeur interne reste novice ou pro (explications simples ou détaillées).
+HOME_COMFORT_LABELS = {
+    "novice": "Je débute",
+    "pro": "Je m'y connais",
+}
 HOME_LEVEL_HELP = (
     "Seul le texte change : chiffres, statuts et sources restent identiques. "
-    "Modifiable à tout moment dans la barre latérale."
+    "Modifiable à tout moment dans le menu de paramètres, en haut à droite."
 )
-HOME_LEVEL_DEFAULT = "Sans choix, le style suit celui prévu pour le profil choisi."
+HOME_LEVEL_DEFAULT = "Les explications s'adaptent à votre réponse. Sans réponse, elles suivent le profil choisi."
 HOME_LEVEL_DESCRIPTIONS = {
-    "novice": "Simples : phrases courtes, une image pour chaque notion, sans jargon.",
-    "pro": "Détaillées : vocabulaire précis, mesures et méthode, plus concis.",
+    "novice": "Explications simples : phrases courtes, une image par notion, sans jargon.",
+    "pro": "Explications détaillées : vocabulaire précis, mesures et méthode.",
 }
 HOME_PREVIEW_TITLE = "Exemple de réponse, explications {level}"
 HOME_PREVIEW_SOURCE = (
@@ -90,11 +93,17 @@ EXPLANATION_STYLE_LABELS = {
 # --- Simulation et conversation -------------------------------------------------------
 CHART_TITLE = "Portefeuille fictif de départ : {name}"
 CHART_CAPTION = "Poids actuels des positions, lus dans le registre de la radiographie. Survolez une barre pour le détail."
+CHART_VIEW_LABEL = "Vue du portefeuille"
+CHART_OTHERS = "Autres ({count})"
+CHART_VIEW_LABELS = {"bars": "Barres", "composition": "Composition"}
+CHART_COMPOSITION_CAPTION = "Part de chaque position dans le total, lue dans le registre de la radiographie."
 CHART_TOOLTIP_TICKER = "Titre"
 CHART_TOOLTIP_NAME = "Nom"
 CHART_TOOLTIP_WEIGHT = "Poids"
-SIM_SHOW_XRAY = "Afficher la radiographie du portefeuille"
-SIM_MANUAL = "Réglages manuels"
+SIM_HERO_TITLE = "Simulation pour {name}"
+SIM_CHANGE_PROFILE = "Changer de profil"
+SIM_TABS = ("Portefeuille", "Radiographie", "Réglages manuels")
+SIM_CHAT_TITLE = "Conversation"
 CHAT_PLACEHOLDER = "Ex. : Et si je mettais 25 % dans TSLA ?"
 CHAT_WELCOME = (
     "Décrivez une idée à simuler sur ce portefeuille fictif : un actif, un poids visé, "
@@ -208,13 +217,13 @@ CHAT_CLARIFY = {
 }
 CHAT_CLARIFY_MANUAL = "Vous pouvez aussi passer par les réglages manuels."
 CHAT_KEY_POINTS = "Points clés (cliquez sur un chiffre pour sa preuve)"
-CHAT_SHOW_DETAILS = "Voir le détail : faits, hypothèses, simulation, sources, trace"
+CHAT_SHOW_DETAILS = "Voir le détail : faits, hypothèses, simulation et explication complète"
 CHAT_TAB_DETAILS = "Faits, hypothèses, simulation"
 CHAT_TAB_TEXT = "Explication complète"
-CHAT_TAB_SOURCES = "Sources et limites"
 CHAT_TAB_TRACE = "Trace"
-CHAT_SOURCES = "Sources citées"
-CHAT_LIMITS = "Limites et incertitudes"
+SHOW_TRACE_LABEL = "Afficher la trace des agents (démo)"
+SHOW_TRACE_HELP = ("Ajoute l'onglet Trace à chaque réponse : outils appelés, contrôles, garde-fou "
+                   "et ses interventions, contrôles de simulation.")
 
 # --- En-tête et barre latérale ---------------------------------------------------
 HEADER_MODE = "Mode"
@@ -327,11 +336,20 @@ FICTIONAL_BADGE = "Fictif"
 PERSONA_AGE = "{age} ans"
 PERSONA_RISK = "Risque"
 PERSONA_HORIZON = "Horizon"
-PERSONA_OBJECTIVE = "Objectif"
 PERSONA_EXPERIENCE = "Expérience"
 PERSONA_CAPITAL = "Capital fictif"
 
+CUSTOM_HERO_TITLE = "Dessinez votre investisseur fictif"
 CUSTOM_REMINDER = "Aucune donnée personnelle : ni nom, ni revenu, ni compte."
+CUSTOM_STEPS = ("Votre projet", "Votre rapport au risque", "Vos préférences", "Point de départ")
+CUSTOM_PREVIEW_TITLE = "Récapitulatif"
+CUSTOM_ESG_SHORT = "ESG"
+CUSTOM_CRYPTO_SHORT = "Crypto"
+CUSTOM_CRYPTO_YES = "Permise"
+CUSTOM_CRYPTO_NO = "Exclue"
+CUSTOM_CAPITAL_SHORT = "Capital fictif"
+CUSTOM_RULES_EXPANDER = "Règles produites ({count})"
+CUSTOM_BLOCKED = "Corrigez le point signalé pour utiliser ce profil."
 CUSTOM_OBJECTIVE = "Objectif"
 CUSTOM_HORIZON = "Horizon (années)"
 CUSTOM_RISK = "Tolérance au risque"
@@ -344,11 +362,9 @@ CUSTOM_CAP = "Plafond par titre (%)"
 CUSTOM_CAPITAL = "Capital fictif (CAD)"
 CUSTOM_CAPITAL_HELP = "Montant inventé, sert seulement à exprimer les pertes historiques en dollars."
 CUSTOM_PORTFOLIO = "Portefeuille de départ"
-CUSTOM_RULES_TITLE = "Règles produites"
-CUSTOM_USE = "Utiliser ce profil"
-CUSTOM_UPDATE = "Mettre à jour le profil"
-CUSTOM_ACTIVE = "Profil construit actif."
-CUSTOM_DRAFT_CHANGED = "Réponses modifiées : cliquez sur \"Mettre à jour le profil\" pour les appliquer."
+CUSTOM_USE = "Utiliser ce profil et simuler"
+CUSTOM_UPDATE = "Mettre à jour et simuler"
+CUSTOM_DRAFT_CHANGED = "Réponses modifiées : cliquez sur \"Mettre à jour et simuler\" pour les appliquer."
 CUSTOM_DISPLAY_NAME = "Profil construit"
 
 # Liste fermée : pas de texte libre dans le MVP (US-02). À remplacer par la

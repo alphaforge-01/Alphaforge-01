@@ -8,13 +8,14 @@ construit a sa propre page. Chaque page est un fichier de
 from __future__ import annotations
 
 from dataclasses import dataclass
+from html import escape
 from typing import Dict, Optional, Tuple
 
 import streamlit as st
 
 import ui_texts as texts
 from components.banners import render_page_heading
-from components.style import NEXT_KEY
+from components.style import NEXT_KEY, html
 
 
 @dataclass(frozen=True)
@@ -35,8 +36,13 @@ CHECKS: Tuple[PageSpec, ...] = (
     PageSpec("sources", "views/sources_page.py", ":material/menu_book:", "sources"),
 )
 ALL_PAGES: Dict[str, PageSpec] = {spec.key: spec for spec in JOURNEY + CHECKS}
-# Bouton "Étape suivante" : le fil de la démo.
-_NEXT = {"home": "simulation", "custom": "simulation", "simulation": "guardrail", "guardrail": "sources"}
+# Pages ouvertes par le choix d'un profil : dans la barre du haut, simple repère quand on y est,
+# lien seulement une fois un profil choisi (pour y revenir), absentes sinon.
+INDICATOR_ONLY = frozenset({"simulation"})
+# Action à part dans la barre (bouton à contour), distincte des pages du parcours.
+NAV_ACTION = "custom"
+# Bouton "Étape suivante" : le fil du parcours. Les pages de vérification sont hors du parcours.
+_NEXT = {"home": "simulation", "custom": "simulation"}
 
 
 def _page(spec: PageSpec, default: bool = False):
@@ -45,11 +51,59 @@ def _page(spec: PageSpec, default: bool = False):
 
 
 def build():
-    """Navigation de la barre latérale. Les pages sont recréées à chaque exécution."""
-    return st.navigation({
-        texts.NAV_JOURNEY: [_page(spec, default=index == 0) for index, spec in enumerate(JOURNEY)],
-        texts.NAV_CHECKS: [_page(spec) for spec in CHECKS],
-    })
+    """Toutes les pages, sans le menu automatique de Streamlit (recréées à chaque exécution).
+
+    Le visiteur ne voit que le parcours (`render_top_nav`). Les pages de vérification restent
+    enregistrées : le garde-fou est lié depuis le menu de paramètres (`render_check_links`),
+    sources et méthode n'a pas de lien (adresse /sources, pour la démo et le jury).
+    """
+    pages = [_page(spec, default=index == 0) for index, spec in enumerate(JOURNEY)]
+    pages += [_page(spec) for spec in CHECKS]
+    return st.navigation(pages, position="hidden")
+
+
+def current_key(page) -> Optional[str]:
+    """Clé de la page en cours, retrouvée par son titre."""
+    return next((key for key, name in texts.PAGE_NAMES.items() if name == page.title), None)
+
+
+def render_top_nav(current: Optional[str] = None, has_profile: bool = False):
+    """Barre horizontale en haut de chaque page : marque, parcours, puis une icône de paramètres.
+
+    La simulation s'ouvre en choisissant un profil : dans la barre, c'est un repère non
+    cliquable quand on y est, un lien quand un profil est déjà choisi, rien sinon. Renvoie le conteneur du menu de
+    paramètres : l'appelant y place les réglages (pas de barre latérale).
+
+    Renvoie aussi la place du contexte actif (mode, profil, idée), à droite de la marque :
+    l'appelant la remplit une fois les données chargées.
+    """
+    with st.container(horizontal=True, vertical_alignment="center", key="af-topnav"):
+        html(f'<div class="af-brand">{escape(texts.BRAND)}<span>{escape(texts.BRAND_TAGLINE)}</span></div>')
+        context_slot = st.container(key="af-nav-context")
+        st.space("stretch")
+        for spec in JOURNEY:
+            if spec.key in INDICATOR_ONLY and spec.key == current:
+                html(f'<span class="af-nav-here" aria-current="page">{escape(texts.PAGE_NAMES[spec.key])}</span>')
+            elif spec.key == NAV_ACTION:
+                with st.container(key="af-nav-action", width="content"):
+                    st.page_link(spec.path, label=texts.PAGE_NAMES[spec.key], icon=":material/add:")
+            elif spec.key not in INDICATOR_ONLY or has_profile:
+                st.page_link(spec.path, label=texts.PAGE_NAMES[spec.key])
+        settings = st.popover(texts.SIDEBAR_ADVANCED, icon=":material/settings:", type="tertiary",
+                              help=texts.SIDEBAR_ADVANCED, key="af-settings")
+    return settings, context_slot
+
+
+# Liens du menu de paramètres : le garde-fou seulement. Sources et méthode reste une page
+# enregistrée (adresse /sources), sans lien : l'explication complète cite déjà sources et limites.
+CHECK_LINKS = ("guardrail",)
+
+
+def render_check_links() -> None:
+    """Liens discrets vers les pages de vérification (à placer dans le menu de paramètres)."""
+    st.caption(texts.NAV_CHECKS)
+    for spec in (ALL_PAGES[key] for key in CHECK_LINKS):
+        st.page_link(spec.path, label=texts.PAGE_NAMES[spec.key], icon=spec.icon)
 
 
 def heading(key: str) -> None:

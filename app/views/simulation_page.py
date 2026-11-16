@@ -1,4 +1,7 @@
-"""Simulation : radiographie repliable, réglages manuels et conversation avec l'agent (US-03 à US-13).
+"""Simulation : en-tête du profil, contexte en onglets et conversation avec l'agent (US-03 à US-13).
+
+Mise en page : une colonne centrée. En haut, le profil actif et la progression ; puis une
+carte à trois onglets (portefeuille, radiographie, réglages manuels) ; puis la conversation.
 
 Deux façons de soumettre une idée, un seul état : le champ de saisie (langage
 naturel, filtré par le garde-fou puis traduit par des règles déterministes) et
@@ -7,6 +10,7 @@ pipeline (get_analysis puis get_explanation).
 """
 from __future__ import annotations
 
+from html import escape
 from typing import Any, Dict, Mapping, Optional
 
 import streamlit as st
@@ -15,11 +19,31 @@ import data_source
 import navigation
 import session
 import ui_texts as texts
-from components import conversation, idea_panel, portfolio_chart, xray
-from components.persistence import kept_toggle
+from components import conversation, idea_panel, portfolio_chart, profile_panel, xray
 from components.style import html
+from formatting import format_horizon
 
-SHOW_XRAY_KEY = "show_xray"
+
+def render_profile_header(active: session.Active) -> None:
+    """Bande du profil actif : initiale en couleur, titre, objectif et repères, lien pour changer."""
+    profile = active.profile
+    profile_id = st.session_state.profile_id or ""
+    accent = profile_panel.PERSONA_ACCENTS.get(profile_id, profile_panel.CUSTOM_ACCENT)
+    name = session.display_name(profile)
+    tags = (
+        (texts.PERSONA_RISK, texts.RISK_LABELS.get(profile.get("risk_tolerance"), "")),
+        (texts.PERSONA_HORIZON, format_horizon(profile["horizon_years_min"], profile["horizon_years_max"])),
+    )
+    tags_html = "".join(f'<span class="af-pc-tag">{escape(label)} <b>{escape(str(value))}</b></span>'
+                        for label, value in tags if value)
+    with st.container(horizontal=True, vertical_alignment="center", key="sim-head"):
+        html(f'<div class="af-sim-head" style="--af-accent: {accent}">'
+             f'<div class="af-pc-avatar" aria-hidden="true">{escape(name[:1])}</div>'
+             f'<div><h1>{escape(texts.SIM_HERO_TITLE.format(name=name))}</h1>'
+             f'<div class="af-sim-sub">{escape(profile.get("objective", ""))}</div>'
+             f'<div class="af-pc-facts">{tags_html}</div></div></div>')
+        st.space("stretch")
+        navigation.link("home", texts.SIM_CHANGE_PROFILE)
 
 
 def render_progress(active: session.Active) -> None:
@@ -47,8 +71,6 @@ def render_chart(active: session.Active) -> None:
 
 
 def render_xray(active: session.Active) -> None:
-    if not kept_toggle(texts.SIM_SHOW_XRAY, SHOW_XRAY_KEY):
-        return
     xray_data = session.load_xray(active)
     if xray_data is not None:
         ctx = session.proof_context(xray_data["limits"])
@@ -57,11 +79,22 @@ def render_xray(active: session.Active) -> None:
 
 
 def render_manual(active: session.Active) -> None:
-    with st.expander(texts.SIM_MANUAL, icon=":material/tune:"):
-        if active.universe:
-            current_weights = session.current_weight_displays(session.peek_xray(active))
-            idea_panel.render_idea_panel(active.universe, active.portfolio, st.session_state.idea,
-                                         session.submit_idea, current_weights)
+    if active.universe:
+        current_weights = session.current_weight_displays(session.peek_xray(active))
+        idea_panel.render_idea_panel(active.universe, active.portfolio, st.session_state.idea,
+                                     session.submit_idea, current_weights)
+
+
+def render_context(active: session.Active) -> None:
+    """Une carte, trois onglets : le portefeuille d'abord, le reste à un clic."""
+    with st.container(key="sim-context"):
+        chart_tab, xray_tab, manual_tab = st.tabs(list(texts.SIM_TABS))
+        with chart_tab:
+            session.guarded(lambda: render_chart(active))
+        with xray_tab:
+            session.guarded(lambda: render_xray(active))
+        with manual_tab:
+            session.guarded(lambda: render_manual(active))
 
 
 def make_analysis_renderer(active: session.Active):
@@ -104,20 +137,56 @@ def make_analysis_renderer(active: session.Active):
     return render_analysis
 
 
+# Longueur du fil au dernier affichage : un fil plus long signifie un nouvel échange.
+SEEN_CHAT_KEY = "_chat_seen_len"
+_SCROLL_SCRIPT = """<script>(function () {
+  var tries = 0;
+  function go() {
+    var el = document.querySelector(".%s");
+    if (el) { el.scrollIntoView({behavior: "smooth", block: "start"}); }
+    else if (tries++ < 30) { setTimeout(go, 100); }
+  }
+  setTimeout(go, 150);
+})();</script>"""
+
+
+def scroll_to_latest_exchange(history) -> None:
+    """Après un nouvel échange, fait défiler la page jusqu'au dernier message de l'utilisateur,
+    la réponse de l'agent juste dessous. Rien au premier affichage ni quand rien n'a changé."""
+    seen = st.session_state.get(SEEN_CHAT_KEY, len(history))
+    st.session_state[SEEN_CHAT_KEY] = len(history)
+    if len(history) <= seen:
+        return
+    users = [index for index, entry in enumerate(history) if entry.get("role") == "user"]
+    if users:
+        # Script fixe, seule la classe générée par le code (index entier) varie : aucun texte saisi n'y entre.
+        st.html(_SCROLL_SCRIPT % f"st-key-chat-user-{int(users[-1])}", unsafe_allow_javascript=True)
+
+
 def cached_result(entry: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
     """Verdict d'une réponse ancienne, lu à sa propre clé (son profil, son mode), jamais au profil actif."""
     return st.session_state.analysis_cache.get(entry.get("key"))
 
 
 def render() -> None:
-    navigation.heading("simulation")
+    with st.container(key="sim-wrap"):
+        has_profile = _render_page()
+    # Champ de saisie hors de la colonne : au niveau de la page, Streamlit le fixe en bas de
+    # l'écran, visible sans défiler.
+    if has_profile:
+        st.chat_input(texts.CHAT_PLACEHOLDER, key=session.CHAT_INPUT_KEY, on_submit=session.ask)
+
+
+def _render_page() -> bool:
+    """Contenu de la colonne centrée ; False si aucun profil n'est actif."""
     active = session.require_profile()
     if active is None:
-        return
+        return False
+    session.guarded(lambda: render_profile_header(active))
     render_progress(active)
-    session.guarded(lambda: render_chart(active))
-    session.guarded(lambda: render_xray(active))
-    session.guarded(lambda: render_manual(active))
+    render_context(active)
+    html(f'<div class="af-sim-section">{escape(texts.SIM_CHAT_TITLE)}</div>')
+    st.caption(texts.PAGE_INTROS["simulation"])
     history = st.session_state.chat_history
     analyses = [index for index, entry in enumerate(history) if entry.get("type") == "analysis"]
     latest = analyses[-1] if analyses else None
@@ -132,8 +201,9 @@ def render() -> None:
         session.guarded(lambda: conversation.render_entry(
             entry, index, index == latest, render_analysis,
             cached_result, session.submit_idea, session.ask))
-    st.chat_input(texts.CHAT_PLACEHOLDER, key=session.CHAT_INPUT_KEY, on_submit=session.ask)
+    scroll_to_latest_exchange(history)
     navigation.next_step("simulation")
+    return True
 
 
 session.guarded(render)
