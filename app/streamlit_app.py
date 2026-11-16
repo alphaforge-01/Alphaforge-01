@@ -4,8 +4,8 @@ Lancer depuis la racine du projet :
     streamlit run app/streamlit_app.py
 
 Ce fichier pose le cadre commun à toutes les pages : thème, barre latérale
-(navigation, mode, profil actif, avertissement), en-tête compact et bandeau de
-données d'essai. Chaque page vit dans app/views/ et suit l'ordre de la démo :
+(navigation, style d'explication, mode replié dans les paramètres avancés),
+en-tête compact et bandeau de données d'essai. Chaque page vit dans app/views/ et suit l'ordre de la démo :
 accueil, simulation (conversation et réglages manuels), garde-fou, sources. La logique
 métier reste dans src/alphaforge/ : l'interface lit les objets du contrat par
 app/data_source.py et les affiche (docs/ui_spec.md).
@@ -28,7 +28,6 @@ import navigation  # noqa: E402
 import session  # noqa: E402
 import ui_texts as texts  # noqa: E402
 from components import banners, style  # noqa: E402
-from formatting import format_horizon  # noqa: E402
 
 
 def render_bedrock_status() -> None:
@@ -46,44 +45,34 @@ def render_bedrock_status() -> None:
         st.warning(texts.SIDEBAR_BEDROCK_FALLBACK)
 
 
-def render_sidebar_mode() -> None:
-    """Rendu avant toute donnée : le mode reste modifiable même si tout le reste échoue (US-15)."""
+def render_sidebar_advanced() -> None:
+    """Rendu avant toute donnée : le mode reste modifiable même si tout le reste échoue (US-15).
+
+    Replié par défaut dans "Paramètres avancés" ; ouvert d'office hors du mode hors ligne,
+    pour que le mode actif reste visible (il l'est aussi dans l'en-tête).
+    """
     with st.sidebar:
-        st.radio(texts.SIDEBAR_MODE_LABEL, options=data_source.MODES, format_func=texts.MODE_LABELS.get,
-                 key="mode", on_change=session.on_mode_change, help=texts.SIDEBAR_MODE_HELP)
+        with st.expander(texts.SIDEBAR_ADVANCED, icon=":material/settings:",
+                         expanded=st.session_state.get("mode", "offline") != "offline"):
+            st.radio(texts.SIDEBAR_MODE_LABEL, options=data_source.MODES, format_func=texts.MODE_LABELS.get,
+                     key="mode", on_change=session.on_mode_change, help=texts.SIDEBAR_MODE_HELP)
+            if st.session_state.mode == "bedrock":
+                session.guarded(render_bedrock_status)
 
 
 LEVEL_WIDGET_KEY = "level_choice"
 
 
 def render_sidebar_level() -> None:
-    """Niveau d'explication, toujours accessible. Changer de niveau ne relance que l'explicateur."""
-    with st.sidebar:
-        st.session_state[LEVEL_WIDGET_KEY] = st.session_state.level or "novice"
-        st.select_slider(texts.EXPLANATION_LEVEL, options=list(texts.LEVEL_LABELS),
-                         format_func=texts.LEVEL_LABELS.get, key=LEVEL_WIDGET_KEY,
-                         on_change=session.sync_level, args=(LEVEL_WIDGET_KEY,),
-                         help=texts.EXPLANATION_LEVEL_HELP)
+    """Style d'explication, accessible sur chaque page sauf l'accueil, qui a son propre contrôle.
 
-
-def render_sidebar_profile() -> None:
-    with st.sidebar:
-        if st.session_state.mode == "bedrock":
-            render_bedrock_status()
-        persona = session.active_persona()
-        with st.container(border=True):
-            st.caption(texts.SIDEBAR_ACTIVE_PROFILE)
-            if persona is None or st.session_state.level not in texts.LEVEL_LABELS:
-                st.markdown(texts.SIDEBAR_NO_PROFILE)
-                return
-            profile = persona["profile"]
-            st.markdown(
-                f"**{session.display_name(profile)}** ({texts.FICTIONAL_BADGE.lower()})  \n"
-                f"{texts.PERSONA_RISK} : {texts.RISK_LABELS.get(profile['risk_tolerance'], '')}  \n"
-                f"{texts.PERSONA_HORIZON} : "
-                f"{format_horizon(profile['horizon_years_min'], profile['horizon_years_max'])}  \n"
-                f"{texts.SIDEBAR_LEVEL} : {texts.LEVEL_LABELS[st.session_state.level]}"
-            )
+    Changer de style ne relance que l'explicateur.
+    """
+    st.session_state[LEVEL_WIDGET_KEY] = st.session_state.level or "novice"
+    st.select_slider(texts.EXPLANATION_LEVEL, options=list(texts.EXPLANATION_STYLE_LABELS),
+                     format_func=texts.EXPLANATION_STYLE_LABELS.get, key=LEVEL_WIDGET_KEY,
+                     on_change=session.sync_level, args=(LEVEL_WIDGET_KEY,),
+                     help=texts.EXPLANATION_LEVEL_HELP)
 
 
 def render_header() -> None:
@@ -101,11 +90,15 @@ def main() -> None:
     style.inject()
 
     page = navigation.build()
-    render_sidebar_mode()
+    # Place du style d'explication réservée au-dessus des paramètres avancés, rendus avant toute donnée.
+    level_slot = st.sidebar.container()
+    render_sidebar_advanced()
     session.load_personas()
     session.guarded(lambda: session.resolve_level(session.available_profiles()))
-    session.guarded(render_sidebar_level)
-    session.guarded(render_sidebar_profile)
+    # L'accueil porte son propre choix d'explication : pas de doublon dans la barre latérale.
+    if page.title != texts.PAGE_NAMES["home"]:
+        with level_slot:
+            session.guarded(render_sidebar_level)
 
     # Au-dessus de chaque page : avertissement toujours visible (US-12) et mode actif (US-15).
     session.guarded(render_header)

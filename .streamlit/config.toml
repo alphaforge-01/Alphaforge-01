@@ -11,6 +11,8 @@ gatherUsageStats = false
 showErrorDetails = "none"
 # Navigation multipage déclarée par st.navigation dans app/streamlit_app.py.
 showSidebarNavigation = true
+# Barre d'outils réduite : pas de menu "Deploy" ni d'options de développeur.
+toolbarMode = "minimal"
 
 # Thème clair et sobre : bleu profond pour l'action, gris bleutés pour les surfaces.
 # Les couleurs de statut (vert, orange, rouge, gris) restent toujours accompagnées d'un libellé.

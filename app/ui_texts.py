@@ -14,7 +14,8 @@ DISCLAIMER = (
     "Simulation éducative, pas un conseil financier personnalisé. "
     "Profils, portefeuilles et montants fictifs."
 )
-FIXTURE_BANNER = "Données d'essai : chiffres inventés, ils ne décrivent aucun marché."
+DISCLAIMER_SHORT = "Simulation fictive, pas un conseil"  # puce toujours visible ; DISCLAIMER au survol
+FIXTURE_BANNER ="Données d'essai : chiffres inventés, ils ne décrivent aucun marché."
 NOT_AVAILABLE = "non disponible"
 
 # --- Navigation ----------------------------------------------------------------
@@ -40,20 +41,51 @@ NEED_PROFILE = "Choisissez d'abord un profil."
 PROFILE_NOT_IN_MODE = "Ce profil n'existe pas dans ce mode de données. Choisissez-en un autre."
 
 # --- Accueil ----------------------------------------------------------------------
-HOME_PROFILES_TITLE = "Choisir un profil du datathon"
-HOME_CUSTOM_LINK = "Ou créer un profil fictif"
-HOME_LEVEL_TITLE = "Niveau d'explication de l'agent"
-HOME_LEVEL_DESCRIPTIONS = {
-    "novice": "Novice : phrases simples, une image pour chaque notion, sans jargon.",
-    "pro": "Pro : vocabulaire précis, mesures et méthode, plus concis.",
+HOME_TITLE = "Votre idée de placement colle-t-elle à votre profil ?"
+HOME_SUBTITLE = (
+    "Choisissez un investisseur fictif, proposez une idée, et voyez pourquoi, "
+    "chiffres et sources à l'appui."
+)
+# Trois étapes du parcours : (titre, détail).
+HOME_STEPS = (
+    ("Choisir un profil", "Trois investisseurs fictifs, trois rapports au risque."),
+    ("Proposer une idée", "En une phrase ou par réglages, par exemple 25 % dans TSLA."),
+    ("Comprendre le verdict", "Statut, chiffres, sources, hypothèses et limites."),
+)
+HOME_STEPS_LABEL = "Comment ça marche"
+HOME_PROFILES_TITLE = "Même idée, profils différents"
+HOME_PROFILES_HINT = "Chaque profil réagit autrement à la même idée. Choisissez celui à mettre à l'épreuve."
+HOME_TRY_WITH = "Essayer avec {name}"
+HOME_CONTINUE_WITH = "Continuer avec {name}"
+HOME_ACTIVE_BADGE = "Profil actif"
+HOME_TESTS_LABEL = "Ce que ce profil teste"
+# Ce que chaque persona du datathon met à l'épreuve (brief officiel, section des personas).
+PERSONA_TESTS = {
+    "robert": "Tenté par un titre à la mode. L'outil doit signaler la tension, pas acquiescer.",
+    "amira": "Risque élevé ne veut pas dire risque illimité. La diversification compte encore.",
+    "mateo": "Ses valeurs comptent autant que le rendement. Sans donnée ESG vérifiée, l'outil le signale au lieu de conclure.",
 }
-HOME_LEVEL_DEFAULT = "Sans choix, le niveau suit celui du profil choisi."
-HOME_PREVIEW_TITLE = "Exemple de réponse en mode {level}"
-HOME_LEVEL_HOVER_HINT = "Choisissez Novice ou Pro. Survolez un bouton pour voir comment l'agent s'exprime."
+HOME_CUSTOM_LINK = "Ou créer votre propre profil fictif"
+HOME_LEVEL_TITLE = "Explications"
+HOME_LEVEL_HELP = (
+    "Seul le texte change : chiffres, statuts et sources restent identiques. "
+    "Modifiable à tout moment dans la barre latérale."
+)
+HOME_LEVEL_DEFAULT = "Sans choix, le style suit celui prévu pour le profil choisi."
+HOME_LEVEL_DESCRIPTIONS = {
+    "novice": "Simples : phrases courtes, une image pour chaque notion, sans jargon.",
+    "pro": "Détaillées : vocabulaire précis, mesures et méthode, plus concis.",
+}
+HOME_PREVIEW_TITLE = "Exemple de réponse, explications {level}"
 HOME_PREVIEW_SOURCE = (
     "Passage (Résumé) rédigé par l'agent explicateur pour {persona} et l'idée \"25 % dans TSLA\", "
     "modèle {model}, chiffres à la date de la trace. Texte réel, tiré de {source}."
 )
+# Libellés du choix d'explication (valeurs internes novice et pro inchangées).
+EXPLANATION_STYLE_LABELS = {
+    "novice": "Simples",
+    "pro": "Détaillées",
+}
 
 # --- Simulation et conversation -------------------------------------------------------
 CHART_TITLE = "Portefeuille fictif de départ : {name}"
@@ -196,9 +228,7 @@ SIDEBAR_MODE_HELP = (
     "Hors ligne : données réelles, sans agent. Amazon Bedrock : agents et garde-fou "
     "(lancés seulement sur demande, quotas partagés). Données d'essai : chiffres inventés."
 )
-SIDEBAR_ACTIVE_PROFILE = "Profil actif"
-SIDEBAR_NO_PROFILE = "Aucun profil choisi."
-SIDEBAR_LEVEL = "Niveau"
+SIDEBAR_ADVANCED = "Paramètres avancés"
 SIDEBAR_BEDROCK = "État de Bedrock"
 SIDEBAR_BEDROCK_MODELS = "Modèles"
 SIDEBAR_BEDROCK_GUARDRAIL = "Garde-fou"
@@ -257,9 +287,9 @@ ESG_LABELS = {
     "moderate": "Modérée",
     "strong": "Forte",
 }
-LEVEL_LABELS = {
-    "novice": "Novice",
-    "pro": "Pro",
+LEVEL_LABELS = {  # mêmes mots que les contrôles de l'accueil et de la barre latérale
+    "novice": "Simples",
+    "pro": "Détaillées",
 }
 
 ASSET_CLASS_LABELS = {
@@ -300,11 +330,6 @@ PERSONA_HORIZON = "Horizon"
 PERSONA_OBJECTIVE = "Objectif"
 PERSONA_EXPERIENCE = "Expérience"
 PERSONA_CAPITAL = "Capital fictif"
-CHOOSE_THIS_PROFILE = "Choisir ce profil"
-CAROUSEL_PREV = "Profil précédent (flèche gauche)"
-CAROUSEL_NEXT = "Profil suivant (flèche droite)"
-CAROUSEL_POSITION = "Profil {n} sur {total}"
-SELECTED_PROFILE = "Profil choisi"
 
 CUSTOM_REMINDER = "Aucune donnée personnelle : ni nom, ni revenu, ni compte."
 CUSTOM_OBJECTIVE = "Objectif"
@@ -499,7 +524,7 @@ REASON_LABELS = {
 }
 
 # --- Explication (US-10) -------------------------------------------------------
-EXPLANATION_LEVEL = "Niveau d'explication"
+EXPLANATION_LEVEL = "Explications"
 EXPLANATION_LEVEL_HELP = "Seul le texte change : chiffres et statuts restent identiques."
 EXPLANATION_SPINNER = "Rédaction de l'explication..."
 EXPLANATION_RUN = "Rédiger l'explication (niveau {level})"

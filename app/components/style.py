@@ -3,8 +3,8 @@
 Les couleurs de base viennent de .streamlit/config.toml. Ce module ajoute
 seulement : l'en-tête compact, les pastilles de statut (toujours couleur et
 texte), le verdict, les étiquettes des trois zones (faits, hypothèses,
-simulation), des cartes de métriques et des cartes de personas de hauteur
-égale. Les blocs Streamlit
+simulation), des cartes de métriques, l'accueil (titre-promesse, étapes) et
+les cartes de personas côte à côte, de hauteur égale. Les blocs Streamlit
 sont ciblés par la classe `st-key-<clé>` que Streamlit pose sur un conteneur
 qui a une clé.
 """
@@ -35,8 +35,9 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .af-chip { font-size: .78rem; padding: .12rem .6rem; border-radius: 999px;
   background: #eef2f7; border: 1px solid #dbe2ea; color: #1a2332; }
 .af-chip b { font-weight: 600; }
-.af-disclaimer { margin: .45rem 0 .15rem; padding: .35rem .75rem; border-radius: .45rem;
-  font-size: .82rem; background: #fff8e6; border: 1px solid #f0dfa8; color: #5c4700; }
+.af-disclaimer { display: flex; justify-content: flex-end; margin: .3rem 0 .1rem; }
+.af-disclaimer span { font-size: .75rem; padding: .1rem .6rem; border-radius: 999px;
+  background: #f3f6fa; border: 1px solid #dde3ea; color: #3d4a5a; cursor: help; }
 .af-fixture { margin: .25rem 0; padding: .35rem .75rem; border-radius: .45rem;
   font-size: .82rem; background: #fdecea; border: 1px solid #f3c2bd; color: #8a1c12;
   font-weight: 600; }
@@ -95,36 +96,57 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 
 [class*="st-key-card-"] { min-height: 7.4rem; }
 
-/* Carrousel des personas : une carte à la fois, flèches de part et d'autre. */
-[class*="st-key-persona-carousel"] { gap: 1rem; margin: .4rem 0 .2rem; }
-[class*="st-key-persona_prev"] button, [class*="st-key-persona_next"] button {
-  border-radius: 999px; width: 2.6rem; height: 2.6rem; padding: 0; }
-/* Une seule flèche par bouton : l'indication du raccourci clavier (gauche, droite) est masquée,
-   le raccourci reste actif et il est rappelé dans l'info-bulle. */
-[class*="st-key-persona_prev"] kbd, [class*="st-key-persona_next"] kbd { display: none; }
-.af-pc { position: relative; padding: 1.2rem 1.3rem 1rem; border-radius: .9rem; background: #ffffff;
-  border: 1px solid #dbe2ea; border-top: 5px solid var(--af-accent);
-  box-shadow: 0 8px 22px rgba(20, 50, 92, .10); margin-bottom: .6rem; }
-.af-pc-head { display: flex; align-items: center; gap: .85rem; }
-.af-pc-avatar { flex: 0 0 auto; width: 3.1rem; height: 3.1rem; border-radius: 50%; display: flex;
-  align-items: center; justify-content: center; font-size: 1.45rem; font-weight: 700; color: #ffffff;
+/* Accueil : titre-promesse et trois étapes. */
+.af-hero { margin: 1.4rem 0 1.1rem; max-width: 46rem; }
+.af-hero h1 { font-size: 2.3rem; line-height: 1.15; font-weight: 750; color: #14243a; margin: 0 0 .55rem;
+  padding: 0; letter-spacing: -0.02em; }
+.af-hero p { font-size: 1.08rem; color: #46505e; margin: 0; line-height: 1.5; }
+.af-steps { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem;
+  margin: 0 0 1.8rem !important; padding: 0 !important; }
+.af-step { display: flex; gap: .7rem; align-items: flex-start; padding: .75rem .9rem; border-radius: .7rem;
+  background: #f5f7fa; margin: 0 !important; }
+.af-step-n { flex: 0 0 auto; width: 1.7rem; height: 1.7rem; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: .85rem; font-weight: 700;
+  background: #1d4e89; color: #ffffff; }
+.af-step-title { font-weight: 650; color: #1a2332; font-size: .95rem; }
+.af-step-text { font-size: .84rem; color: #4f5a68; margin-top: .1rem; line-height: 1.4; }
+
+/* Cartes des personas, côte à côte et de même hauteur : colonnes étirées, la carte prend
+   la place libre et le bouton reste aligné en bas. */
+[data-testid="stHorizontalBlock"]:has([class*="st-key-persona-"]) { align-items: stretch; }
+[data-testid="stColumn"]:has([class*="st-key-persona-"]) > [data-testid="stVerticalBlock"] { height: 100%; }
+[data-testid="stColumn"]:has([class*="st-key-persona-"]) [data-testid="stLayoutWrapper"] {
+  flex: 1 1 auto; display: flex; flex-direction: column; }
+[class*="st-key-persona-"] { gap: .6rem; flex: 1 1 auto; }
+[class*="st-key-persona-"] [data-testid="stElementContainer"]:has(.af-pc) { flex: 1 1 auto; }
+[class*="st-key-persona-"] [data-testid="stElementContainer"]:has(.af-pc) div:has(.af-pc) { height: 100%; }
+.af-pc { box-sizing: border-box; height: 100%; display: flex; flex-direction: column; min-height: 17rem; padding: 1.15rem 1.2rem 1rem;
+  border-radius: .9rem; background: #ffffff; border: 1px solid #dbe2ea;
+  border-top: 4px solid var(--af-accent); box-shadow: 0 2px 8px rgba(20, 50, 92, .06);
+  transition: box-shadow .18s ease, transform .18s ease; }
+.af-pc:hover { box-shadow: 0 10px 24px rgba(20, 50, 92, .12); transform: translateY(-2px); }
+.af-pc--on { border-color: var(--af-accent); }
+.af-pc-head { display: flex; align-items: center; gap: .8rem; }
+.af-pc-avatar { flex: 0 0 auto; width: 2.8rem; height: 2.8rem; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 700; color: #ffffff;
   background: var(--af-accent); }
-.af-pc-name { font-size: 1.45rem; font-weight: 700; color: #1a2332; display: flex; align-items: center;
-  gap: .5rem; flex-wrap: wrap; }
-.af-pc-badge, .af-pc-selected { font-size: .72rem; font-weight: 600; padding: .1rem .55rem; border-radius: 999px; }
-.af-pc-badge { background: #eef2f7; color: #5b6675; border: 1px solid #dbe2ea; }
+.af-pc-name { font-size: 1.3rem; font-weight: 700; color: #1a2332; display: flex; align-items: center;
+  gap: .45rem; flex-wrap: wrap; }
+.af-pc-badge, .af-pc-selected { font-size: .7rem; font-weight: 600; padding: .08rem .5rem; border-radius: 999px; }
+.af-pc-badge { background: #eef2f7; color: #4f5a68; border: 1px solid #dbe2ea; }
 .af-pc-selected { background: var(--af-accent); color: #ffffff; }
-.af-pc-sub { color: #5b6675; font-size: .88rem; margin-top: .1rem; }
-.af-pc-summary { margin: .9rem 0 .8rem; color: #1a2332; line-height: 1.5; }
-.af-pc-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
-.af-pc-tile { background: #f5f7fa; border-radius: .6rem; padding: .5rem .6rem; }
-.af-pc-tile-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #5b6675; }
-.af-pc-tile-value { font-size: .9rem; font-weight: 600; color: #1a2332; margin-top: .15rem; }
-.af-pc-foot { margin-top: .75rem; font-size: .78rem; color: #5b6675; }
-.af-dots { display: flex; justify-content: center; gap: .4rem; margin: .1rem 0 .6rem; }
-.af-dot { width: .5rem; height: .5rem; border-radius: 50%; background: #c9d3df; }
-.af-dot--on { background: #1d4e89; width: 1.4rem; border-radius: 999px; }
-@media (max-width: 640px) { .af-pc-tiles { grid-template-columns: 1fr; } }
+.af-pc-sub { color: #4f5a68; font-size: .86rem; margin-top: .05rem; }
+.af-pc-tests { margin: .95rem 0 .9rem; color: #1a2332; line-height: 1.45; font-size: .95rem; flex: 1 1 auto; }
+.af-pc-tests span { display: block; font-size: .7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--af-accent); margin-bottom: .2rem; }
+.af-pc-facts { margin: 0; border-top: 1px solid #e6ebf1; }
+.af-pc-fact { display: flex; justify-content: space-between; gap: .8rem; padding: .42rem 0;
+  border-bottom: 1px solid #eef2f6; font-size: .87rem; }
+.af-pc-fact dt { color: #4f5a68; font-weight: 400; }
+.af-pc-fact dd { margin: 0; color: #1a2332; font-weight: 600; text-align: right; }
+@media (prefers-reduced-motion: reduce) { .af-pc { transition: none; } .af-pc:hover { transform: none; } }
+@media (max-width: 900px) { .af-steps { grid-template-columns: 1fr; } .af-pc { min-height: 0; } }
+[class*="st-key-home-foot"] { margin-top: 1.2rem; padding-top: .9rem; border-top: 1px solid #e6ebf1; }
 @media (max-width: 640px) {
   .af-progress { overflow-x: auto; }
   .af-progress-line { min-width: .5rem; }
