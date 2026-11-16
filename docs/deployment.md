@@ -16,7 +16,7 @@ CLAUDE.md demande de placer les identifiants temporaires de l'atelier uniquement
 
 | Champ | Valeur |
 | --- | --- |
-| Repository | `Naoufalmo/Alphaforge-01` |
+| Repository | `alphaforge-01/Alphaforge-01` (organisation GitHub, dépôt privé : l'application GitHub de Streamlit doit avoir accès à l'organisation) |
 | Branch | `chore/release-remise`, créée depuis `main` après la dernière fusion (voir « Gel ») |
 | Main file path | `app/streamlit_app.py` |
 | Python version | 3.12 (celle des essais : suite de tests verte et interface sans exception) |
