@@ -1,30 +1,38 @@
-# AlphaForge AI : un copilote de cohérence, pas un conseiller
+# AlphaForge AI — Un copilote de cohérence, pas un conseiller
 
-Datathon PolyFinances 2026. Simulation éducative : tout est fictif, aucune transaction, aucun conseil personnalisé.
+**Datathon PolyFinances 2026 | Équipe AlphaForge 01**
 
-## Problème et solution
-Une idée tentante (25 % dans TSLA) peut contredire le profil de celui qui la formule, et un verdict sans preuve est inutilisable. Le système ne dit pas quoi acheter : il compare le portefeuille avant et après l'idée, applique les règles du profil, donne le plus grand poids testé qui respecte chaque règle en tension ou en conflit, propose des variantes et explique le résultat aux niveaux novice et pro, avec les mêmes chiffres.
+*Simulation financière éducative : profils et portefeuilles fictifs, aucune transaction réelle, aucun conseil personnalisé ni prédiction de rendement.*
 
-## Architecture : un agent agit, le code juge, un agent explique
-- **Analyste** (Bedrock, tours et appels bornés) : choisit les outils, propose au plus deux variantes.
-- **Code déterministe** : calculs, gouvernance, preuves, dossier, validateur.
-- **Explicateur** (Bedrock, sans outil) : écrit des renvois ([E3], [G1]) remplacés par les valeurs du registre. Texte rejeté ou Bedrock en échec : un gabarit sans modèle prend le relais.
-- **Garde-fou Bedrock** : sujets refusés et ancrage du texte, en mode détection.
+### 1. Problème et solution
+Une idée de placement peut sembler intéressante tout en contredisant les contraintes d'un investisseur. Un simple verdict ne suffit pas : il faut comprendre **pourquoi**, sur quelles données il repose et ce qui pourrait le modifier.
 
-## Données
-31 actifs, prix Yahoo Finance (2021-11-12 au 2026-11-12), taux USD/CAD de la Banque du Canada, FRED. Prix en CAD. Profils, portefeuilles et seuils : fictifs, hypothèses de l'équipe.
+AlphaForge AI simule une idée sur un portefeuille fictif, compare les mesures avant/après, vérifie les règles du profil et explique les résultats en langage novice ou professionnel, sans jamais dire quoi acheter.
 
-## Gouvernance et explicabilité
-- Statuts : conforme, tension, conflit, information manquante. Aucune preuve ESG n'existe : la règle ESG de Mateo reste en "information manquante", donc un verdict conforme n'est pas une vérification ESG.
-- Le validateur rejette un chiffre hors registre, un renvoi inconnu, une recommandation ou prévision, une règle non citée, un lien, une image ou une balise HTML.
-- Avertissements et limites fixes par niveau ; chaque preuve porte source, période et devise.
+### 2. Approche agentique
+- **Agent analyste — Amazon Bedrock :** choisit des outils de calcul, examine le portefeuille et propose jusqu'à deux variantes simulées.
+- **Code déterministe :** calcule les mesures, applique les règles, produit les verdicts et construit un registre de preuves vérifiables.
+- **Agent explicateur et conversationnel :** explique les conflits, les données du profil et les facteurs pouvant modifier un verdict. Les réponses passent par un validateur et les garde-fous Bedrock ; un texte généré par le code prend le relais si nécessaire.
+- **AWS :** Bedrock Converse pour les agents, Guardrails pour les sujets refusés et l'ancrage, S3 privé pour les traces d'analyse.
 
-## État du prototype
-- **Vérifié en local, sans AWS** : outils, gouvernance, dossier, validateur, tests automatisés, 12 scénarios fixes sans échec (25 % de TSLA : Robert en conflit, Amira en tension, Mateo en "information manquante").
-- **Vérifié dans le compte AWS**, d'après `docs/technical_documentation.md` et `outputs/reports/demo_traces/` : agents, garde-fou, traces S3.
-- **Implémenté, sans test automatisé** : interface Streamlit (affichage non relu).
+### 3. Originalité
+- **Un copilote de cohérence, pas un conseiller :** pour Robert et TSLA à 25 %, il montre un conflit et un poids testé conforme à la règle de concentration à 20 % ou moins, sans recommandation d'achat.
+- **L'IA ne décide ni des chiffres ni des verdicts :** elle utilise des renvois `[E#]`, `[G#]`, `[T#]`, remplacés par le code.
+- **L'absence de preuve reste visible :** pour Mateo, un verdict financier conforme peut coexister avec un verdict ESG « information manquante ».
+- **Des conclusions mises à l'épreuve :** période, devise, fréquence, date d'analyse et seuils sont modifiés séparément pour mesurer leur influence sur les verdicts.
 
-## Limites
-- Aucune donnée ESG. Biais du survivant, cinq ans d'historique, données publiques non certifiées.
-- Ancrage faible des explications du modèle (0,34 pour Robert) malgré des chiffres validés ; le mode Bedrock dépend du compte temporaire.
-- Hors périmètre : texte libre, rejeu historique, transactions réelles.
+### 4. Sources de données
+**31 actifs** : actions canadiennes et américaines, FNB et cryptoactifs. Prix historiques Yahoo Finance du 12 novembre 2021 au 12 novembre 2026 ; taux USD/CAD de la Banque du Canada. Conversion en CAD au taux connu du même jour, calendrier boursier commun TSX–États-Unis et contrôle `as_of` empêchant l'utilisation de données futures. Profils et seuils entièrement fictifs.
+
+### 5. Explicabilité et validation
+Chaque mesure est reliée à une preuve contenant sa source, sa période, sa devise, sa transformation et ses limites. Le validateur rejette les chiffres non justifiés, références inconnues, conseils et prédictions. Le garde-fou complète ce contrôle et signale un ancrage faible sans le confondre avec une preuve d'exactitude.
+
+**Prototype vérifié :** 15 scénarios de référence sans échec ; **2 760 tests réussis** et 1 ignoré. Parcours Streamlit testés automatiquement, services Bedrock, Guardrails et traces S3 vérifiés dans le compte AWS de l'atelier.
+
+### 6. Bénéfices pour l'utilisateur
+- Comprendre les tensions et conflits avec des explications novice/pro fondées sur les mêmes chiffres.
+- Consulter les preuves et comparer portefeuille initial, simulation et variantes.
+- Poser des questions pédagogiques sur le profil, les règles et les résultats, avec réponses contrôlées.
+- Explorer différentes hypothèses sans exposer de données financières personnelles.
+
+**Limites :** aucune donnée ESG vérifiable ; historique de cinq ans et données publiques non certifiées ; seuils hypothétiques ; sensibilité des résultats aux hypothèses ; mode Bedrock dépendant du compte AWS temporaire. Les simulations historiques ne prédisent pas les performances futures.
